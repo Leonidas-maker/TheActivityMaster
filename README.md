@@ -61,9 +61,9 @@ project-root/
    ```bash
    git clone https://github.com/your-repo/club-management-app.git
    ```
-2. Navigate to the backend directory and set up the environment:
+2. Navigate to the server directory and set up the environment:
    ```bash
-   cd backend
+   cd server
    python -m venv env
    source env/bin/activate  # For Windows: .\env\Scripts\activate
    pip install -r requirements.txt
@@ -73,10 +73,10 @@ project-root/
    ```bash
    uvicorn main:app --reload
    ```
-5. Navigate to the mobile directory to start the mobile development server.
+5. Navigate to the client directory to start the client development server.
 6. Install dependencies and run the app:
    ```bash
-   cd mobile
+   cd client
    npm install
    npm start
    ```
