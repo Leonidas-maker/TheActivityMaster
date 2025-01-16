@@ -2,6 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import event
 import os
+from contextlib import asynccontextmanager
 
 from config.settings import DEFAULT_TIMEZONE
 
@@ -25,6 +26,14 @@ SessionLocal = async_sessionmaker(engine, class_=AsyncSession, future=True)
 Base = declarative_base()
 
 async def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        await db.close()
+
+@asynccontextmanager
+async def get_async_session():
     db = SessionLocal()
     try:
         yield db
