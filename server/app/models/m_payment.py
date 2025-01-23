@@ -14,11 +14,13 @@ from datetime import datetime
 import enum
 from typing import List
 
-from models.m_user import *
-from models.m_club import *
 from config.database import Base
 from config.settings import DEFAULT_TIMEZONE
 
+from models.m_generic import *
+from models.m_club import *
+from models.m_audit import *
+from models.m_payment import *
 
 ###########################################################################
 ################################## Enums ##################################

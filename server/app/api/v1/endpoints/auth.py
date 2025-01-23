@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, security
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 
-from config.database import get_db
+from core.database import get_db
 
 from controllers import auth as auth_controller
 

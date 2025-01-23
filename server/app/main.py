@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 import uvicorn
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config.database import engine, Base, get_async_session, get_db, check_db_connection
+from core.database import engine, get_async_session, get_db, check_db_connection
 from config.settings import ENVIRONMENT
+from config.database import Base
 from core.init_database import init_country_states_city, init_country_states_city_mode, init_users
 
 from models.m_generic import *

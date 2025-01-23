@@ -1,13 +1,17 @@
 from typing import Annotated
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey, UUID, Boolean, DateTime, Enum, Text
+from sqlalchemy import ForeignKey, UUID, Boolean, DateTime, Enum, Text, String
 import uuid
 from datetime import datetime
 import enum
 
-from .m_user import *
 from config.database import Base
 from config.settings import DEFAULT_TIMEZONE
+
+from models.m_generic import *
+from models.m_club import *
+from models.m_audit import *
+from models.m_payment import *
 
 class AuditLogCategories(enum.Enum):
     SYSTEM = "SYSTEM"

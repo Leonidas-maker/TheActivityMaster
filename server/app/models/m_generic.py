@@ -6,6 +6,10 @@ from typing import List
 
 from config.database import Base
 
+from models.m_generic import *
+from models.m_club import *
+from models.m_audit import *
+from models.m_payment import *
 
 class Address(Base):
     __tablename__ = "addresses"
