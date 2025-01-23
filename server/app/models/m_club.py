@@ -36,7 +36,7 @@ class Club(Base):
         Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=False)]
     ]
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
 
     address: Mapped["Address"] = relationship("Address")
@@ -55,7 +55,7 @@ class Membership(Base):
     currency: Mapped[Annotated[str, mapped_column(String(3), nullable=False)]]  # ISO 4217
     duration: Mapped[Annotated[int, mapped_column(Integer, nullable=False)]]  # in months
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
@@ -63,8 +63,8 @@ class Membership(Base):
             mapped_column(
                 DateTime,
                 nullable=False,
-                default=datetime.now(DEFAULT_TIMEZONE),
-                onupdate=datetime.now(DEFAULT_TIMEZONE),
+                default=lambda: datetime.now(DEFAULT_TIMEZONE),
+                onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
             ),
         ]
     ]
@@ -85,7 +85,7 @@ class MembershipSubscription(Base):
     ]
     user_id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)]]
     start_time: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     end_time: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=True)]]
 
@@ -109,6 +109,20 @@ class MembershipAccess(Base):
     membership: Mapped["Membership"] = relationship("Membership", back_populates="programs_access")
     program: Mapped["Program"] = relationship("Program", back_populates="memberships")
 
+class MembershipTransaction(Base):
+    __tablename__ = "membership_transactions"
+
+    id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)]]
+    membership_id: Mapped[
+        Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)]
+    ]
+    transaction_id: Mapped[
+        Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)]
+    ]
+    created_at: Mapped[
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
+    ]
+
 
 class ProgramType(Base):
     __tablename__ = "program_types"
@@ -130,7 +144,7 @@ class Program(Base):
     capacity: Mapped[Annotated[int, mapped_column(Integer, nullable=False)]]
     club_id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)]]
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
@@ -138,8 +152,8 @@ class Program(Base):
             mapped_column(
                 DateTime,
                 nullable=False,
-                default=datetime.now(DEFAULT_TIMEZONE),
-                onupdate=datetime.now(DEFAULT_TIMEZONE),
+                default=lambda: datetime.now(DEFAULT_TIMEZONE),
+                onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
             ),
         ]
     ]
@@ -167,7 +181,7 @@ class Event(Base):
         Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)]
     ]
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
@@ -175,8 +189,8 @@ class Event(Base):
             mapped_column(
                 DateTime,
                 nullable=False,
-                default=datetime.now(DEFAULT_TIMEZONE),
-                onupdate=datetime.now(DEFAULT_TIMEZONE),
+                default=lambda: datetime.now(DEFAULT_TIMEZONE),
+                onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
             ),
         ]
     ]
@@ -195,7 +209,7 @@ class Course(Base):
     currency: Mapped[Annotated[str, mapped_column(String(3), nullable=False)]]  # ISO 4217
     subscription_required: Mapped[Annotated[bool, mapped_column(Boolean, nullable=False)]]
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
@@ -203,8 +217,8 @@ class Course(Base):
             mapped_column(
                 DateTime,
                 nullable=False,
-                default=datetime.now(DEFAULT_TIMEZONE),
-                onupdate=datetime.now(DEFAULT_TIMEZONE),
+                default=lambda: datetime.now(DEFAULT_TIMEZONE),
+                onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
             ),
         ]
     ]
@@ -245,7 +259,7 @@ class BookingStatus(enum.Enum):
     CONFIRMED = "Confirmed"
     CANCELLED = "Cancelled"
     COMPLETED = "Completed"
-
+    CANCELLED_BY_CLUB = "Cancelled by Club"
 
 class Booking(Base):
     __tablename__ = "bookings"
@@ -261,7 +275,7 @@ class Booking(Base):
         Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)]
     ]
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
@@ -269,8 +283,8 @@ class Booking(Base):
             mapped_column(
                 DateTime,
                 nullable=False,
-                default=datetime.now(DEFAULT_TIMEZONE),
-                onupdate=datetime.now(DEFAULT_TIMEZONE),
+                default=lambda: datetime.now(DEFAULT_TIMEZONE),
+                onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
             ),
         ]
     ]
@@ -289,52 +303,6 @@ class BookingType(Base):
     bookings = relationship("Booking", back_populates="booking_types")
 
 
-class TransactionStatus(enum.Enum):
-    SUCCESS = "Success"
-    FAILED = "Failed"
-    PENDING = "Pending"
-
-
-class PaymentMethod(enum.Enum):
-    STRIPE = "Stripe"
-
-
-class Transaction(Base):
-    __tablename__ = "transactions"
-
-    id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)]]
-    user_id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)]]
-    amount: Mapped[Annotated[DECIMAL, mapped_column(DECIMAL(10, 2), nullable=False)]]
-    currency: Mapped[Annotated[str, mapped_column(String(3), nullable=False)]]
-    status: Mapped[Annotated[TransactionStatus, mapped_column(Enum(TransactionStatus), nullable=False)]]
-    payment_method: Mapped[
-        Annotated[PaymentMethod, mapped_column(Enum(PaymentMethod), nullable=False, default=PaymentMethod.STRIPE)]
-    ]
-    created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
-    ]
-    updated_at: Mapped[
-        Annotated[
-            datetime,
-            mapped_column(
-                DateTime,
-                nullable=False,
-                default=datetime.now(DEFAULT_TIMEZONE),
-                onupdate=datetime.now(DEFAULT_TIMEZONE),
-            ),
-        ]
-    ]
-
-    program_id: Mapped[
-        Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=True)]
-    ]
-    membership_id: Mapped[
-        Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=True)]
-    ]
-
-    user: Mapped["User"] = relationship("User", back_populates="transactions")
-    programs: Mapped["Program"] = relationship("Program", uselist=True)
-    memberships: Mapped["Membership"] = relationship("Membership", uselist=True)
 
 
 ###########################################################################
@@ -359,7 +327,7 @@ class UserClubRole(Base):
     club_id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), primary_key=True)]]
     club_role_id: Mapped[Annotated[int, mapped_column(Integer, ForeignKey("club_roles.id"), primary_key=True)]]
     assigned_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
 
     __table_args__ = (UniqueConstraint("user_id", "club_id", "club_role_id", name="unique_user_club_role"),)

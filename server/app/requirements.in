@@ -1,7 +1,7 @@
 fastapi[all] 
 fastapi-mail
 alt-profanity-check
-bcrypt
+argon2-cffi
 sqlalchemy
 rich
 pytz

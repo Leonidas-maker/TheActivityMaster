@@ -14,7 +14,7 @@ class Address(Base):
     street: Mapped[Annotated[str, mapped_column(String(255), nullable=False)]]  # Explizit VARCHAR(255)
     postal_code_id: Mapped[Annotated[int, mapped_column(Integer, ForeignKey("postal_codes.id"), nullable=False)]]
     
-    postal_code: Mapped["PostalCode"] = relationship("PostalCode", back_populates="addresses")
+    postal_code: Mapped["PostalCode"] = relationship("PostalCode", back_populates="addresses", lazy="joined")
 
     __table_args__ = (UniqueConstraint("street", "postal_code_id", name="unique_address_postal_code"),)
 
@@ -27,7 +27,7 @@ class PostalCode(Base):
 
     city_id: Mapped[Annotated[int, mapped_column(Integer, ForeignKey("cities.id"), nullable=False)]]
 
-    city: Mapped["City"] = relationship("City", back_populates="postal_codes")
+    city: Mapped["City"] = relationship("City", back_populates="postal_codes", lazy="joined")
     addresses: Mapped[List["Address"]] = relationship("Address", back_populates="postal_code", uselist=True)
 
     __table_args__ = (UniqueConstraint("code", "city_id", name="unique_postal_code_city"),)
@@ -41,7 +41,7 @@ class City(Base):
 
     state_id: Mapped[Annotated[int, mapped_column(Integer, ForeignKey("states.id"), nullable=False)]]
 
-    state: Mapped["State"] = relationship("State", back_populates="cities")
+    state: Mapped["State"] = relationship("State", back_populates="cities", lazy="joined")
     postal_codes: Mapped[List["PostalCode"]] = relationship("PostalCode", back_populates="city", uselist=True)
 
     __table_args__ = (UniqueConstraint("name", "state_id", name="unique_city_state"),)
@@ -55,7 +55,7 @@ class State(Base):
 
     country_id: Mapped[Annotated[int, mapped_column(Integer, ForeignKey("countries.id"), nullable=False)]]
 
-    country: Mapped["Country"] = relationship("Country", back_populates="states")
+    country: Mapped["Country"] = relationship("Country", back_populates="states", lazy="joined")
     cities: Mapped[List["City"]] = relationship("City", back_populates="state", uselist=True)
 
     __table_args__ = (UniqueConstraint("name", "country_id", name="unique_state_country"),)
