@@ -3,10 +3,10 @@ import React, {
     useEffect
 } from "react";
 import { useColorScheme } from "nativewind";
-import { useTheme } from "../../provider/ThemeProvider";
+import { useTheme } from "@/src/provider/ThemeProvider";
 import { View, ScrollView } from "react-native";
-import Subheading from "../../components/textFields/Subheading";
-import RadioOption from "../../components/radioOption/RadioOption";
+import Subheading from "@/src/components/textFields/Subheading";
+import RadioOption from "@/src/components/radioOption/RadioOption";
 
 type SchemeType = "light" | "dark" | "system";
 

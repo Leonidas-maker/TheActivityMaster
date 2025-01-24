@@ -1,27 +1,28 @@
 // ~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~ //
 import React from "react";
 import { View, ScrollView } from "react-native";
-import { expo } from "../../../app.json";
-import { useNavigation } from "@react-navigation/native";
-import { clearAllStorage } from "../../services/clearStorage";
+import { expo } from "@/app.json";
+import { useRouter } from "expo-router";
+import { clearAllStorage } from "@/src/services/clearStorage";
 
 // ~~~~~~~~ Own components imports ~~~~~~~ //
-import PageNavigator from "../../components/pageNavigator/PageNavigator";
-import DefaultText from "../../components/textFields/DefaultText";
-import DefaultButton from "../../components/buttons/DefaultButton";
+import DefaultText from "@/src/components/textFields/DefaultText";
+import DefaultButton from "@/src/components/buttons/DefaultButton";
+import PageNavigator from '@/src/components/pageNavigator/PageNavigator';
 
 // ====================================================== //
 // ====================== Component ===================== //
 // ====================================================== //
 const OverviewHome: React.FC = () => {
   // ~~~~~~~~~~~ Define navigator ~~~~~~~~~~ //
-  const navigation = useNavigation<any>();
+  const router = useRouter(); // Den Router definieren
 
   // ====================================================== //
   // =================== ModuleNavigator ================== //
   // ====================================================== //
   const handleSettingsPress = () => {
-    navigation.navigate("Settings");
+    router.navigate("../settings/Settings");
+    params: { previousRoute: '/(tabs)/OverviewHome' }
   };
 
   const moduleTitle = "Einstellungen";

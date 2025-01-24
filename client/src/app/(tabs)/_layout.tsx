@@ -1,12 +1,12 @@
 import { Tabs } from 'expo-router';
 import React, { useState, useEffect } from "react";
 import { useColorScheme } from "react-native";
-import ActiveDiscoverSGV from "../../public/images/navigatorIcons/active/ActiveDiscoverSVG";
-import DiscoverSVG from "../../public/images/navigatorIcons/inactive/DiscoverSVG";
-import ActiveOverviewSVG from "../../public/images/navigatorIcons/active/ActiveOverviewSVG";
-import OverviewSVG from "../../public/images/navigatorIcons/inactive/OverviewSVG";
-import ActiveCalendarSVG from "../../public/images/navigatorIcons/active/ActiveCalendarSVG";
-import CalendarSVG from "../../public/images/navigatorIcons/inactive/CalendarSVG";
+import ActiveDiscoverSGV from "../../../public/images/navigatorIcons/active/ActiveDiscoverSVG";
+import DiscoverSVG from "../../../public/images/navigatorIcons/inactive/DiscoverSVG";
+import ActiveOverviewSVG from "../../../public/images/navigatorIcons/active/ActiveOverviewSVG";
+import OverviewSVG from "../../../public/images/navigatorIcons/inactive/OverviewSVG";
+import ActiveCalendarSVG from "../../../public/images/navigatorIcons/active/ActiveCalendarSVG";
+import CalendarSVG from "../../../public/images/navigatorIcons/inactive/CalendarSVG";
 
 export default function TabLayout() {
     const [isLight, setIsLight] = useState(false);
@@ -32,6 +32,8 @@ export default function TabLayout() {
 
     return (
         <Tabs
+            initialRouteName='DiscoverHome'
+            backBehavior='history'
             screenOptions={{
                 headerShown: true,
                 headerStyle: {
@@ -45,6 +47,7 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="DiscoverHome"
                 options={{
+                    lazy: true,
                     headerTitle: "TheActivityMaster",
                     tabBarLabel: "Entdecken",
                     tabBarIcon: ({ color, size, focused }) => {
@@ -61,6 +64,7 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="CalendarHome"
                 options={{
+                    lazy: true,
                     headerTitle: "TheActivityMaster",
                     tabBarLabel: "Kalender",
                     headerShown: true,
@@ -75,10 +79,12 @@ export default function TabLayout() {
                     },
                 }}
             />
-            {/* <Tabs.Screen
-                name="Weiteres"
+            <Tabs.Screen
+                name="OverviewHome"
                 options={{
+                    lazy: true,
                     headerTitle: "Weiteres",
+                    tabBarLabel: "Weiteres",
                     headerShown: true,
                     tabBarIcon: ({ color, size, focused }) => {
                         if (focused) {
@@ -90,7 +96,7 @@ export default function TabLayout() {
                         }
                     },
                 }}
-            /> */}
+            />
         </Tabs>
     );
 }
