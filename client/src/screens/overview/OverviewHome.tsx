@@ -3,10 +3,12 @@ import React from "react";
 import { View, ScrollView } from "react-native";
 import { expo } from "../../../app.json";
 import { useNavigation } from "@react-navigation/native";
+import { clearAllStorage } from "../../services/clearStorage";
 
 // ~~~~~~~~ Own components imports ~~~~~~~ //
 import PageNavigator from "../../components/pageNavigator/PageNavigator";
 import DefaultText from "../../components/textFields/DefaultText";
+import DefaultButton from "../../components/buttons/DefaultButton";
 
 // ====================================================== //
 // ====================== Component ===================== //
@@ -42,6 +44,9 @@ const OverviewHome: React.FC = () => {
         texts={moduleTexts}
         iconNames={moduleIconNames}
       />
+      <View className="justify-center items-center my-2">
+        <DefaultButton text="Clear Storage" onPress={() => clearAllStorage()} />
+      </View>
       <View className="justify-center items-center my-2">
         <DefaultText text={`App Version: ${expo.version} ❤️`} />
       </View>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useColorScheme } from "react-native";
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import BottomTabNavigator from './BottomTabNavigator';
 import DiscoverStack from './DiscoverStack';
@@ -30,42 +29,40 @@ const RootNavigator: React.FC = () => {
     const headerTintColor = isLight ? "#171717" : "#E0E2DB";
 
     return (
-        <NavigationContainer>
-            <Stack.Navigator
-                screenOptions={{
-                    headerStyle: {
-                        backgroundColor: backgroundColor,
-                    },
-                    headerTintColor: headerTintColor,
-                    headerBackButtonDisplayMode: "minimal",
-                }}>
-                <Stack.Screen
-                    name="Tabs"
-                    component={BottomTabNavigator}
-                    options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                    name="Discover"
-                    component={DiscoverStack}
-                    options={{}}
-                />
-                <Stack.Screen
-                    name="Overview"
-                    component={OverviewStack}
-                    options={{}}
-                />
-                <Stack.Screen
-                    name="Settings"
-                    component={SettingsStack}
-                    options={{}}
-                />
-                <Stack.Screen
-                    name="Calendar"
-                    component={CalendarStack}
-                    options={{}}
-                />
-            </Stack.Navigator>
-        </NavigationContainer>
+        <Stack.Navigator
+            screenOptions={{
+                headerStyle: {
+                    backgroundColor: backgroundColor,
+                },
+                headerTintColor: headerTintColor,
+                headerBackButtonDisplayMode: "minimal",
+            }}>
+            <Stack.Screen
+                name="Tabs"
+                component={BottomTabNavigator}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="Discover"
+                component={DiscoverStack}
+                options={{}}
+            />
+            <Stack.Screen
+                name="Overview"
+                component={OverviewStack}
+                options={{}}
+            />
+            <Stack.Screen
+                name="Settings"
+                component={SettingsStack}
+                options={{}}
+            />
+            <Stack.Screen
+                name="Calendar"
+                component={CalendarStack}
+                options={{}}
+            />
+        </Stack.Navigator>
     );
 };
 

@@ -1,21 +1,32 @@
 interface TextProps {
-    text: string;
-  }
+  text: string;
+}
 
 interface RadioOptionProps {
-    label: string;
-    onPress: () => void;
-    checked: boolean;
-    radioColor: string;
-  }
-  
-interface NavigatorProps {
-    title: string;
-    onPressFunctions: (() => void)[];
-    texts: string[];
-    iconNames: string[];
-    isExternalLink?: boolean[];
-  }
-  
+  label: string;
+  onPress: () => void;
+  checked: boolean;
+  radioColor: string;
+}
 
-export { TextProps, RadioOptionProps, NavigatorProps };
+interface NavigatorProps {
+  title: string;
+  onPressFunctions: (() => void)[];
+  texts: string[];
+  iconNames: string[];
+  isExternalLink?: boolean[];
+}
+
+interface DefaultButtonProps {
+  text?: string;
+  onPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
+  onLongPress?: () => void;
+  disabled?: boolean;
+  delayLongPress?: number;
+  unstable_pressDelay?: number;
+  isCancel?: boolean;
+}
+
+export { TextProps, RadioOptionProps, NavigatorProps, DefaultButtonProps };
