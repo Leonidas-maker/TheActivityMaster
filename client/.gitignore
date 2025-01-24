@@ -39,3 +39,6 @@ yarn-error.*
 # app builds
 android/
 ios/
+
+package-lock.json
+yarn.lock

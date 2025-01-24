@@ -17,11 +17,8 @@ const getMajorVersion = (version: any) => {
 
 const getOrCreateUUID = async () => {
     let uuid = await secureLoadData('uuid'); // Load UUID from secure storage
-    console.log('UUID:', uuid); // Optional: Log UUID for debugging
     if (!uuid) {
-        console.log('Generating new UUID...'); // Optional: Log UUID generation
         uuid = await Crypto.randomUUID(); // Generate new UUID if not found
-        console.log('New UUID:', uuid); // Optional: Log new UUID
         await secureSaveData('uuid', uuid); // Save the new UUID in secure storage
     }
     return uuid; // Return the UUID

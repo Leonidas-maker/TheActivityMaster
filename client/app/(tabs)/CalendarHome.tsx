@@ -1,13 +1,11 @@
 import React from "react";
 import { View } from "react-native";
-import DefaultText from "../../components/textFields/DefaultText";
+import DefaultText from "@/src/components/textFields/DefaultText";
 
-const DiscoverHome: React.FC = () => {
+export default function Tab(){
     return (
         <View className={"flex h-screen items-center justify-center bg-light_primary dark:bg-dark_primary"}>
-            <DefaultText text="Welcome to Discover" />
+            <DefaultText text="Welcome to Calendar" />
         </View>
     );
 };
-
-export default DiscoverHome;

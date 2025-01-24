@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useColorScheme } from "react-native";
+import { useColorScheme, View } from "react-native";
 import { createStackNavigator } from '@react-navigation/stack';
-import DiscoverHome from '../screens/discover/DiscoverHome';
 
 const Stack = createStackNavigator();
 
@@ -25,15 +24,9 @@ const DiscoverStack: React.FC = () => {
     const headerTintColor = isLight ? "#171717" : "#E0E2DB";
 
     return (
-        <Stack.Navigator
-            screenOptions={{
-                headerStyle: {
-                    backgroundColor: backgroundColor,
-                },
-                headerTintColor: headerTintColor,
-            }}>
-            <Stack.Screen name="DiscoverHome" component={DiscoverHome} />
-        </Stack.Navigator>
+        <View>
+
+        </View>
     );
 };
 

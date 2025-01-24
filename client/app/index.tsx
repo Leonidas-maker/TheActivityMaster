@@ -7,9 +7,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import generateFingerprint from "../src/fingerprint/Fingerprint";
 import { useEffect } from "react";
-import "expo-dev-client";
+import { Redirect } from "expo-router";
 
-export default function App() {
+export default function Page() {
   useEffect(() => {
     generateFingerprint();
   }, []);
@@ -19,11 +19,9 @@ export default function App() {
       <GestureHandlerRootView>
         <SafeAreaProvider>
           <StatusBar style="auto" />
-          <RootNavigator />
+          <Redirect href="/(tabs)/DiscoverHome" />
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ThemeProvider>
   );
 }
-
-registerRootComponent(App);
