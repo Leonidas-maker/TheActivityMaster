@@ -7,6 +7,8 @@ import generateFingerprint from "../fingerprint/Fingerprint";
 import { useEffect } from "react";
 import { Redirect } from "expo-router";
 
+import "../custom_logger/custom_logger";
+
 export default function Page() {
   useEffect(() => {
     generateFingerprint();
