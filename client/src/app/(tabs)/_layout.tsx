@@ -1,19 +1,21 @@
 import { Tabs } from 'expo-router';
 import React, { useState, useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme } from "nativewind";
 import ActiveDiscoverSGV from "../../../public/images/navigatorIcons/active/ActiveDiscoverSVG";
 import DiscoverSVG from "../../../public/images/navigatorIcons/inactive/DiscoverSVG";
 import ActiveOverviewSVG from "../../../public/images/navigatorIcons/active/ActiveOverviewSVG";
 import OverviewSVG from "../../../public/images/navigatorIcons/inactive/OverviewSVG";
 import ActiveCalendarSVG from "../../../public/images/navigatorIcons/active/ActiveCalendarSVG";
 import CalendarSVG from "../../../public/images/navigatorIcons/inactive/CalendarSVG";
+import { ThemeProvider } from "@/src/provider/ThemeProvider";
 
 export default function TabLayout() {
     const [isLight, setIsLight] = useState(false);
 
     // ~~~~~~~~~~~ Use color scheme ~~~~~~~~~~ //
     // Get the current color scheme
-    const colorScheme = useColorScheme();
+    const { colorScheme } = useColorScheme();
+    
 
     // Check if the color scheme is light or dark
     useEffect(() => {
@@ -24,6 +26,7 @@ export default function TabLayout() {
         }
     }, [colorScheme]);
 
+
     // Set the colors based on the color scheme
     const backgroundColor = isLight ? "#E8EBF7" : "#1E1E24";
     const headerTintColor = isLight ? "#171717" : "#E0E2DB";
@@ -31,8 +34,8 @@ export default function TabLayout() {
     const tabBarInactiveTintColor = isLight ? "#B71515" : "#C91818";
 
     return (
+        <ThemeProvider>
         <Tabs
-            initialRouteName='DiscoverHome'
             backBehavior='history'
             screenOptions={{
                 headerShown: true,
@@ -43,9 +46,10 @@ export default function TabLayout() {
                 headerTintColor: headerTintColor,
                 tabBarActiveTintColor: tabBarActiveTintColor,
                 tabBarInactiveTintColor: tabBarInactiveTintColor,
-            }}>
+            }}
+            >
             <Tabs.Screen
-                name="DiscoverHome"
+                name="index" // aka DiscoverHome
                 options={{
                     lazy: true,
                     headerTitle: "TheActivityMaster",
@@ -98,5 +102,6 @@ export default function TabLayout() {
                 }}
             />
         </Tabs>
+        </ThemeProvider>
     );
 }

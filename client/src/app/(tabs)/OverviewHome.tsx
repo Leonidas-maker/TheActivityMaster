@@ -21,7 +21,7 @@ const OverviewHome: React.FC = () => {
   // =================== ModuleNavigator ================== //
   // ====================================================== //
   const handleSettingsPress = () => {
-    router.navigate("../settings/Settings");
+    router.navigate("../Settings");
     params: { previousRoute: '/(tabs)/OverviewHome' }
   };
 
