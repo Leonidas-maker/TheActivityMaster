@@ -3,7 +3,7 @@
     "name": "TheActivityMaster",
     "slug": "TheActivityMaster",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -11,18 +11,21 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#B3BCBB"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.leonidas-maker.TheActivityMaster"
+      "bundleIdentifier": "com.TheMasterCollection.TheActivityMaster",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#B3BCBB"
       },
-      "package": "com.leonidasmaker.TheActivityMaster"
+      "package": "com.schuetze1000.TheActivityMaster",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/images/favicon.png",
@@ -33,7 +36,9 @@
         "projectId": "4dc12d23-371d-4e64-b516-3898dea89099"
       }
     },
+    "owner": "themastercollection",
     "plugins": [
+      "expo-secure-store",
       "expo-router",
       [
         "expo-splash-screen",
@@ -41,7 +46,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#B3BCBB"
         }
       ]
     ],

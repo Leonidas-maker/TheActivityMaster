@@ -2,7 +2,6 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 
-// Typ für die Log-Nachricht
 interface LogPayload {
   level: 'Info' | 'Warn' | 'Error';
   message: string;
@@ -36,7 +35,7 @@ async function testServerConnection(): Promise<boolean> {
     console._log(`[Log Info]: Server (${LOG_SERVER_IP}) is reachable`);
     return true;
   } catch (error) {
-    console._warn(`[Log Error]: Server (${LOG_SERVER_IP}) is not reachable`);
+    console._warn(`[Log Error]: Server (${LOG_SERVER_IP}) is not reachable`, error);
     return false;
   }
 }
@@ -96,8 +95,6 @@ function customError(...args: unknown[]): void {
   const message = args.map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
   sendLogToServer('Error', message);
 }
-
-
 
 // Save native console methods
 console._log = console.log;

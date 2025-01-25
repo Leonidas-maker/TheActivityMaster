@@ -4,11 +4,14 @@ import { useTheme  } from "@/src/provider/ThemeProvider";
 import { View, ScrollView } from "react-native";
 import Subheading from "@/src/components/textFields/Subheading";
 import RadioOption from "@/src/components/radioOption/RadioOption";
+import { useTranslation } from 'react-i18next';
+import DefaultButton from "../components/buttons/DefaultButton";
 
 const Settings: React.FC = () => {
   const [isLight, setIsLight] = useState(false);
 
   const { theme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation("settings");
 
   // ~~~~~~~~~~~~~~ Use Color Scheme ~~~~~~~~~~~~~~ //
   const { colorScheme, setColorScheme } = useColorScheme();
@@ -30,28 +33,36 @@ const Settings: React.FC = () => {
   // Color based on the theme
   const radioColor = isLight ? "#171717" : "#E0E2DB";
 
+  const switchLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+  };
+
+  //TODO: Make the language switcher a component with better styling
   return (
       <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
         <View className="p-4">
-          <Subheading text="Design auswählen" />
+          <Subheading text={t("design_heading")} />
           <RadioOption
-            label="Light Mode"
+            label={t("light_mode")}
             onPress={() => setTheme("light")}
             checked={theme === "light"}
             radioColor={radioColor}
           />
           <RadioOption
-            label="Dark Mode"
+            label={t("dark_mode")}
             onPress={() => setTheme("dark")}
             checked={theme === "dark"}
             radioColor={radioColor}
           />
           <RadioOption
-            label="System Mode"
+            label={t("system_mode")}
             onPress={() => setTheme("system")}
             checked={theme === "system"}
             radioColor={radioColor}
           />
+          <Subheading text={t("lang_heading")} />
+          <DefaultButton text={t("en_btn")} onPress={() => switchLanguage("en")} />
+          <DefaultButton text={t("de_btn")} onPress={() => switchLanguage("de")} />
         </View>
       </ScrollView>
   );

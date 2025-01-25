@@ -1,11 +1,14 @@
 import React from "react";
 import { View } from "react-native";
 import DefaultText from "@/src/components/textFields/DefaultText";
+import { useTranslation } from "react-i18next";
 
 export default function Tab(){
+    const { t } = useTranslation("calendar");
+
     return (
         <View className={"flex h-screen items-center justify-center bg-light_primary dark:bg-dark_primary"}>
-            <DefaultText text="Welcome to Calendar" />
+            <DefaultText text={t("test_text")} />
         </View>
     );
 };

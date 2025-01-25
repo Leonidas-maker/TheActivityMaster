@@ -4,6 +4,7 @@ import { View, ScrollView } from "react-native";
 import { expo } from "@/app.json";
 import { useRouter } from "expo-router";
 import { clearAllStorage } from "@/src/services/clearStorage";
+import { useTranslation } from "react-i18next";
 
 // ~~~~~~~~ Own components imports ~~~~~~~ //
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -16,20 +17,20 @@ import PageNavigator from '@/src/components/pageNavigator/PageNavigator';
 const OverviewHome: React.FC = () => {
   // ~~~~~~~~~~~ Define navigator ~~~~~~~~~~ //
   const router = useRouter(); // Den Router definieren
+  const { t } = useTranslation("overview");
 
   // ====================================================== //
   // =================== ModuleNavigator ================== //
   // ====================================================== //
   const handleSettingsPress = () => {
     router.navigate("../Settings");
-    params: { previousRoute: '/(tabs)/OverviewHome' }
   };
 
-  const moduleTitle = "Einstellungen";
+  const moduleTitle = t("pageNavigator_title1");
 
   const onPressModuleFunctions = [handleSettingsPress];
 
-  const moduleTexts = ["Einstellungen"];
+  const moduleTexts = [t("settings_btn")];
 
   const moduleIconNames = ["settings"];
 
@@ -46,10 +47,10 @@ const OverviewHome: React.FC = () => {
         iconNames={moduleIconNames}
       />
       <View className="justify-center items-center my-2">
-        <DefaultButton text="Clear Storage" onPress={() => clearAllStorage()} />
+        <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} />
       </View>
       <View className="justify-center items-center my-2">
-        <DefaultText text={`App Version: ${expo.version} ❤️`} />
+        <DefaultText text={t("app_version") + `: ${expo.version} ❤️`} />
       </View>
     </ScrollView>
   );
