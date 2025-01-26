@@ -5,13 +5,12 @@ import { View, ScrollView } from "react-native";
 import Subheading from "@/src/components/textFields/Subheading";
 import RadioOption from "@/src/components/radioOption/RadioOption";
 import { useTranslation } from 'react-i18next';
-import DefaultButton from "../components/buttons/DefaultButton";
 
-const Settings: React.FC = () => {
+const SettingsTheme: React.FC = () => {
   const [isLight, setIsLight] = useState(false);
 
   const { theme, setTheme } = useTheme();
-  const { t, i18n } = useTranslation("settings");
+  const { t } = useTranslation("settings");
 
   // ~~~~~~~~~~~~~~ Use Color Scheme ~~~~~~~~~~~~~~ //
   const { colorScheme, setColorScheme } = useColorScheme();
@@ -32,10 +31,6 @@ const Settings: React.FC = () => {
 
   // Color based on the theme
   const radioColor = isLight ? "#171717" : "#E0E2DB";
-
-  const switchLanguage = (lang: string) => {
-    i18n.changeLanguage(lang);
-  };
 
   //TODO: Make the language switcher a component with better styling
   return (
@@ -60,12 +55,9 @@ const Settings: React.FC = () => {
             checked={theme === "system"}
             radioColor={radioColor}
           />
-          <Subheading text={t("lang_heading")} />
-          <DefaultButton text={t("en_btn")} onPress={() => switchLanguage("en")} />
-          <DefaultButton text={t("de_btn")} onPress={() => switchLanguage("de")} />
         </View>
       </ScrollView>
   );
 };
 
-export default Settings;
+export default SettingsTheme;

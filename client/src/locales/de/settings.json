@@ -5,5 +5,8 @@
     "en_btn": "Englisch",
     "light_mode": "Heller Modus",
     "dark_mode": "Dunkler Modus",
-    "system_mode": "System Modus"
+    "system_mode": "System Modus",
+    "settingsPageNavigator_title1": "App Einstellungen",
+    "settings_theme_btn": "Erscheinungsbild",
+    "settings_lang_btn": "Sprache"
 }

@@ -2,7 +2,7 @@
 import React from "react";
 import { View, ScrollView } from "react-native";
 import { expo } from "@/app.json";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { clearAllStorage } from "@/src/services/clearStorage";
 import { useTranslation } from "react-i18next";
 
@@ -10,20 +10,21 @@ import { useTranslation } from "react-i18next";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import PageNavigator from '@/src/components/pageNavigator/PageNavigator';
+import { goBack } from "expo-router/build/global-state/routing";
 
 // ====================================================== //
 // ====================== Component ===================== //
 // ====================================================== //
 const OverviewHome: React.FC = () => {
   // ~~~~~~~~~~~ Define navigator ~~~~~~~~~~ //
-  const router = useRouter(); // Den Router definieren
+  const router = useRouter();
   const { t } = useTranslation("overview");
 
   // ====================================================== //
   // =================== ModuleNavigator ================== //
   // ====================================================== //
   const handleSettingsPress = () => {
-    router.navigate("../Settings");
+    router.navigate("/Settings");
   };
 
   const moduleTitle = t("pageNavigator_title1");

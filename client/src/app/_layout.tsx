@@ -51,17 +51,29 @@ export default function RootLayout() {
             }}
           >
             {/* Tabs-Navigation */}
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false, headerTitle: t("more_tab") }} />
 
             {/* Zusätzliche Screens */}
             <Stack.Screen
-              name="Settings"
+              name="(settings)/Settings"
               options={{
-                headerBackTitle: t("back_btn"),
                 headerShown: true,
                 headerTitle: t("settings_header"),
               }}
-
+            />
+            <Stack.Screen
+              name="(settings)/SettingsTheme"
+              options={{
+                headerShown: true,
+                headerTitle: t("settings_theme_header"),
+              }}
+            />
+            <Stack.Screen
+              name="(settings)/SettingsLanguage"
+              options={{
+                headerShown: true,
+                headerTitle: t("settings_language_header"),
+              }}
             />
           </Stack>
         </SafeAreaProvider>
