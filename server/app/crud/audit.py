@@ -172,6 +172,23 @@ class AuditLogger:
             status=True,
             details=f"Token created for application_id_hash: {application_id_hash}, jti: {jti}",
         )
+    
+    def token_refresh_failed(self, user_id: uuid.UUID, ip_address: str, application_id_hash: str, jti: uuid.UUID, reason: str):
+        """Log a token refresh failure action.
+
+        :param user_id: The user ID whose token refresh failed
+        :param ip_address: The IP address from which the refresh request was made
+        :param application_id_hash: The hashed application identifier
+        :param jti: The unique token identifier
+        :param reason: The reason for the token refresh failure
+        """
+        self.log_to_authentication(
+            user_id,
+            method=AuthMethods.TOKEN_REFRESH,
+            ip_address=ip_address,
+            status=False,
+            details=f"Token refresh failed for application_id_hash: {application_id_hash}, jti: {jti}, reason: {reason}",
+        )
 
     def token_revocation(self, user_id: uuid.UUID, jti: uuid.UUID, application_id_hash: str):
         """Log a token revocation action.

@@ -92,13 +92,15 @@ async def create_2fa_token(
         raise HTTPException(status_code=500, detail="Failed to create 2FA token. Please try again later.")
 
 
-async def create_auth_tokens(db: AsyncSession, user_id: uuid.UUID, application_id: str, ip_address: str) -> Tuple[str, str]:
+async def create_auth_tokens(db: AsyncSession, user_id: uuid.UUID, application_id: str, ip_address: str, log_creation: bool = False) -> Tuple[str, str]:
     """
     Create the access and refresh tokens for a user
 
     :param db: The database session
     :param user: The user to create the tokens for
     :param application_id: The application ID to create the tokens for
+    :param ip_address: The IP address of the user
+    :param log_creation: Whether to log the initial token creation or only the refresh token creation (default: False)
     :return: The access and refresh tokens: (access_token, refresh_token)
     """
     audit_logger = audit_crud.AuditLogger(db)
@@ -153,7 +155,7 @@ async def create_auth_tokens(db: AsyncSession, user_id: uuid.UUID, application_i
         )
 
         # Log the token creation
-        audit_logger.token_creation(user_id, ip_address, application_id, access_token_details.jti)
+        audit_logger.token_creation(user_id, ip_address, application_id, access_token_details.jti, log_creation)
 
         await db.flush()
         return access_token, refresh_token
@@ -170,7 +172,7 @@ async def create_auth_tokens(db: AsyncSession, user_id: uuid.UUID, application_i
 ###########################################################################
 
 
-async def login(db: AsyncSession, login_form: s_auth.LoginRequest, ip_address: str) -> Tuple[str, list[m_user.User2FAMethods]]:
+async def login(db: AsyncSession, login_form: s_auth.LoginRequest, ip_address: str, application_id: str) -> Tuple[str, list[m_user.User2FAMethods]]:
     """
     Check the user's password and handle 2FA login process.
 
@@ -191,7 +193,7 @@ async def login(db: AsyncSession, login_form: s_auth.LoginRequest, ip_address: s
 
         audit_logger.user_login(user.id, ip_address)
 
-        security_token = await create_2fa_token(db, user, login_form.application_id, ip_address, audit_logger)
+        security_token = await create_2fa_token(db, user, application_id, ip_address, audit_logger)
 
         # Get the 2FA methods
         res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method).filter(m_user.User2FA.user_id == user.id))
@@ -224,7 +226,7 @@ async def login(db: AsyncSession, login_form: s_auth.LoginRequest, ip_address: s
         raise HTTPException(status_code=500, detail="Failed to login. Please try again later.")
 
 
-async def verify_2fa(db: AsyncSession, security_token: str, metadata: s_auth.LoginCode2fa, ip_address: str) -> Tuple[str, str]:
+async def verify_2fa(db: AsyncSession, security_token: str, metadata: s_auth.LoginCode2fa, ip_address: str, application_id: str) -> Tuple[str, str]:
     """Verify a 2FA code and return the access and refresh tokens
 
     :param AsyncSession: The database session
@@ -234,7 +236,7 @@ async def verify_2fa(db: AsyncSession, security_token: str, metadata: s_auth.Log
     """
     audit_logger = audit_crud.AuditLogger(db)
 
-    token_payload = await auth_crud.verify_token(db, security_token, m_user.TokenTypes.SECURITY, metadata.application_id)
+    token_payload = await auth_crud.verify_token(db, security_token, m_user.TokenTypes.SECURITY, application_id)
 
     if not token_payload:
         raise HTTPException(status_code=401, detail="Invalid security token")
@@ -282,7 +284,35 @@ async def verify_2fa(db: AsyncSession, security_token: str, metadata: s_auth.Log
 
     # Create the access and refresh tokens
     await auth_crud.delete_token(db, uuid.UUID(token_payload["jti"]))
-    access_token, refresh_token = await create_auth_tokens(db, user_2fa.user_id, metadata.application_id, ip_address)
+    access_token, refresh_token = await create_auth_tokens(db, user_2fa.user_id, application_id, ip_address, log_creation=True)
+
+    await db.commit()
+    return access_token, refresh_token
+
+async def refresh_token(db, client_ip: str, application_id: str, refresh_token: str) -> Tuple[str, str]:
+    """Refresh the access token
+
+    :param db: The database session
+    :param access_jti: The access token JWT ID
+    :param refresh_jti: The refresh token JWT ID
+    :return: The new access and refresh tokens
+    """
+
+    audit_logger = audit_crud.AuditLogger(db)
+
+    refresh_payload = await auth_crud.verify_token(db, refresh_token, m_user.TokenTypes.REFRESH, application_id)
+
+    if not refresh_payload:
+        raise HTTPException(status_code=401, detail="Invalid access or refresh token")
+
+    # Get the user ID
+    user_id = uuid.UUID(refresh_payload["sub"])
+    
+    # Delete the old tokens
+    await auth_crud.delete_auth_tokens(db, user_id, refresh_payload["aud"])
+
+    # Create the new tokens
+    access_token, refresh_token = await create_auth_tokens(db, user_id, application_id, client_ip)
 
     await db.commit()
     return access_token, refresh_token

@@ -151,7 +151,7 @@ async def delete_token(db: AsyncSession, jti: uuid.UUID) -> int:
     return res.rowcount
 
 
-async def delete_auth_tokens(db: AsyncSession, user: User, application_id: str) -> int:
+async def delete_auth_tokens(db: AsyncSession, user_id: uuid.UUID, hashed_application_id: str) -> int:
     """Delete the authentication tokens for a user
 
     :param db: The database session
@@ -159,9 +159,8 @@ async def delete_auth_tokens(db: AsyncSession, user: User, application_id: str) 
     :param application_id: The application ID to delete the tokens for
     :return: The number of tokens deleted
     """
-    hashed_application_id = core_security.sha256_salt(application_id)
     res = await db.execute(
-        delete(UserToken).filter(UserToken.user_id == user.id, UserToken.application_id_hash == hashed_application_id)
+        delete(UserToken).filter(UserToken.user_id == user_id, UserToken.application_id_hash == hashed_application_id)
     )
     return res.rowcount
 
