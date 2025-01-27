@@ -1,3 +1,4 @@
+import OptionSelector from '../components/optionSelector/OptionSelector';
 interface TextProps {
   text: string;
 }
@@ -17,6 +18,15 @@ interface NavigatorProps {
   isExternalLink?: boolean[];
 }
 
+interface OptionSelectorProps {
+  title: string;
+  onPressFunctions: (() => void)[];
+  texts: string[];
+  iconNames: string[];
+  checked: boolean[];
+  isEmoji?: boolean;
+}
+
 interface DefaultButtonProps {
   text?: string;
   onPress?: () => void;
@@ -29,4 +39,4 @@ interface DefaultButtonProps {
   isCancel?: boolean;
 }
 
-export { TextProps, RadioOptionProps, NavigatorProps, DefaultButtonProps };
+export { TextProps, RadioOptionProps, NavigatorProps, DefaultButtonProps, OptionSelectorProps };

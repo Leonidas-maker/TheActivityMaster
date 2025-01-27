@@ -54,15 +54,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
             {/* Zusätzliche Screens */}
-            <Stack.Screen
-              name="Settings"
-              options={{
-                headerBackTitle: t("back_btn"),
-                headerShown: true,
-                headerTitle: t("settings_header"),
-              }}
 
-            />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

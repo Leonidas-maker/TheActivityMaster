@@ -5,5 +5,10 @@
     "en_btn": "English",
     "light_mode": "Light mode",
     "dark_mode": "Dark mode",
-    "system_mode": "System mode"
+    "system_mode": "System mode",
+    "settingsPageNavigator_title1": "App settings",
+    "settings_theme_btn": "Theme",
+    "settings_lang_btn": "Language",
+    "settings_theme_selector": "Select design",
+    "settings_lang_selector": "Select language"
 }

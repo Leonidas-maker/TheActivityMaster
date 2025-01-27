@@ -3,5 +3,7 @@
     "calendar_tab": "Calendar",
     "more_tab": "More",
     "settings_header": "Settings",
+    "settings_theme_header": "Theme",
+    "settings_language_header": "Language",
     "back_btn": "Back"
 }

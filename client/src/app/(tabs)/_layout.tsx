@@ -53,7 +53,6 @@ export default function TabLayout() {
                 <Tabs.Screen
                     name="index" // aka DiscoverHome
                     options={{
-                        lazy: true,
                         headerTitle: "TheActivityMaster",
                         tabBarLabel: t("discover_tab"),
                         tabBarIcon: ({ color, size, focused }) => {
@@ -70,7 +69,6 @@ export default function TabLayout() {
                 <Tabs.Screen
                     name="CalendarHome"
                     options={{
-                        lazy: true,
                         headerTitle: "TheActivityMaster",
                         tabBarLabel: t("calendar_tab"),
                         headerShown: true,
@@ -86,12 +84,11 @@ export default function TabLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="OverviewHome"
+                    name="overview"
                     options={{
-                        lazy: true,
                         headerTitle: t("more_tab"),
                         tabBarLabel: t("more_tab"),
-                        headerShown: true,
+                        headerShown: false,
                         tabBarIcon: ({ color, size, focused }) => {
                             if (focused) {
                                 return (
