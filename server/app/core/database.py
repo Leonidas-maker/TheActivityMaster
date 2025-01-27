@@ -42,7 +42,8 @@ async def check_db_connection(engine):
                 ) from e
 
 if ENVIRONMENT == "dev":
-    SQLALCHEMY_DATABASE_URL = "root:root@127.0.0.1:3306/tam"
+    db_host = os.getenv("DB_HOST", "127.0.0.1")
+    SQLALCHEMY_DATABASE_URL = f"root:root@{db_host}:3306/tam"
     ssl_args = {}
 else:
     db_host = os.getenv("DB_HOST")

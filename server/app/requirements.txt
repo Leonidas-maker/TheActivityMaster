@@ -30,6 +30,8 @@ asyncmy==0.2.10
     # via -r .\requirements.in
 asyncpg==0.30.0
     # via -r .\requirements.in
+bcrypt==4.2.1
+    # via -r .\requirements.in
 blinker==1.9.0
     # via fastapi-mail
 certifi==2024.12.14
