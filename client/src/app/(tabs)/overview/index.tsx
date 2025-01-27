@@ -24,7 +24,7 @@ const OverviewHome: React.FC = () => {
   // =================== ModuleNavigator ================== //
   // ====================================================== //
   const handleSettingsPress = () => {
-    router.navigate("/Settings");
+    router.navigate("/(tabs)/overview/(settings)/Settings");
   };
 
   const moduleTitle = t("pageNavigator_title1");

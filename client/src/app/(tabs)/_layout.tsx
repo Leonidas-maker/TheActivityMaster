@@ -84,11 +84,11 @@ export default function TabLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="OverviewHome"
+                    name="overview"
                     options={{
                         headerTitle: t("more_tab"),
                         tabBarLabel: t("more_tab"),
-                        headerShown: true,
+                        headerShown: false,
                         tabBarIcon: ({ color, size, focused }) => {
                             if (focused) {
                                 return (

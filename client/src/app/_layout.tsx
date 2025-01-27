@@ -51,30 +51,10 @@ export default function RootLayout() {
             }}
           >
             {/* Tabs-Navigation */}
-            <Stack.Screen name="(tabs)" options={{ headerShown: false, headerTitle: t("more_tab") }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
             {/* Zusätzliche Screens */}
-            <Stack.Screen
-              name="(settings)/Settings"
-              options={{
-                headerShown: true,
-                headerTitle: t("settings_header"),
-              }}
-            />
-            <Stack.Screen
-              name="(settings)/SettingsTheme"
-              options={{
-                headerShown: true,
-                headerTitle: t("settings_theme_header"),
-              }}
-            />
-            <Stack.Screen
-              name="(settings)/SettingsLanguage"
-              options={{
-                headerShown: true,
-                headerTitle: t("settings_language_header"),
-              }}
-            />
+
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

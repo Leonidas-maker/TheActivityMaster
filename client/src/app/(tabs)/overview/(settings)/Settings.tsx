@@ -13,11 +13,11 @@ const Settings: React.FC = () => {
   // ================== SettingsNavigator ================= //
   // ====================================================== //
   const handleThemePress = () => {
-    router.navigate("/(settings)/SettingsTheme");
+    router.navigate("/(tabs)/overview/(settings)/SettingsTheme");
   };
 
   const handleLanguagePress = () => {
-    router.navigate("/(settings)/SettingsLanguage");
+    router.navigate("/(tabs)/overview/(settings)/SettingsLanguage");
   };
 
   const moduleTitle = t("settingsPageNavigator_title1");

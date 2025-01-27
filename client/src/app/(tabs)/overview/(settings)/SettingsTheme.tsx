@@ -5,6 +5,7 @@ import { View, ScrollView } from "react-native";
 import Subheading from "@/src/components/textFields/Subheading";
 import RadioOption from "@/src/components/radioOption/RadioOption";
 import { useTranslation } from 'react-i18next';
+import OptionSelector from "@/src/components/optionSelector/OptionSelector";
 
 const SettingsTheme: React.FC = () => {
   const [isLight, setIsLight] = useState(false);
@@ -32,30 +33,29 @@ const SettingsTheme: React.FC = () => {
   // Color based on the theme
   const radioColor = isLight ? "#171717" : "#E0E2DB";
 
-  //TODO: Make the language switcher a component with better styling
+  const handleLightPress = () => setTheme("light");
+  const handleDarkPress = () => setTheme("dark");
+  const handleSystemPress = () => setTheme("system");
+
+  const themeSelectorTitle = t("settings_theme_selector");
+
+  const onPressThemeFunctions = [handleLightPress, handleDarkPress, handleSystemPress];
+
+  const themeTexts = [t("light_mode"), t("dark_mode"), t("system_mode")];
+
+  const themeIconNames = ["light-mode", "dark-mode", "smartphone"];
+
+  const checkedTheme = [theme === "light", theme === "dark", theme === "system"];
+  
   return (
       <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-        <View className="p-4">
-          <Subheading text={t("design_heading")} />
-          <RadioOption
-            label={t("light_mode")}
-            onPress={() => setTheme("light")}
-            checked={theme === "light"}
-            radioColor={radioColor}
-          />
-          <RadioOption
-            label={t("dark_mode")}
-            onPress={() => setTheme("dark")}
-            checked={theme === "dark"}
-            radioColor={radioColor}
-          />
-          <RadioOption
-            label={t("system_mode")}
-            onPress={() => setTheme("system")}
-            checked={theme === "system"}
-            radioColor={radioColor}
-          />
-        </View>
+        <OptionSelector 
+          title={themeSelectorTitle}
+          texts={themeTexts}
+          iconNames={themeIconNames}
+          onPressFunctions={onPressThemeFunctions}
+          checked={checkedTheme}
+        />
       </ScrollView>
   );
 };
