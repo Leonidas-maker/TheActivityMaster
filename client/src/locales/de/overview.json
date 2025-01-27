@@ -2,5 +2,8 @@
     "pageNavigator_title1": "Einstellungen",
     "settings_btn": "Einstellungen",
     "app_version": "App Version",
-    "clear_storage_btn": "Speicher löschen"
+    "clear_storage_btn": "Speicher löschen",
+    "pageNavigator_title2": "Entwickler Seiten",
+    "login_btn": "Anmelden",
+    "signup_btn": "Registrieren"
 }

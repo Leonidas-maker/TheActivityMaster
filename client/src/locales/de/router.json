@@ -5,5 +5,7 @@
     "settings_header": "Einstellungen",
     "settings_theme_header": "Erscheinungsbild",
     "settings_language_header": "Sprache",
-    "back_btn": "Zurück"
+    "back_btn": "Zurück",
+    "login_header": "Anmelden",
+    "register_header": "Registrieren"
 }

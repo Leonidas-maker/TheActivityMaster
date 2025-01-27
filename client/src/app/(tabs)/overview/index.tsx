@@ -21,7 +21,7 @@ const OverviewHome: React.FC = () => {
   const { t } = useTranslation("overview");
 
   // ====================================================== //
-  // =================== ModuleNavigator ================== //
+  // ================== SettingsNavigator ================= //
   // ====================================================== //
   const handleSettingsPress = () => {
     router.navigate("/(tabs)/overview/(settings)/Settings");
@@ -36,6 +36,25 @@ const OverviewHome: React.FC = () => {
   const moduleIconNames = ["settings"];
 
   // ====================================================== //
+  // ==================== DevNavigator ==================== //
+  // ====================================================== //
+  const handleLoginPress = () => {
+    router.navigate("/auth");
+  };
+
+  const handleSignupPress = () => {
+    router.navigate("/auth/SignUp");
+  }
+
+  const devTitle = t("pageNavigator_title2");
+
+  const onPressDevFunctions = [handleLoginPress, handleSignupPress];
+
+  const devTexts = [t("login_btn"), t("signup_btn")];
+
+  const devIconNames = ["login", "note-add"];
+
+  // ====================================================== //
   // ================== Return component ================== //
   // ====================================================== //
   // Returns the navigators and the current app version
@@ -46,6 +65,12 @@ const OverviewHome: React.FC = () => {
         onPressFunctions={onPressModuleFunctions}
         texts={moduleTexts}
         iconNames={moduleIconNames}
+      />
+      <PageNavigator 
+        title={devTitle}
+        onPressFunctions={onPressDevFunctions}
+        texts={devTexts}
+        iconNames={devIconNames}
       />
       <View className="justify-center items-center my-2">
         <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} />

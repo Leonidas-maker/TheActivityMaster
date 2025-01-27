@@ -5,5 +5,7 @@
     "settings_header": "Settings",
     "settings_theme_header": "Theme",
     "settings_language_header": "Language",
-    "back_btn": "Back"
+    "back_btn": "Back",
+    "login_header": "Sign In",
+    "register_header": "Sign Up"
 }
