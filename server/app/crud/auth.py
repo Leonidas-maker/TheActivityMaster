@@ -1,22 +1,15 @@
-import re
-from turtle import st
-import pyotp
 import secrets
-import bcrypt
 import jwt
-from datetime import datetime, timezone, timedelta
+import datetime
 import uuid
 from typing import Tuple, Union, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-import hashlib
 from sqlalchemy import delete, select
-import time
 
 from config.settings import ENVIRONMENT, DEFAULT_TIMEZONE
 from config.security import TOKEN_ISSUER
 from models.m_user import User, UserToken, TokenTypes, User2FA, User2FAMethods
 from core import security as core_security
-from utils import jwt_keyfiles
 from crud import audit as audit_crud
 from data.auth import TokenDetails
 
@@ -46,7 +39,7 @@ async def save_auth_tokens(
             user_id=user_id,
             application_id_hash=hashed_application_id,
             token_type=TokenTypes.ACCESS,
-            expires_at=datetime.fromtimestamp(access_token_details.exp, tz=DEFAULT_TIMEZONE),
+            expires_at=datetime.datetime.fromtimestamp(access_token_details.exp, tz=DEFAULT_TIMEZONE),
         )
     )
 
@@ -57,7 +50,7 @@ async def save_auth_tokens(
             user_id=user_id,
             application_id_hash=hashed_application_id,
             token_type=TokenTypes.REFRESH,
-            expires_at=datetime.fromtimestamp(refresh_token_details.exp, tz=DEFAULT_TIMEZONE),
+            expires_at=datetime.datetime.fromtimestamp(refresh_token_details.exp, tz=DEFAULT_TIMEZONE),
         )
     )
 
@@ -80,7 +73,7 @@ async def save_security_token(
             user_id=user_id,
             application_id_hash=hashed_application_id,
             token_type=TokenTypes.SECURITY,
-            expires_at=datetime.fromtimestamp(token_details.exp, tz=DEFAULT_TIMEZONE),
+            expires_at=datetime.datetime.fromtimestamp(token_details.exp, tz=DEFAULT_TIMEZONE),
         )
     )
 
@@ -100,19 +93,20 @@ async def verify_token(db: AsyncSession, token: str, token_type: TokenTypes, app
     if not token or len(token.split(".")) != 3:
         return {}
 
-    # Get the public key
-    match token_type:
-        case TokenTypes.ACCESS:
-            jwt_key = jwt_keyfiles.get_access_token_public()
-            algorithm = "ES256"
-        case TokenTypes.REFRESH:
-            jwt_key = jwt_keyfiles.get_refresh_token_public()
-            algorithm = "ES512"
-        case TokenTypes.SECURITY:
-            jwt_key = jwt_keyfiles.get_security_token_public()
-            algorithm = "ES256"
-        case _:
-            raise ValueError("Invalid token type")
+    with core_security.jwt_key_manager_dependency.get() as km:
+        # Get the public key
+        match token_type:
+            case TokenTypes.ACCESS:
+                jwt_key = km.access_public_key
+                algorithm = "ES256"
+            case TokenTypes.REFRESH:
+                jwt_key = km.refresh_public_key
+                algorithm = "ES512"
+            case TokenTypes.SECURITY:
+                jwt_key = km.security_public_key
+                algorithm = "ES256"
+            case _:
+                raise ValueError("Invalid token type")
 
     payload = jwt.decode(token, algorithms=algorithm, options={"verify_signature": False})
     salt, _ = payload["aud"].split(".")
@@ -122,9 +116,9 @@ async def verify_token(db: AsyncSession, token: str, token_type: TokenTypes, app
     # Verify the token
     try:
         payload = jwt.decode(token, jwt_key, algorithms=algorithm, audience=hashed_application_id, issuer=TOKEN_ISSUER)
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as e:
         return {}
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
         return {}
 
     # Check if the token and corresponding information exists in the database
@@ -139,6 +133,7 @@ async def verify_token(db: AsyncSession, token: str, token_type: TokenTypes, app
     ):
         return {}
     return payload
+
 
 async def delete_token(db: AsyncSession, jti: uuid.UUID) -> int:
     """Delete a token from the database
@@ -179,10 +174,11 @@ async def create_email_code(db: AsyncSession, user: User) -> str:
     email_code = str(secrets.randbelow(1000000)).zfill(6)
     email_code_hash = core_security.sha256_salt(email_code)
 
-    email_2fa = User2FA(user_id=user.id, method=User2FAMethods.EMAIL, public_key=email_code_hash)
+    email_2fa = User2FA(user_id=user.id, method=User2FAMethods.EMAIL, public_key=email_code_hash, fails=0)
     db.add(email_2fa)
 
     return email_code
+
 
 async def delete_single_2fa(db: AsyncSession, user_id: uuid.UUID, id_2fa: uuid.UUID) -> int:
     """Delete a single 2FA method
@@ -194,6 +190,58 @@ async def delete_single_2fa(db: AsyncSession, user_id: uuid.UUID, id_2fa: uuid.U
     """
     res = await db.execute(delete(User2FA).filter(User2FA.user_id == user_id, User2FA.id == id_2fa))
     return res.rowcount
+
+
+async def create_totp(db: AsyncSession, user: User) -> str:
+    """Create a TOTP secret for 2FA
+
+    :param db: The database session
+    :param user: The user to create the TOTP secret for
+    :return: The TOTP secret
+    """
+    with core_security.totp_manager_dependency.get() as totp_m:
+        secret, encrypted_secret = totp_m.generate_totp_secret()
+    
+    totp_2fa = User2FA(user_id=user.id, method=User2FAMethods.TOTP, key_handle=encrypted_secret)
+    db.add(totp_2fa)
+
+    return secret
+
+async def verify_totp(db: AsyncSession, user: User, code: str) -> bool:
+    """Verify a TOTP code
+
+    :param db: The database session
+    :param user: The user to verify the TOTP code for
+    :param code: The TOTP code to verify
+    :return: True if the code is valid, False otherwise
+    """
+    with core_security.totp_manager_dependency.get() as totp_m:
+        res = await db.execute(
+            select(User2FA).filter(User2FA.user_id == user.id, User2FA.method == User2FAMethods.TOTP)
+        )
+        totp_2fa = res.scalar_one_or_none()
+        if not totp_2fa:
+            return False
+
+        return totp_m.verify_totp(totp_2fa.key_handle, code)
+
+async def get_2fa_totp(db: AsyncSession, user_id: uuid.UUID) -> User2FA:
+    """Get the TOTP 2FA method for a user
+
+    :param db: The database session
+    :param user: The user to get the TOTP method for
+    :return: The TOTP 2FA method
+    :raises ValueError: If the TOTP method is not found
+    """
+    res = await db.execute(
+        select(User2FA).filter(User2FA.user_id == user_id, User2FA.method == User2FAMethods.TOTP)
+    )
+    totp_db = res.scalar_one_or_none()
+    if not totp_db:
+        raise ValueError("TOTP method not found")
+    return totp_db
+    
+
 
 ###########################################################################
 ############################## Recurring Task #############################
@@ -209,9 +257,10 @@ async def clean_tokens(db: AsyncSession) -> int:
     audit_log.sys_info("Cleaning up expired tokens")
 
     # Delete expired tokens
-    res = await db.execute(delete(UserToken).where(UserToken.expires_at < datetime.now(tz=timezone.utc)))
+    res = await db.execute(delete(UserToken).where(UserToken.expires_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE)))
 
     # Add audit logs
     audit_log.sys_info("Cleaned up expired tokens completed.", details="Deleted {res.rowcount} expired tokens")
     await db.commit()
     return res.rowcount
+

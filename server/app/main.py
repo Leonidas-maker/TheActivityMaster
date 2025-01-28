@@ -16,7 +16,11 @@ from models.m_payment import *
 
 import schemas.s_generic as s_generic
 from crud import generic as crud_generic
-import utils.jwt_keyfiles as jwt_keyfiles
+
+from core.security import jwt_key_manager_dependency, totp_manager_dependency
+
+from utils.jwt_keyfile_manager import JWTKeyManager
+from utils.totp_manager import TOTPManager
 
 from api.v1.router import router as v1_router
 
@@ -31,7 +35,13 @@ async def lifespan(app: FastAPI):
         await init_users(db)
         await init_country_states_city(db, mode=init_country_states_city_mode.country)
 
-    jwt_keyfiles.generate_keys()
+    # Initialize the JWT key manager 
+    km = JWTKeyManager()
+    jwt_key_manager_dependency.init(km)
+
+    # Initialize the TOTP manager
+    totp_m = TOTPManager()
+    totp_manager_dependency.init(totp_m)
 
     yield
     await engine.dispose()

@@ -1,7 +1,7 @@
 from email.mime import application
 from re import S
 from typing import Annotated
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, deferred
 from sqlalchemy import TIMESTAMP, String, Integer, ForeignKey, UniqueConstraint, UUID, Boolean, DateTime, PrimaryKeyConstraint, Enum, Text, Index
 import uuid
 from datetime import datetime
@@ -26,15 +26,15 @@ class User(Base):
     password: Mapped[Annotated[str, mapped_column(String(255), nullable=False)]]
     address_id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)]]
 
-    backup_codes_2fa: Mapped[Annotated[str, mapped_column(String(255), nullable=True)]]
+    backup_codes_2fa: Mapped[str] = deferred(mapped_column(String(1000), nullable=True)) # Backup codes for 2FA
     is_passkey_used: Mapped[Annotated[bool, mapped_column(Boolean, nullable=False, default=False)]]
 
     is_verified: Mapped[Annotated[bool, mapped_column(Boolean, nullable=False, default=False)]]
     is_anonymized: Mapped[Annotated[bool, mapped_column(Boolean, nullable=False, default=False)]]
     is_system: Mapped[Annotated[bool, mapped_column(Boolean, nullable=False, default=False)]]
 
-    created_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
-    updated_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE), onupdate=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    created_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    updated_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE), onupdate=lambda: datetime.now(DEFAULT_TIMEZONE))]]
     
     address: Mapped["Address"] = relationship("Address")
     generic_roles: Mapped[List["GenericRole"]] = relationship(
@@ -84,7 +84,7 @@ class UserRole(Base):
 
     user_id: Mapped[Annotated[uuid.UUID, mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)]]
     role_id: Mapped[Annotated[int, mapped_column(Integer, ForeignKey("generic_roles.id"), primary_key=True)]]
-    assigned_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    assigned_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
 
     __table_args__ = (UniqueConstraint("user_id", "role_id", name="unique_user_role"),)
 
@@ -110,12 +110,12 @@ class User2FA(Base):
     
     public_key: Mapped[Annotated[str, mapped_column(String(512), nullable=True)]]       # Public key like U2F
     key_handle: Mapped[Annotated[str, mapped_column(String(255), nullable=True)]]       # Secret key for TOTP | Key handle for U2F
-    counter: Mapped[Annotated[int, mapped_column(Integer, nullable=True, default=0)]]   # Last used counter for TOTP or U2F
-    fails: Mapped[Annotated[int, mapped_column(Integer, nullable=True, default=0)]]     # Number of failed attempts
+    counter: Mapped[Annotated[int, mapped_column(Integer, nullable=True)]]   # Last used counter for TOTP or U2F
+    fails: Mapped[Annotated[int, mapped_column(Integer, nullable=False, default=-1)]]     # Number of failed attempts; -1 if the method is not validated
     device_name: Mapped[Annotated[str, mapped_column(String(100), nullable=True)]]      # Name of the device
 
-    created_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
-    updated_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE), onupdate=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    created_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    updated_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE), onupdate=lambda: datetime.now(DEFAULT_TIMEZONE))]]
 
     user: Mapped["User"] = relationship("User", back_populates="_2fa")
 
@@ -130,8 +130,8 @@ class UserPasskey(Base):
     sign_count: Mapped[Annotated[int, mapped_column(Integer, nullable=False, default=0)]] # Counter to prevent replay attacks
     device_name: Mapped[Annotated[str, mapped_column(String(100), nullable=False)]] # Name of the device
     is_verified: Mapped[Annotated[bool, mapped_column(Boolean, nullable=False, default=False)]]
-    created_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
-    updated_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE), onupdate=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    created_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    updated_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE), onupdate=lambda: datetime.now(DEFAULT_TIMEZONE))]]
 
     user: Mapped["User"] = relationship("User", back_populates="passkeys")
 
@@ -148,8 +148,8 @@ class UserToken(Base):
 
     application_id_hash: Mapped[Annotated[str, mapped_column(String(255), nullable=False)]]
     token_type: Mapped[Annotated[TokenTypes, mapped_column(Enum(TokenTypes), nullable=False)]]
-    created_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
-    expires_at: Mapped[Annotated[datetime, mapped_column(DateTime, nullable=False)]]
+    created_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]]
+    expires_at: Mapped[Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False)]]
     
     user: Mapped["User"] = relationship("User", back_populates="tokens")
 

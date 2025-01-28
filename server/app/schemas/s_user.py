@@ -1,6 +1,6 @@
 from calendar import c
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 
 
 from .s_generic import Address
@@ -19,3 +19,12 @@ class User(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class RegisterInitTOTP(BaseModel):
+    secret: str
+    uri: str
+
+class RegisterTOTP(BaseModel):
+    success: bool
+    backup_codes: List[str]

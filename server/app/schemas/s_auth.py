@@ -1,7 +1,7 @@
-from fastapi import security
 from pydantic import BaseModel
 
 from models.m_user import User2FAMethods
+
 
 class LoginRequest(BaseModel):
     email: str
@@ -18,3 +18,5 @@ class SecurityTokenResponse(BaseModel):
 class LoginCode2fa(BaseModel):
     code: str
     is_totp: bool = False
+
+    

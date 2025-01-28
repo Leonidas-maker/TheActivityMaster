@@ -4,6 +4,7 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.sql.expression import or_
 import datetime
 import traceback
+from typing import Optional
 
 import models.m_user as m_user
 import models.m_club as m_club
@@ -12,6 +13,7 @@ from schemas.s_user import UserCreate
 
 from crud.audit import AuditLogger
 from crud.generic import get_create_address
+
 
 async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     """
@@ -33,9 +35,10 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
         user_db.address = await get_create_address(db, user.address)
 
     db.add(user_db)
-    
+
     # await db.flush()
     return user_db
+
 
 async def get_user_by_email(db: AsyncSession, email: str) -> m_user.User:
     """
@@ -47,6 +50,25 @@ async def get_user_by_email(db: AsyncSession, email: str) -> m_user.User:
     """
     res = await db.execute(select(m_user.User).filter(m_user.User.email == email))
     return res.scalar_one_or_none()
+
+
+async def get_user_by_id(
+    db: AsyncSession, user_id: uuid.UUID, query_options: list = [], only_real_users: bool = True
+) -> m_user.User:
+    """
+    Get a user by their ID
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to search for
+    :return: User: The user
+    """
+    res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_options))
+    user = res.scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+    if only_real_users and (user.is_anonymized or user.is_system):
+        raise ValueError("User is not a real user")
+    return user
 
 
 async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
@@ -65,7 +87,7 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
     user = res.scalar_one_or_none()
     if not user:
         raise ValueError("User not found")
-    
+
     audit_logger = AuditLogger(db)
     try:
         # Add audit logs
@@ -82,10 +104,13 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
         # Cancel all membership subscriptions
         res = await db.execute(
             update(m_club.MembershipSubscription)
-            .where(m_club.MembershipSubscription.user_id == user.id, or_(
-                m_club.MembershipSubscription.end_time == None,  
-                m_club.MembershipSubscription.end_time > datetime.datetime.now()
-            ))
+            .where(
+                m_club.MembershipSubscription.user_id == user.id,
+                or_(
+                    m_club.MembershipSubscription.end_time == None,
+                    m_club.MembershipSubscription.end_time > datetime.datetime.now(),
+                ),
+            )
             .values(end_time=datetime.datetime.now())
         )
 
@@ -113,3 +138,38 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
         )
         await db.commit()
 
+
+###########################################################################
+############################ Security Settings ############################
+###########################################################################
+async def save_totp_secret(
+    db: AsyncSession, user_id: uuid.UUID, encrypted_secret: str, device_name: Optional[str] = None
+) -> m_user.User2FA:
+    """
+    Save the TOTP secret for a user
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user
+    :param secret: str: The secret to save
+    """
+    totp_2fa = m_user.User2FA(
+        user_id=user_id, key_handle=encrypted_secret, method=m_user.User2FAMethods.TOTP, device_name=device_name
+    )
+    db.add(totp_2fa)
+    return totp_2fa
+
+
+async def update_user_password(db: AsyncSession, user_id: uuid.UUID, password: str) -> None:
+    """
+    Update a user's password
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to update
+    :param password: str: The new password
+    """
+    res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id))
+    user = res.scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+
+    user.password = password

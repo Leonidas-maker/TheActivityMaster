@@ -204,34 +204,8 @@ class AuditLogger:
             details=f"Token revoked for application_id_hash: {application_id_hash}, jti: {jti}",
         )
 
-    def user_role_removal(self, issuer: uuid.UUID, user_id: uuid.UUID, role: str, reason: str = ""):
-        """Log a user role removal action.
-
-        :param issuer: The user ID or system ID that removes the role
-        :param user_id: The user ID whose role is removed
-        :param role: The role being removed
-        :param reason: The reason for removing the role, defaults to an empty string
-        """
-        details = f"User {user_id} role {role} removed by {issuer}"
-        if reason:
-            details += f" for reason: {reason}"
-        self.log_to_audit(issuer, action="User Role Removal", category=AuditLogCategories.USER, details=details)
-
-    def user_role_assignment(self, issuer: uuid.UUID, user_id: uuid.UUID, role: str, reason: str = ""):
-        """Log a user role assignment action.
-
-        :param issuer: The user ID or system ID that assigns the role
-        :param user_id: The user ID whose role is assigned
-        :param role: The role being assigned
-        :param reason: The reason for assigning the role, defaults to an empty string
-        """
-        details = f"User {user_id} role {role} assigned by {issuer}"
-        if reason:
-            details += f" for reason: {reason}"
-        self.log_to_audit(issuer, action="User Role Assignment", category=AuditLogCategories.USER, details=details)
-
     # ======================================================== #
-    # ====================== User Login ====================== #
+    # =================== User Login/Logout ================== #
     # ======================================================== #
     def user_login(self, user_id: uuid.UUID, ip_address: str):
         """Log a user login action.
@@ -273,6 +247,92 @@ class AuditLogger:
             status=False,
             details= details if details else None,
         )
+
+    def user_2fa_success(self, user_id: uuid.UUID, ip_address: str, method: AuthMethods):
+        """Log a user 2FA success action.
+
+        :param user_id: The user ID successfully completing 2FA
+        :param ip_address: The IP address from which the successful 2FA request was made
+        :param method: The 2FA method used
+        """
+        self.log_to_authentication(
+            user_id,
+            method=method,
+            ip_address=ip_address,
+            status=True,
+            details= "2FA"
+        )
+    
+    def user_logout(self, user_id: uuid.UUID, ip_address: str, application_id_hash: str):
+        """Log a user logout action.
+
+        :param user_id: The user ID logging out
+        :param ip_address: The IP address from which the logout request was made
+        """
+        self.log_to_authentication(
+            user_id,
+            method=AuthMethods.LOGOUT,
+            ip_address=ip_address,
+            status=True,
+            details=f"Logout for application_id_hash: {application_id_hash}",
+        )
+    
+    # ======================================================== #
+    # ========================== 2FA ========================= #
+    # ======================================================== #
+    def backup_codes_generated(self, user_id: uuid.UUID):
+        """Log the generation of backup codes.
+
+        :param user_id: The user ID for whom backup codes are generated
+        """
+        self.log_to_audit(
+            user_id,
+            action="Backup Codes Generated",
+            category=AuditLogCategories.USER,
+        )
+
+
+    def totp_register_init(self, user_id: uuid.UUID,  application_id_hash: str):
+        """Log a TOTP registration initiation action.
+
+        :param user_id: The user ID initiating TOTP registration
+        :param application_id_hash: The hashed application identifier
+        """
+        self.log_to_audit(
+            user_id,
+            action="TOTP Registration Initiated",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
+
+    def totp_register_failed(self, user_id: uuid.UUID, application_id_hash: str, reason: str):
+        """Log a TOTP registration failure action.
+
+        :param user_id: The user ID whose TOTP registration failed
+        """
+        self.log_to_audit(
+            user_id,
+            action="TOTP Registration Failed",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}, Reason: {reason}",
+        )
+
+    def totp_registered(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a TOTP registration completion action.
+
+        :param user_id: The user ID completing TOTP registration
+        :param application_id_hash: The hashed application identifier
+        """
+        self.log_to_audit(
+            user_id,
+            action="TOTP Registered",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
+
+
+
+
 
     # ======================================================== #
     # ===================== User Deletion ==================== #
@@ -330,6 +390,34 @@ class AuditLogger:
             details=f"[USER] User deletion completed (REF: {ref})",
         )
 
+    # ======================================================== #
+    # ====================== User-Roles ====================== #
+    # ======================================================== #
+    def user_role_removal(self, issuer: uuid.UUID, user_id: uuid.UUID, role: str, reason: str = ""):
+        """Log a user role removal action.
+
+        :param issuer: The user ID or system ID that removes the role
+        :param user_id: The user ID whose role is removed
+        :param role: The role being removed
+        :param reason: The reason for removing the role, defaults to an empty string
+        """
+        details = f"User {user_id} role {role} removed by {issuer}"
+        if reason:
+            details += f" for reason: {reason}"
+        self.log_to_audit(issuer, action="User Role Removal", category=AuditLogCategories.USER, details=details)
+
+    def user_role_assignment(self, issuer: uuid.UUID, user_id: uuid.UUID, role: str, reason: str = ""):
+        """Log a user role assignment action.
+
+        :param issuer: The user ID or system ID that assigns the role
+        :param user_id: The user ID whose role is assigned
+        :param role: The role being assigned
+        :param reason: The reason for assigning the role, defaults to an empty string
+        """
+        details = f"User {user_id} role {role} assigned by {issuer}"
+        if reason:
+            details += f" for reason: {reason}"
+        self.log_to_audit(issuer, action="User Role Assignment", category=AuditLogCategories.USER, details=details)
 
 ###########################################################################
 ############################## Recurring Task #############################

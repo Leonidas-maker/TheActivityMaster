@@ -63,13 +63,13 @@ class Transaction(Base):
     ]
 
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
             datetime,
             mapped_column(
-                DateTime,
+                DateTime(timezone=True),
                 nullable=False,
                 default=lambda: datetime.now(DEFAULT_TIMEZONE),
                 onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
@@ -106,13 +106,13 @@ class SplitTransaction(Base):
     club: Mapped["Club"] = relationship("Club")
 
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
             datetime,
             mapped_column(
-                DateTime,
+                DateTime(timezone=True),
                 nullable=False,
                 default=lambda: datetime.now(DEFAULT_TIMEZONE),
                 onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
@@ -136,13 +136,13 @@ class Refund(Base):
     external_refund_id: Mapped[Annotated[str, mapped_column(String(255), nullable=True)]]
 
     created_at: Mapped[
-        Annotated[datetime, mapped_column(DateTime, nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
+        Annotated[datetime, mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE))]
     ]
     updated_at: Mapped[
         Annotated[
             datetime,
             mapped_column(
-                DateTime,
+                DateTime(timezone=True),
                 nullable=False,
                 default=lambda: datetime.now(DEFAULT_TIMEZONE),
                 onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
