@@ -13,6 +13,8 @@ import enOverview from './en/overview.json';
 import deOverview from './de/overview.json';
 import enRouter from './en/router.json';
 import deRouter from './de/router.json';
+import enAuth from './en/auth.json';
+import deAuth from './de/auth.json';
 
 const resources = {
   en: {
@@ -21,6 +23,7 @@ const resources = {
     calendar: enCalendar,
     overview: enOverview,
     router: enRouter,
+    auth: enAuth,
   },
   de: {
     discover: deDiscover,
@@ -28,6 +31,7 @@ const resources = {
     calendar: deCalendar,
     overview: deOverview,
     router: deRouter,
+    auth: deAuth,
   },
 };
 
