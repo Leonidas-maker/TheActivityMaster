@@ -181,14 +181,14 @@ async def login(
 
     user = await user_crud.get_user_by_email(db, login_form.email)
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     if user.is_anonymized or user.is_system:
-        raise HTTPException(status_code=400, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     if not core_security.verify_password(login_form.password, user.password):
         audit_logger.user_login_failed(user.id, ip_address)
-        raise HTTPException(status_code=400, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     audit_logger.user_login(user.id, ip_address)
 
