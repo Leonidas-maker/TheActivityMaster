@@ -59,7 +59,7 @@ project-root/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/club-management-app.git
+   git clone https://gitlab.com/themastercollection/TheActivityMaster.git
    ```
 2. Navigate to the server directory and set up the environment:
    ```bash
