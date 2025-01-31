@@ -3,7 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Array der SecureStore Schlüssel direkt im Code definiert
 const secureStoreKeys = [
-  "uuid"
+  "uuid",
+  "savedPassword",
 ];
 
 // Function to clear all data from AsyncStorage

@@ -51,10 +51,10 @@ export default function RootLayout() {
             }}
           >
             {/* Tabs-Navigation */}
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
             
             {/* Zusätzliche Screens */}
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

@@ -4,6 +4,7 @@ import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "expo-router";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function AuthLayout() {
     const [isLight, setIsLight] = useState(false);
@@ -26,35 +27,38 @@ export default function AuthLayout() {
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
     return (
-        <Stack
-            screenOptions={{
-                headerShown: true,
-                headerStyle: {
-                    backgroundColor: backgroundColor,
-                },
-                headerTintColor: headerTintColor,
-                headerLeft: () => (
-                    <Icon
-                        name="close"
-                        size={30}
-                        color={iconColor}
-                        onPress={() => navigation.goBack()}
-                    />
-                ),
-            }}
-        >
-            <Stack.Screen
-                name="index"
-                options={{
-                    headerTitle: t("login_header"),
+        <SafeAreaProvider>
+            <Stack
+                screenOptions={{
+                    headerShown: true,
+                    headerStyle: {
+                        backgroundColor: backgroundColor,
+                    },
+                    headerTintColor: headerTintColor,
+                    headerLeft: () => (
+                        <Icon
+                            name="close"
+                            size={30}
+                            color={iconColor}
+                            onPress={() => navigation.goBack()}
+                        />
+                    ),
+                    gestureEnabled: false
                 }}
-            />
-            <Stack.Screen
-                name="SignUp"
-                options={{
-                    headerTitle: t("register_header"),
-                }}
-            />
-        </Stack>
+            >
+                <Stack.Screen
+                    name="index"
+                    options={{
+                        headerTitle: t("login_header"),
+                    }}
+                />
+                <Stack.Screen
+                    name="SignUp"
+                    options={{
+                        headerTitle: t("register_header"),
+                    }}
+                />
+            </Stack>
+        </SafeAreaProvider>
     );
 }
