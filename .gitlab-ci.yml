@@ -14,7 +14,7 @@ services:
       - "--collation-server=utf8mb4_uca1400_as_ci"
 
 before_script:
-  - sudo apt-get update && sudo apt-get install -y python3-pip python3-venv
+  - apt-get update && apt-get install -y python3-pip python3-venv
   - python3 -m venv venv
   - source venv/bin/activate
   - pip install pytest pytest-dependency
