@@ -1,4 +1,3 @@
-from calendar import c
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 

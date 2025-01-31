@@ -39,6 +39,7 @@ class JWTKeyManager:
             "access_private_key.pem", "access_public_key.pem",
             "refresh_private_key.pem", "refresh_public_key.pem"
         ]
+        os.makedirs(self.keyfiles_path, exist_ok=True)
         existing_files = os.listdir(self.keyfiles_path)
         return all(f in existing_files for f in required_files)
 

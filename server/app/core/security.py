@@ -10,9 +10,6 @@ import string
 import bcrypt
 import hmac
 import hashlib
-import base64
-import time
-from urllib.parse import urlencode
 
 from utils.totp_manager import TOTPManager
 from utils.jwt_keyfile_manager import JWTKeyManager

@@ -3,7 +3,6 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, undefer
-import traceback
 from typing import List, Tuple
 
 import models.m_user as m_user

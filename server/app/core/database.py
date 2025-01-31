@@ -1,5 +1,3 @@
-from calendar import c
-from tkinter import E
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import event, text

@@ -1,0 +1,26 @@
+stages:
+  - test
+
+variables:
+  MARIADB_ROOT_PASSWORD: "root"
+  MYSQL_DATABASE: "tam"
+
+services:
+  - name: mariadb:latest
+    alias: mariadb
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_uca1400_as_ci"
+
+before_script:
+  - apt-get update && apt-get install -y python3-pip python3-venv
+  - python3 -m venv venv
+  - source venv/bin/activate
+  - pip install pytest pytest-dependency
+  - pip install -r server/app/requirements.txt
+
+test:
+  stage: test
+  script:
+    - cd server
+    - pytest -s
