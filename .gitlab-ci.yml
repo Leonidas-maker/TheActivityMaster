@@ -1,3 +1,10 @@
+workflow:
+  rules:
+    - changes:
+        - server/**
+        - .gitlab-ci.yml
+    - when: never
+
 stages:
   - test
 
@@ -24,4 +31,7 @@ test:
   stage: test
   script:
     - cd server
-    - pytest -s
+    - pytest --junitxml=pytest-report.xml
+  artifacts:
+    reports:
+      junit: pytest-report.xml
