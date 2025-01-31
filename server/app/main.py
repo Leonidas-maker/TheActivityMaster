@@ -17,10 +17,11 @@ from models.m_payment import *
 import schemas.s_generic as s_generic
 from crud import generic as crud_generic
 
-from core.security import jwt_key_manager_dependency, totp_manager_dependency
+from core.security import jwt_key_manager_dependency, totp_manager_dependency, email_verify_manager_dependency
 
 from utils.jwt_keyfile_manager import JWTKeyManager
 from utils.totp_manager import TOTPManager
+from utils.email_verify_manager import EmailVerifyManager
 
 from api.v1.router import router as v1_router
 
@@ -43,6 +44,10 @@ async def lifespan(app: FastAPI):
     totp_m = TOTPManager()
     totp_manager_dependency.init(totp_m)
 
+    # Initialize the Email Verify manager
+    evm = EmailVerifyManager()
+    email_verify_manager_dependency.init(evm)
+
     yield
     await engine.dispose()
 
@@ -54,22 +59,6 @@ app.include_router(v1_router, prefix="/api/v1")
 @app.get("/ping")
 def read_root():
     return {"message": "pong"}
-
-
-@app.post("/address", response_model=s_generic.Address)
-async def create_address(address: s_generic.Address, db: AsyncSession = Depends(get_db)):
-    try:
-        address = await crud_generic.get_create_address(db, address)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail="Invalid country")
-    return s_generic.Address(
-        street=address.street,
-        postal_code=address.postal_code.code,
-        city=address.postal_code.city.name,
-        state=address.postal_code.city.state.name,
-        country=address.postal_code.city.state.country.name,
-    )
-
 
 if __name__ == "__main__":
     import uvicorn

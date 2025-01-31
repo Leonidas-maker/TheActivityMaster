@@ -14,6 +14,9 @@ from schemas.s_user import UserCreate
 from crud.audit import AuditLogger
 from crud.generic import get_create_address
 
+from core.generic import EndpointContext
+import core.security as core_security
+
 
 async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     """
@@ -25,6 +28,7 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     """
     user_db = m_user.User(
         id=uuid.uuid4(),
+        username=user.username,
         email=user.email,
         first_name=user.first_name,
         last_name=user.last_name,
@@ -34,13 +38,18 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     if user.address:
         user_db.address = await get_create_address(db, user.address)
 
+    not_first_logged_in_role = await db.execute(
+        select(m_user.GenericRole).where(m_user.GenericRole.name == "NotEmailVerified")
+    )
+    user_db.generic_roles.append(not_first_logged_in_role.scalar_one())
+
     db.add(user_db)
 
     # await db.flush()
     return user_db
 
 
-async def get_user_by_email(db: AsyncSession, email: str) -> m_user.User:
+async def get_user_by_ident(db: AsyncSession, ident: str) -> m_user.User:
     """
     Get a user by their email address
 
@@ -48,8 +57,8 @@ async def get_user_by_email(db: AsyncSession, email: str) -> m_user.User:
     :param email: str: Email address to search for
     :return: User: The user
     """
-    res = await db.execute(select(m_user.User).filter(m_user.User.email == email))
-    return res.scalar_one_or_none()
+    res = await db.execute(select(m_user.User).filter(or_(m_user.User.email == ident, m_user.User.username == ident)))
+    return res.unique().scalar_one_or_none()
 
 
 async def get_user_by_id(
@@ -63,7 +72,7 @@ async def get_user_by_id(
     :return: User: The user
     """
     res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_options))
-    user = res.scalar_one_or_none()
+    user = res.unique().scalar_one_or_none()
     if not user:
         raise ValueError("User not found")
     if only_real_users and (user.is_anonymized or user.is_system):
@@ -71,7 +80,7 @@ async def get_user_by_id(
     return user
 
 
-async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
+async def delete_user(ep_context: EndpointContext, user_id: uuid.UUID, application_id_hash: str) -> None:
     """
     Soft delete a user by setting their email to a placeholder and anonymizing their name and password
     This is a soft delete operation is needed to be compliant with GDPR and other regulations
@@ -83,16 +92,17 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
 
     :raises ValueError: If the user is not found
     """
+    db = ep_context.db
+    audit_logger = ep_context.audit_logger
+
     res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id))
-    user = res.scalar_one_or_none()
+    user = res.unique().scalar_one_or_none()
     if not user:
         raise ValueError("User not found")
 
-    audit_logger = AuditLogger(db)
     try:
         # Add audit logs
-        init_audit_log = audit_logger.user_self_deletion_initiated(user.id)
-        await db.commit()
+        init_audit_log = audit_logger.user_self_deletion_initiated(user.id, application_id_hash)
 
         # Delete tokens, passkeys, 2FA, tokens and roles
         await db.execute(delete(m_user.UserToken).where(m_user.UserToken.user_id == user.id))
@@ -117,6 +127,7 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
         audit_logger.user_self_deletion_cancelled_memberships(init_audit_log.id, user_id=user.id, count=res.rowcount)
 
         # Anonymize user data
+        user.username = f"deleted_user_{user.id}"
         user.email = f"deleted_user_{user.id}@example.com"
         user.first_name = "Anonymized"
         user.last_name = "User"
@@ -128,7 +139,6 @@ async def delete_user(db: AsyncSession, user_id: uuid.UUID) -> None:
         # Add audit logs
         audit_logger.user_self_deletion_anonymized(init_audit_log.id, user_id=user.id)
         audit_logger.user_self_deletion_completed(init_audit_log.id, user_id=user.id)
-        await db.commit()
     except Exception as e:
         await db.rollback()
         audit_logger.sys_error(
@@ -159,7 +169,7 @@ async def save_totp_secret(
     return totp_2fa
 
 
-async def update_user_password(db: AsyncSession, user_id: uuid.UUID, password: str) -> None:
+async def update_user_password(db: AsyncSession, user_id: uuid.UUID, new_password: str) -> None:
     """
     Update a user's password
 
@@ -168,8 +178,8 @@ async def update_user_password(db: AsyncSession, user_id: uuid.UUID, password: s
     :param password: str: The new password
     """
     res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id))
-    user = res.scalar_one_or_none()
+    user = res.unique().scalar_one_or_none()
     if not user:
         raise ValueError("User not found")
 
-    user.password = password
+    user.password = core_security.hash_password(new_password)

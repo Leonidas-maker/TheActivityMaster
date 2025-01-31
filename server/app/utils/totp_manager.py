@@ -4,6 +4,7 @@ from cryptography.hazmat.backends import default_backend
 from pathlib import Path
 import secrets
 import base64
+from typing import Optional
 
 from config.security import TOTP_ENCRYPTION_KEY_PATH
 from config.settings import ENVIRONMENT
@@ -17,6 +18,7 @@ class TOTPManager:
         """
         self.key_path = key_path
         self._load_key()
+        self.new_key = None
 
     def _load_key(self):
         """Load and validate encryption key"""
@@ -33,7 +35,7 @@ class TOTPManager:
         if len(self.encryption_key) != 32:
             raise ValueError("Invalid key length (must be 32 bytes)")
 
-    def encrypt(self, plaintext: str) -> bytes:
+    def encrypt(self, plaintext: str, key_override: Optional[bytes] = None) -> bytes:
         """Encrypt a secret using AES-GCM
 
         :param plaintext: The plaintext secret to encrypt
@@ -41,7 +43,10 @@ class TOTPManager:
         """
 
         iv = secrets.token_bytes(12)  # 96-bit IV for AES-GCM
-        cipher = Cipher(algorithms.AES(self.encryption_key), modes.GCM(iv), backend=default_backend())
+        if key_override:
+            cipher = Cipher(algorithms.AES(key_override), modes.GCM(iv), backend=default_backend())
+        else:
+            cipher = Cipher(algorithms.AES(self.encryption_key), modes.GCM(iv), backend=default_backend())
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
         return iv + ciphertext + encryptor.tag 
@@ -93,3 +98,40 @@ class TOTPManager:
         encrypted_secret_bytes = base64.b64decode(encrypted_secret)
         secret = self.decrypt(encrypted_secret_bytes)
         return pyotp.TOTP(secret).verify(code)
+    
+    # ======================================================== #
+    # ===================== Key Rotation ===================== #
+    # ======================================================== #
+    def generate_new_key(self) -> bytes:
+        """Generate a new encryption key"""
+        if not self.new_key:
+            self.new_key = secrets.token_bytes(32)
+            return self.new_key
+        else:
+            raise ValueError("New key already generated")
+    
+    
+    def save_new_key(self):
+        """Save the encryption key to a file
+
+        :param key: The encryption key to save
+        """
+        if not self.new_key:
+            raise ValueError("No new key generated")
+        
+        with self.key_path.open("wb") as key_file:
+            key_file.write(self.new_key)
+        self.encryption_key = self.new_key
+        self.new_key = None
+
+    def rotate_key(self, new_key: bytes, encrypted_secret: str) -> str:
+        """Rotate the encryption key of an encrypted secret
+
+        :param new_key: The new encryption key
+        :param encrypted_secret: The encrypted TOTP secret
+        :return: The re-encrypted secret
+        """
+        secret = self.decrypt(base64.b64decode(encrypted_secret))
+        reencrypted_secret = self.encrypt(secret, new_key)
+        return base64.b64encode(reencrypted_secret).decode()
+        

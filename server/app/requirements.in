@@ -24,3 +24,5 @@ asyncpg
 databases 
 alembic
 bcrypt
+apscheduler
+redis

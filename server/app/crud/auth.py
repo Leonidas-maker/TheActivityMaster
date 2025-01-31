@@ -17,6 +17,12 @@ from data.auth import TokenDetails
 ###########################################################################
 ################################### MAIN ##################################
 ###########################################################################
+
+
+
+###########################################################################
+################################ JWT TOKENS ###############################
+###########################################################################
 async def save_auth_tokens(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -264,3 +270,30 @@ async def clean_tokens(db: AsyncSession) -> int:
     await db.commit()
     return res.rowcount
 
+async def totp_key_rotation(db: AsyncSession) -> int:
+    """Rotate TOTP keys
+
+    :param db: The database session
+    :return: The number of keys rotated
+    """
+    # Add audit logs
+    audit_log = audit_crud.AuditLogger(db)
+    audit_log.sys_info("Rotating TOTP keys")
+    
+
+    # Rotate TOTP keys
+    with core_security.totp_manager_dependency.get() as totp_m:
+        new_key = totp_m.generate_new_key()
+
+        res = await db.execute(select(User2FA).filter(User2FA.method == User2FAMethods.TOTP))
+        totp_dbs = res.scalars().all()
+        for totp_db in totp_dbs:
+            reencrypted_secret = totp_m.rotate_key(new_key, totp_db.key_handle)
+            totp_db.key_handle = reencrypted_secret
+        
+        totp_m.save_new_key()
+
+    # Add audit logs
+    audit_log.sys_info("Rotated TOTP keys completed.", details="Rotated {len(totp_dbs)} TOTP keys")
+    await db.commit()
+    return len(totp_dbs)

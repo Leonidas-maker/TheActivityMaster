@@ -8,9 +8,15 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import string
 import bcrypt
+import hmac
+import hashlib
+import base64
+import time
+from urllib.parse import urlencode
 
 from utils.totp_manager import TOTPManager
 from utils.jwt_keyfile_manager import JWTKeyManager
+from utils.email_verify_manager import EmailVerifyManager
 
 # Global password hasher
 ph = PasswordHasher()
@@ -168,3 +174,21 @@ class TOTPManagerDependency:
 
 
 totp_manager_dependency = TOTPManagerDependency()
+
+# ======================================================== #
+# ================= E-Mail Verify Manager ================ #
+# ======================================================== #
+class EmailVerifyManagerDependency:
+    def __init__(self):
+        self._evm: Optional[EmailVerifyManager] = None
+
+    def init(self, evm_instance: EmailVerifyManager):
+        self._evm = evm_instance
+
+    @contextmanager
+    def get(self):
+        if not self._evm:
+            raise RuntimeError("EmailVerifyManager not initialized")
+        yield self._evm
+
+email_verify_manager_dependency = EmailVerifyManagerDependency()

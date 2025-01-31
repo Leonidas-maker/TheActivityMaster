@@ -2,7 +2,8 @@ from calendar import c
 import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update
+from sqlalchemy import update, select
+from sqlalchemy.sql.expression import and_
 import uuid
 import datetime
 from typing import Optional
@@ -172,8 +173,10 @@ class AuditLogger:
             status=True,
             details=f"Token created for application_id_hash: {application_id_hash}, jti: {jti}",
         )
-    
-    def token_refresh_failed(self, user_id: uuid.UUID, ip_address: str, application_id_hash: str, jti: uuid.UUID, reason: str):
+
+    def token_refresh_failed(
+        self, user_id: uuid.UUID, ip_address: str, application_id_hash: str, jti: uuid.UUID, reason: str
+    ):
         """Log a token refresh failure action.
 
         :param user_id: The user ID whose token refresh failed
@@ -202,6 +205,62 @@ class AuditLogger:
             action="Token Revocation",
             category=AuditLogCategories.USER,
             details=f"Token revoked for application_id_hash: {application_id_hash}, jti: {jti}",
+        )
+
+    # ======================================================== #
+    # ==================== Forgot Password =================== #
+    # ======================================================== #
+    def user_forgot_password(self, user_id: uuid.UUID, ip_address: str):
+        """Log a forgot password action.
+
+        :param user_id: The user ID initiating forgot password
+        :param ip_address: The IP address from which the request was made
+        """
+        self.log_to_authentication(
+            user_id,
+            method=AuthMethods.FORGOT_PASSWORD,
+            ip_address=ip_address,
+            status=True,
+        )
+
+    def user_reset_password_initiated(self, user_id: uuid.UUID):
+        """Log a forgot password initiation action.
+
+        :param user_id: The user ID initiating forgot password
+        :param application_id_hash: The hashed application identifier
+        """
+        self.log_to_audit(
+            user_id,
+            action="Forgot Password Initiated",
+            category=AuditLogCategories.USER,
+            details="See authentication logs for more details",
+        )
+
+    def user_reset_password_failed(self, user_id: uuid.UUID, application_id_hash: str, reason: str):
+        """Log a forgot password failure action.
+
+        :param user_id: The user ID whose forgot password failed
+        :param application_id_hash: The hashed application identifier
+        :param reason: The reason for the forgot password failure
+        """
+        self.log_to_audit(
+            user_id,
+            action="Forgot Password Failed",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}, Reason: {reason}",
+        )
+
+    def user_reset_password_successful(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a forgot password success action.
+
+        :param user_id: The user ID whose forgot password succeeded
+        :param application_id_hash: The hashed application identifier
+        """
+        self.log_to_audit(
+            user_id,
+            action="Forgot Password Successful",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
         )
 
     # ======================================================== #
@@ -245,7 +304,7 @@ class AuditLogger:
             method=method,
             ip_address=ip_address,
             status=False,
-            details= details if details else None,
+            details=details if details else None,
         )
 
     def user_2fa_success(self, user_id: uuid.UUID, ip_address: str, method: AuthMethods):
@@ -255,14 +314,8 @@ class AuditLogger:
         :param ip_address: The IP address from which the successful 2FA request was made
         :param method: The 2FA method used
         """
-        self.log_to_authentication(
-            user_id,
-            method=method,
-            ip_address=ip_address,
-            status=True,
-            details= "2FA"
-        )
-    
+        self.log_to_authentication(user_id, method=method, ip_address=ip_address, status=True, details="2FA")
+
     def user_logout(self, user_id: uuid.UUID, ip_address: str, application_id_hash: str):
         """Log a user logout action.
 
@@ -276,7 +329,7 @@ class AuditLogger:
             status=True,
             details=f"Logout for application_id_hash: {application_id_hash}",
         )
-    
+
     # ======================================================== #
     # ========================== 2FA ========================= #
     # ======================================================== #
@@ -291,8 +344,7 @@ class AuditLogger:
             category=AuditLogCategories.USER,
         )
 
-
-    def totp_register_init(self, user_id: uuid.UUID,  application_id_hash: str):
+    def totp_register_init(self, user_id: uuid.UUID, application_id_hash: str):
         """Log a TOTP registration initiation action.
 
         :param user_id: The user ID initiating TOTP registration
@@ -330,14 +382,62 @@ class AuditLogger:
             details=f"Application ID Hash: {application_id_hash}",
         )
 
+    def totp_removal(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a TOTP removal action.
 
+        :param user_id: The user ID removing TOTP
+        :param application_id_hash: The hashed application identifier
+        """
+        self.log_to_audit(
+            user_id,
+            action="TOTP Removed",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
 
+    def totp_removal_failed(self, user_id: uuid.UUID, application_id_hash: str, reason: str):
+        """Log a TOTP removal failure action.
 
+        :param user_id: The user ID whose TOTP removal failed
+        """
+        self.log_to_audit(
+            user_id,
+            action="TOTP Removal Failed",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}, Reason: {reason}",
+        )
+
+    # ======================================================== #
+    # ======================== Changes ======================= #
+    # ======================================================== #
+    def user_password_change(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a user password change action.
+
+        :param user_id: The user ID changing the password
+        """
+        self.log_to_audit(
+            user_id,
+            action="Password Change",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
+
+    def user_address_change(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a user address change action.
+
+        :param user_id: The user ID changing the address
+        """
+        self.log_to_audit(
+            user_id,
+            action="Address Change",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
 
     # ======================================================== #
     # ===================== User Deletion ==================== #
     # ======================================================== #
-    def user_self_deletion_initiated(self, user_id: uuid.UUID) -> AuditLog:
+    def user_self_deletion_initiated(self, user_id: uuid.UUID, application_id_hash: str):
         """Log a user self-deletion initiation action.
 
         :param user_id: The user ID initiating self-deletion
@@ -347,7 +447,7 @@ class AuditLogger:
             user_id,
             action="User Deletion Initiated",
             category=AuditLogCategories.USER,
-            details=f"[USER] User deletion initiated by user",
+            details=f"User deletion initiated by user (Application ID Hash: {application_id_hash})",
         )
 
     def user_self_deletion_cancelled_memberships(self, ref: uuid.UUID, user_id: uuid.UUID, count: int):
@@ -390,6 +490,30 @@ class AuditLogger:
             details=f"[USER] User deletion completed (REF: {ref})",
         )
 
+    def user_self_deletion_failed(self, user_id: uuid.UUID, application_id_hash: str, reason: str):
+        """Log a user self-deletion failure action.
+
+        :param user_id: The user ID whose self-deletion failed
+        """
+        self.log_to_audit(
+            user_id,
+            action="User Deletion Failed",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}, Reason: {reason}",
+        )
+
+    def user_self_deletion_successful(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a user self-deletion success action.
+
+        :param user_id: The user ID whose self-deletion succeeded
+        """
+        self.log_to_audit(
+            user_id,
+            action="User Deletion Successful",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
+
     # ======================================================== #
     # ====================== User-Roles ====================== #
     # ======================================================== #
@@ -418,6 +542,23 @@ class AuditLogger:
         if reason:
             details += f" for reason: {reason}"
         self.log_to_audit(issuer, action="User Role Assignment", category=AuditLogCategories.USER, details=details)
+
+
+###########################################################################
+################################## Verify #################################
+###########################################################################
+async def forgot_password_allowed(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Check if the user is allowed to reset their password
+
+    :param db: The database session
+    :param user: The user to check
+    :return: True if the user is allowed to reset their password, False otherwise
+    """
+    res = await db.execute(select(AuthenticationLog).where(and_(AuthenticationLog.user_id == user_id, AuthenticationLog.method == AuthMethods.FORGOT_PASSWORD)).order_by(AuthenticationLog.timestamp.desc()).limit(1))
+    last_log = res.scalars().first()
+    if last_log and last_log.timestamp.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(DEFAULT_TIMEZONE) - datetime.timedelta(minutes=5):
+        return False
+    return True
 
 ###########################################################################
 ############################## Recurring Task #############################

@@ -33,7 +33,7 @@ from data.auth import TokenDetails
 ###########################################################################
 async def create_security_token(
     ep_context: EndpointContext,
-    user: m_user.User,
+    user_id: uuid.UUID,
     application_id: str,
     amr: List[str],
     ip_address: str,
@@ -66,7 +66,7 @@ async def create_security_token(
     token = jwt.encode(
         {
             "iss": TOKEN_ISSUER,
-            "sub": str(user.id),
+            "sub": str(user_id),
             "exp": security_token_details.exp,
             "jti": str(security_token_details.jti),
             "aud": hashed_application_id,
@@ -78,11 +78,11 @@ async def create_security_token(
     )
 
     # Save the token information to the database
-    await auth_crud.save_security_token(db, user.id, hashed_application_id, security_token_details)
+    await auth_crud.save_security_token(db, user_id, hashed_application_id, security_token_details)
 
     # Log the token creation
     audit_logger.token_creation(
-        user.id, ip_address, hashed_application_id, security_token_details.jti, log_creation=True
+        user_id, ip_address, hashed_application_id, security_token_details.jti, log_creation=True
     )
 
     return token
@@ -172,14 +172,14 @@ async def login(
     Check the user's password and handle 2FA login process.
 
     :param ep_context: The endpoint context
-    :param login_form: The login form containing email and password
+    :param login_form: The login form containing ident and password
     :param ip_address: The IP address of the user
     :return: A dictionary with a security token and available 2FA methods
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
 
-    user = await user_crud.get_user_by_email(db, login_form.email)
+    user = await user_crud.get_user_by_ident(db, login_form.ident)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -190,12 +190,14 @@ async def login(
         audit_logger.user_login_failed(user.id, ip_address)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    for generic_role in user.generic_roles:
+        if generic_role.name == "NotEmailVerified":
+            # TODO: Send the email verification email here if the last email was sent more than 30 minutes ago
+            raise HTTPException(status_code=401, detail="Email address not verified")
+
     audit_logger.user_login(user.id, ip_address)
 
-    if not user.is_verified:
-        user.is_verified = True
-
-    security_token = await create_security_token(ep_context, user, application_id, ["2fa"], ip_address)
+    security_token = await create_security_token(ep_context, user.id, application_id, ["2fa"], ip_address)
 
     # Get the 2FA methods
     res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method).filter(m_user.User2FA.user_id == user.id))
@@ -354,4 +356,83 @@ async def logout(ep_context: EndpointContext, token_details: core_security.Token
     await auth_crud.delete_auth_tokens(db, user_id, token_details.payload["aud"])
     audit_logger.user_logout(user_id, client_ip, token_details.payload["aud"])
 
+    await db.commit()
+
+
+async def forgot_password(ep_context: EndpointContext, ident: str, ip_address: str) -> None:
+    """Send a password reset email to the user
+
+    :param ep_context: The endpoint context
+    :param email: The email address of the user
+    :param ip_address: The IP address of the user
+    :param application_id: The application ID
+    """
+    db = ep_context.db
+    audit_logger = ep_context.audit_logger
+
+    user = await user_crud.get_user_by_ident(db, ident)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_anonymized or user.is_system:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not await audit_crud.forgot_password_allowed(db, user.id):
+        raise HTTPException(status_code=429, detail="Too many password reset requests. Please try again later.")
+
+    with core_security.email_verify_manager_dependency.get() as emv:
+        url_params = emv.generate_verification_params(user.id, 300)
+        # TODO send email
+        if DEBUG:
+            print(url_params)
+    audit_logger.user_forgot_password(user.id, ip_address)
+    await db.commit()
+
+
+async def reset_password_init(
+    ep_context: EndpointContext, user_id: str, expires: str, signature: str, application_id: str, ip_address: str
+) -> str:
+    """Reset the user's password
+
+    :param ep_context: The endpoint context
+    :param token_details: The token details
+    :param new_password: The new password
+    """
+    db = ep_context.db
+    audit_logger = ep_context.audit_logger
+
+    # Verify the signature
+    with core_security.email_verify_manager_dependency.get() as emv:
+        if not emv.verify(user_id, expires, signature):
+            audit_logger.user_reset_password_failed(uuid.UUID(user_id), application_id, "Invalid signature")
+            raise HTTPException(status_code=401, detail="Invalid signature")
+
+    audit_logger.user_reset_password_initiated(uuid.UUID(user_id))
+
+    security_token = await create_security_token(
+        ep_context, uuid.UUID(user_id), application_id, ["reset_password"], ip_address
+    )
+    await db.commit()
+    return security_token
+
+
+async def reset_password(
+    ep_context: EndpointContext, token_details: core_security.TokenDetails, new_password: str
+) -> None:
+    """Reset the user's password
+
+    :param ep_context: The endpoint context
+    :param token_details: The token details
+    :param new_password: The new password
+    """
+    db = ep_context.db
+    audit_logger = ep_context.audit_logger
+
+    # Get the user ID
+    user_id = uuid.UUID(token_details.payload["sub"])
+
+    # Update the user's password
+    await user_crud.update_user_password(db, user_id, new_password)
+    await auth_crud.delete_token(db, uuid.UUID(token_details.payload["jti"]))
+    audit_logger.user_reset_password_successful(user_id, token_details.payload["aud"])
     await db.commit()

@@ -1,10 +1,11 @@
 from pydantic import BaseModel
+from typing import List, Optional
 
 from models.m_user import User2FAMethods
 
 
 class LoginRequest(BaseModel):
-    email: str
+    ident: str
     password: str
 
 class TokenResponse(BaseModel):
@@ -13,10 +14,11 @@ class TokenResponse(BaseModel):
 
 class SecurityTokenResponse(BaseModel):
     security_token: str
-    methods: list[User2FAMethods]
+    methods: Optional[List[User2FAMethods]]
 
 class LoginCode2fa(BaseModel):
     code: str
     is_totp: bool = False
 
-    
+class ResetPassword(BaseModel):
+    password: str

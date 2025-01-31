@@ -14,3 +14,7 @@ TOKEN_ISSUER = "www.theactivitymaster.de"
 
 # TOTP settings
 TOTP_ENCRYPTION_KEY_PATH = Path(__file__).parent.absolute() / "totp_encryption_key.bin" if ENVIRONMENT == "dev" else Path("/run/secrets/totp_encryption_key.bin")
+
+# E-Mail settings
+EMAIL_VERIFY_EXPIRE_MINUTES = 15
+EMAIL_VERIFY_KEY_PATH = Path(__file__).parent.absolute() / "email_verify_key.bin" if ENVIRONMENT == "dev" else Path("/run/secrets/email_verify_key.bin")

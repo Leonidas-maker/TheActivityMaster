@@ -22,29 +22,13 @@ async def create_generic_roles(db: AsyncSession):
             "description": "Has full system-wide access, including managing users, clubs, courses, and bookings across the entire app.",
         },
         {
-            "name": "GlobalInstructor",
-            "description": "Can create and manage courses across all clubs but has no control over club-specific roles or memberships.",
-        },
-        {
-            "name": "Student",
-            "description": "Can browse and book courses offered by any club and manage their own profile and bookings.",
-        },
-        {
-            "name": "ClubAdmin",
+            "name": "Club",
             "description": "Can manage one or more clubs, including approving courses, managing members, and overseeing bookings for those clubs.",
         },
         {
-            "name": "ClubEmployee",
-            "description": "Can manage bookings, courses, and members for a specific club but cannot create or manage clubs themselves",
-        },
-        {
-            "name": "SupportStaff",
-            "description": "Handles customer support for app-related queries and can view and assist with bookings across clubs.",
-        },
-        {
-            "name": "Guest",
-            "description": "Limited access to browse courses and view club offerings but cannot make bookings or interact with specific club features.",
-        },
+            "name": "NotEmailVerified",
+            "description": "User has not yet verified their email address.",
+        }
     ]
 
     res = await db.execute(select(GenericRole))
@@ -65,6 +49,7 @@ async def create_system_user(db: AsyncSession):
     if not res.scalars().first():
         user = User(
             id=SYSTEM_USER_ID,
+            username="system",
             first_name="System",
             last_name="User",
             email="system@localhost",
