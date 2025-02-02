@@ -177,6 +177,9 @@ async def login(
     db = ep_context.db
     audit_logger = ep_context.audit_logger
 
+    if not application_id:
+        raise HTTPException(status_code=401, detail="Invalid application ID")
+
     user = await user_crud.get_user_by_ident(db, login_form.ident)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")

@@ -52,7 +52,14 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan,
+    swagger_ui_parameters={"operationsSorter": "tag"},
+    title="🏃‍♂️ TheActivityMaster API",
+    version="0.0.2",
+    contact={
+        "name": "TheActivityMaster Support",
+    }
+)
 
 app.include_router(v1_router, prefix="/api/v1")
 

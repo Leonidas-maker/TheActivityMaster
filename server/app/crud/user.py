@@ -38,14 +38,13 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     if user.address:
         user_db.address = await get_create_address(db, user.address)
 
-    not_first_logged_in_role = await db.execute(
+    res = await db.execute(
         select(m_user.GenericRole).where(m_user.GenericRole.name == "NotEmailVerified")
     )
-    user_db.generic_roles.append(not_first_logged_in_role.scalar_one())
+    role = res.unique().scalar_one()
+    user_db.generic_roles.append(role)
 
     db.add(user_db)
-
-    # await db.flush()
     return user_db
 
 

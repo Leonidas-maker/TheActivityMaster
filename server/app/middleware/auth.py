@@ -26,6 +26,9 @@ async def check_access_token(
     token: str = Depends(oauth2_scheme),
     application_id: str = Header(...),
 ) -> TokenDetails:
+    if not application_id:
+        raise HTTPException(status_code=401, detail="Invalid application ID")
+
     payload = await auth_crud.verify_token(db, token, TokenTypes.ACCESS, application_id)
     if not payload:
         raise credentials_exception
@@ -36,6 +39,9 @@ async def check_refresh_token(
     token: str = Depends(oauth2_scheme),
     application_id: str = Header(...),
 ) -> TokenDetails:
+    if not application_id:
+        raise HTTPException(status_code=401, detail="Invalid application ID")
+
     payload = await auth_crud.verify_token(db, token, TokenTypes.REFRESH, application_id)
     if not payload:
         raise credentials_exception
@@ -51,7 +57,9 @@ class SecurityTokenChecker:
         token: str = Depends(oauth2_scheme),
         application_id: str = Header(...),
     ) -> TokenDetails:
-        # Verify the token first
+        if not application_id:
+            raise HTTPException(status_code=401, detail="Invalid application ID")
+
         payload = await auth_crud.verify_token(
             db, token, TokenTypes.SECURITY, application_id
         )
