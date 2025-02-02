@@ -128,6 +128,7 @@ interface DefaultTextFieldInputProps {
   textAlign?: "left" | "center" | "right";
   value?: string;
   isOTP?: boolean;
+  hasError?: boolean;
 }
 
 interface OptionSwitchProps {

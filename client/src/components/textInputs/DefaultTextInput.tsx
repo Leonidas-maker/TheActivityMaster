@@ -37,6 +37,7 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
       textAlign = "left",
       value: initialValue = "",
       isOTP = false,
+      hasError = false,
     },
     ref,
   ) => {
@@ -47,25 +48,16 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
     const [isLight, setIsLight] = useState(false);
 
     // ~~~~~~~~~~~ Use color scheme ~~~~~~~~~~ //
-    // Get the current color scheme
     const colorScheme = useColorScheme();
-
-    // Check if the color scheme is light or dark
     useEffect(() => {
-      if (colorScheme === "light") {
-        setIsLight(true);
-      } else {
-        setIsLight(false);
-      }
+      setIsLight(colorScheme === "light");
     }, [colorScheme]);
 
-    // Set the placeholder text color based on the color scheme
     const placeholderTextColor = isLight ? "#000000" : "#FFFFFF";
 
     // ====================================================== //
     // ====================== Functions ===================== //
     // ====================================================== //
-    // Handle the change of the input field and set the value
     const handleOnChange = (
       e: NativeSyntheticEvent<TextInputChangeEventData>,
     ) => {
@@ -74,11 +66,26 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
       if (onChange) onChange(e);
     };
 
-    // Handle the change of the text input and set the value
     const handleChangeText = (text: string) => {
       setValue(text);
       if (onChangeText) onChangeText(text);
     };
+
+    // ====================================================== //
+    // ===================== Styling ======================== //
+    // ====================================================== //
+    const baseClasses =
+      "bg-light_secondary dark:bg-dark_secondary text-black dark:text-white border-2 rounded-xl opacity-75 focus:opacity-100 m-2";
+    const errorClasses = hasError
+      ? " border-red-500 dark:border-red-500 focus:border-red-600 dark:focus:border-red-600"
+      : " border-light_secondary dark:border-dark_secondary focus:border-light_action dark:focus:border-dark_action";
+
+    let inputClassName = "";
+    if (isOTP) {
+      inputClassName = `${baseClasses} text-center${errorClasses}`;
+    } else {
+      inputClassName = `${baseClasses} w-3/4 h-10 p-2${errorClasses}`;
+    }
 
     // ====================================================== //
     // ================== Return component ================== //
@@ -86,11 +93,7 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
     return (
       <TextInput
         style={isOTP ? { width: 40, height: 40 } : {}}
-        className={
-          isOTP
-            ? "bg-light_secondary dark:bg-dark_secondary text-black dark:text-white border-2 border-light_secondary dark:border-dark_secondary focus:border-light_action dark:focus:border-dark_action rounded-xl opacity-75 focus:opacity-100 text-center m-2"
-            : "bg-light_secondary dark:bg-dark_secondary text-black dark:text-white border-2 border-light_secondary dark:border-dark_secondary focus:border-light_action dark:focus:border-dark_action w-3/4 h-10 opacity-75 focus:opacity-100 rounded-xl p-2 m-2"
-        }
+        className={inputClassName}
         ref={ref}
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
