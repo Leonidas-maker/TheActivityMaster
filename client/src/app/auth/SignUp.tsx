@@ -1,4 +1,3 @@
-// SignUp.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
     View,
@@ -21,6 +20,7 @@ import OptionSwitch from "@/src/components/optionSwitch/OptionSwitch";
 import Dropdown from "@/src/components/dropdown/Dropdown";
 
 import StepProgressBar from "@/src/components/stepProgressBar/StepProgressBar";
+import Subheading from "@/src/components/textFields/Subheading";
 
 const SignUp: React.FC = () => {
     const { t } = useTranslation("auth");
@@ -30,14 +30,13 @@ const SignUp: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const totalSteps = 4;
 
-    // Step 1: Email and Username.
+    // Step 1: Email and Password.
     const [email, setEmail] = useState("");
     const [confirmEmail, setConfirmEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-
-    // Step 2: Passwords.
+    // Step 2: Username, first and last name.
     const [username, setUsername] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
@@ -56,14 +55,25 @@ const SignUp: React.FC = () => {
 
     // Animated value for step content transitions.
     const fieldAnim = useRef(new Animated.Value(0)).current;
+    // This ref is used to determine if this is the initial page load.
+    const isInitialMount = useRef(true);
+
     useEffect(() => {
-        fieldAnim.setValue(0);
-        Animated.timing(fieldAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
-    }, [currentStep]);
+        // When the signup page is first opened on step 0, we want to show the content
+        // immediately without any animation. For all subsequent transitions (including going
+        // back to step 0 from a later step), the animation is applied.
+        if (currentStep === 0 && isInitialMount.current) {
+            fieldAnim.setValue(1);
+            isInitialMount.current = false;
+        } else {
+            fieldAnim.setValue(0);
+            Animated.timing(fieldAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [currentStep, fieldAnim]);
 
     const animatedStyle = {
         opacity: fieldAnim,
@@ -151,7 +161,7 @@ const SignUp: React.FC = () => {
                         <Animated.View style={animatedStyle} className="w-full">
                             {currentStep === 0 && (
                                 <View className="w-full items-center">
-                                    <DefaultText text={t("registration_title")} />
+                                    <Subheading text={t("registration_step1_title")} />
                                     <DefaultTextFieldInput placeholder={t("email_placeholder")} value={email} onChangeText={setEmail} />
                                     <DefaultTextFieldInput placeholder={t("confirm_email_placeholder")} value={confirmEmail} onChangeText={setConfirmEmail} />
                                     <DefaultTextFieldInput placeholder={t("password_placeholder")} secureTextEntry value={password} onChangeText={setPassword} />
@@ -160,6 +170,7 @@ const SignUp: React.FC = () => {
                             )}
                             {currentStep === 1 && (
                                 <View className="w-full items-center">
+                                    <Subheading text={t("registration_step2_title")} />
                                     <DefaultTextFieldInput placeholder={t("username_placeholder")} value={username} onChangeText={setUsername} />
                                     <DefaultTextFieldInput placeholder={t("first_name_placeholder")} value={firstName} onChangeText={setFirstName} />
                                     <DefaultTextFieldInput placeholder={t("last_name_placeholder")} value={lastName} onChangeText={setLastName} />
@@ -167,7 +178,8 @@ const SignUp: React.FC = () => {
                             )}
                             {currentStep === 2 && (
                                 <View className="w-full items-center">
-                                    <Dropdown values={[]} setSelected={setCountry} search={true} />
+                                    <Subheading text={t("registration_step3_title")} />
+                                    <Dropdown values={[]} setSelected={setCountry} search={true} placeholder={t("country_placeholder")} />
                                     <DefaultTextFieldInput placeholder={t("street_placeholder")} value={street} onChangeText={setStreet} />
                                     <DefaultTextFieldInput placeholder={t("city_placeholder")} value={city} onChangeText={setCity} />
                                     <DefaultTextFieldInput placeholder={t("zip_placeholder")} value={zip} onChangeText={setZip} />
@@ -176,10 +188,11 @@ const SignUp: React.FC = () => {
                             )}
                             {currentStep === 3 && (
                                 <View className="w-full items-center">
+                                    <Subheading text={t("registration_step4_title")} />
                                     <OptionSwitch
-                                        title={t("accept_terms_title")}
+                                        title={t("more_information_title")}
                                         texts={[t("accept_terms_text"), t("receive_news_text"), t("use_2fa_text")]}
-                                        iconNames={["check", "check", "check"]}
+                                        iconNames={["check", "mail", "key"]}
                                         values={[acceptedTerms, receiveNews, use2fa]}
                                         onValueChanges={[setAcceptedTerms, setReceiveNews, setUse2fa]}
                                     />

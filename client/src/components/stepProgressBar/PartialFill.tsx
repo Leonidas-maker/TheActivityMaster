@@ -21,7 +21,7 @@ const PartialFill: React.FC<PartialFillProps> = ({ fieldProgress, containerWidth
   return (
     <Animated.View
       style={{ width: fillWidth }}
-      className="bg-blue-500 h-full rounded-full"
+      className="bg-green-400 dark:bg-green-600 h-full rounded-full -z-50"
     />
   );
 };

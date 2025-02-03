@@ -20,28 +20,38 @@ const StepProgressBar: React.FC<StepProgressBarProps> = ({
   // Animated value for scaling the active circle.
   const animValue = useRef(new Animated.Value(currentStep)).current;
   useEffect(() => {
-    Animated.timing(animValue, {
-      toValue: currentStep,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
+    if (currentStep === 0) {
+      // For the first step, disable the animation.
+      animValue.setValue(currentStep);
+    } else {
+      Animated.timing(animValue, {
+        toValue: currentStep,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
   }, [currentStep]);
 
   return (
-    <View className="flex-row items-center justify-center my-4 w-full px-4">
+    <View className="flex-row items-center justify-center my-4 w-full px-4 relative">
       {Array.from({ length: totalSteps }).map((_, index) => {
-        // Scale the active step's circle.
+        // Interpolate the scale so that the active circle "pops"
         const scale = animValue.interpolate({
           inputRange: [index - 0.5, index, index + 0.5],
           outputRange: [1, 1.2, 1],
           extrapolate: "clamp",
         });
 
+        // The circle element with a high z-index so it sits above the connecting line.
         const circle = (
           <Animated.View
-            style={{ transform: [{ scale }] }}
+            style={{
+              transform: [{ scale }],
+              zIndex: 10, // Ensure the circle is on top
+              position: "relative", // Must be positioned for zIndex to take effect
+            }}
             className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              index <= currentStep ? "bg-blue-500" : "bg-gray-300"
+              index <= currentStep ? "bg-green-400 dark:bg-green-600" : "bg-gray-300"
             }`}
           >
             <DefaultText text={`${index + 1}`} />
@@ -51,6 +61,7 @@ const StepProgressBar: React.FC<StepProgressBarProps> = ({
         return (
           <React.Fragment key={index}>
             {index <= currentStep && onStepPress ? (
+              // Make the circle clickable if this step is accessible.
               <TouchableOpacity onPress={() => onStepPress(index)}>
                 {circle}
               </TouchableOpacity>
@@ -58,12 +69,19 @@ const StepProgressBar: React.FC<StepProgressBarProps> = ({
               circle
             )}
             {index < totalSteps - 1 && (
-              <View className="flex-1 h-1 bg-gray-300">
+              // The connecting line between steps.
+              <View
+                style={{
+                  position: "relative",
+                  zIndex: -1, // Place the connecting line behind the circle
+                }}
+                className="flex-1 h-1 bg-gray-300"
+              >
                 {index < currentStep ? (
-                  // If the step is completed, the connecting line is fully filled.
-                  <View className="bg-blue-500 h-full rounded-full" style={{ width: "100%" }} />
+                  // For already completed steps, the connecting line is fully filled.
+                  <View className="bg-green-400 dark:bg-green-600 h-full rounded-full" style={{ width: "100%" }} />
                 ) : index === currentStep ? (
-                  // For the current step, fill the connecting line based on field progress.
+                  // For the current step, fill gradually based on field progress.
                   <PartialFillWrapper fieldProgress={fieldProgress} />
                 ) : null}
               </View>
