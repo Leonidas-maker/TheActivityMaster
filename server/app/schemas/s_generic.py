@@ -1,8 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+class MessageResponse(BaseModel):
+    message: str
 
 class Address(BaseModel):
-    street: str
-    postal_code: str
-    city: str
-    state: str
-    country: str
+    street: str = Field(..., max_length=255)
+    postal_code: str = Field(..., max_length=20)
+    city: str = Field(..., max_length=100)
+    state: str = Field(..., max_length=100)
+    country: str = Field(..., max_length=100)

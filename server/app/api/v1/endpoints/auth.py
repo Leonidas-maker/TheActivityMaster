@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Header
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 
-from core.database import get_db
 
 from controllers import auth as auth_controller
 
@@ -22,7 +20,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="refresh_token")
 router = APIRouter()
 
 
-@router.post("/login", response_model=s_auth.SecurityTokenResponse, tags=["Authentication-Login"])
+@router.post("/login", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Login"])
 async def login_v1(
     login_form: s_auth.LoginRequest,
     request: Request,
@@ -39,7 +37,7 @@ async def login_v1(
         await handle_exception(e, ep_context, "Failed to login")
 
 
-@router.post("/verify-code-2fa", response_model=s_auth.TokenResponse, tags=["Authentication-Login"])
+@router.post("/verify-code-2fa", response_model=s_auth.TokenResponse, tags=["Authentication - Login"])
 async def verify_code_2fa_v1(
     metadata: s_auth.LoginCode2fa,
     request: Request,
@@ -58,7 +56,7 @@ async def verify_code_2fa_v1(
         await handle_exception(e, ep_context, "Failed to verify 2FA code")
 
 
-@router.post("/refresh-token", response_model=s_auth.TokenResponse, tags=["Authentication-Token"])
+@router.post("/refresh-token", response_model=s_auth.TokenResponse, tags=["Authentication - Token"])
 async def refresh_token_v1(
     request: Request,
     token_details: core_security.TokenDetails = Depends(auth_middleware.check_refresh_token),
@@ -73,10 +71,10 @@ async def refresh_token_v1(
         await handle_exception(e, ep_context, "Failed to refresh token")
 
 
-@router.delete("/logout", tags=["Authentication-Token"])
+@router.delete("/logout", tags=["Authentication - Token"])
 async def logout_v1(
     request: Request,
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Logout a user"""
@@ -88,7 +86,7 @@ async def logout_v1(
         await handle_exception(e, ep_context, "Failed to logout")
 
 
-@router.post("/forgot-password", tags=["Forgot-Password"])
+@router.post("/forgot-password", tags=["Authentication - Forgot-Password"])
 async def forgot_password_v1(
     ident: str,
     request: Request,
@@ -102,7 +100,7 @@ async def forgot_password_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to send forgot password email")
 
-@router.post("/reset-password/init", response_model=s_auth.SecurityTokenResponse, tags=["Forgot-Password"])
+@router.post("/reset-password/init", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Forgot-Password"])
 async def reset_password_init_v1(
     user_id: str,
     expires: str,
@@ -119,7 +117,7 @@ async def reset_password_init_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to reset password")
 
-@router.post("/reset-password", tags=["Forgot-Password"])
+@router.post("/reset-password", tags=["Authentication - Forgot-Password"])
 async def reset_password_v1(
     reset_form: s_auth.ResetPassword,
     ep_context: EndpointContext = Depends(get_endpoint_context),

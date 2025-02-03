@@ -1,10 +1,10 @@
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, literal_column, union_all
 from sqlalchemy.sql.expression import or_
 import datetime
 import traceback
-from typing import Optional
+from typing import Optional, List, Tuple
 
 import models.m_user as m_user
 import models.m_club as m_club
@@ -38,13 +38,12 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     if user.address:
         user_db.address = await get_create_address(db, user.address)
 
-    res = await db.execute(
-        select(m_user.GenericRole).where(m_user.GenericRole.name == "NotEmailVerified")
-    )
+    res = await db.execute(select(m_user.GenericRole).where(m_user.GenericRole.name == "NotEmailVerified"))
     role = res.unique().scalar_one()
     user_db.generic_roles.append(role)
 
     db.add(user_db)
+    await db.flush()
     return user_db
 
 
@@ -78,6 +77,43 @@ async def get_user_by_id(
         raise ValueError("User is not a real user")
     return user
 
+
+###########################################################################
+################################## Roles ##################################
+###########################################################################
+async def get_user_generic_roles(
+    db: AsyncSession, user_id: uuid.UUID, query_options: list = []
+) -> List[m_user.GenericRole]:
+    """
+    Get the generic roles for a user
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to search for
+    :return: list[GenericRole]: The generic roles
+    """
+    res = await db.execute(
+        select(m_user.GenericRole)
+        .join(m_user.UserRole)
+        .filter(m_user.UserRole.user_id == user_id)
+        .options(*query_options)
+    )
+    return list(res.scalars().all())
+
+async def get_user_club_roles(db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, query_options: list = []) -> List[m_user.ClubRole]:
+    """
+    Get the club roles for a user
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to search for
+    :return: list[ClubRole]: The club roles
+    """
+    res = await db.execute(
+        select(m_user.ClubRole)
+        .join(m_user.UserClubRole)
+        .filter(m_user.ClubRole.user_id == user_id, m_user.ClubRole.club_id == club_id)
+        .options(*query_options)
+    )
+    return list(res.scalars().all())
 
 async def delete_user(ep_context: EndpointContext, user_id: uuid.UUID, application_id_hash: str) -> None:
     """
@@ -138,6 +174,7 @@ async def delete_user(ep_context: EndpointContext, user_id: uuid.UUID, applicati
         # Add audit logs
         audit_logger.user_self_deletion_anonymized(init_audit_log.id, user_id=user.id)
         audit_logger.user_self_deletion_completed(init_audit_log.id, user_id=user.id)
+        await db.flush()
     except Exception as e:
         await db.rollback()
         audit_logger.sys_error(
@@ -165,6 +202,7 @@ async def save_totp_secret(
         user_id=user_id, key_handle=encrypted_secret, method=m_user.User2FAMethods.TOTP, device_name=device_name
     )
     db.add(totp_2fa)
+    await db.flush()
     return totp_2fa
 
 
@@ -182,3 +220,4 @@ async def update_user_password(db: AsyncSession, user_id: uuid.UUID, new_passwor
         raise ValueError("User not found")
 
     user.password = core_security.hash_password(new_password)
+    await db.flush()

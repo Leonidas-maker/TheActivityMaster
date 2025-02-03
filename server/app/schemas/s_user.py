@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 
 
@@ -6,15 +6,15 @@ from .s_generic import Address
 
 
 class UserBase(BaseModel):
-    username: str
-    email: EmailStr
-    first_name: str
-    last_name: str
+    username: str = Field(..., max_length=50)
+    email: EmailStr = Field(..., max_length=255)
+    first_name: str = Field(..., max_length=100)
+    last_name: str = Field(..., max_length=100)
     address: Optional[Address] = None
 
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=8, max_length=100)
 
 
 class User(UserBase):
@@ -24,7 +24,7 @@ class User(UserBase):
         from_attributes = True
 
 class UserDelete(BaseModel):
-    password: str
+    password: str = Field(..., min_length=8, max_length=100)
 
 class RegisterInitTOTP(BaseModel):
     secret: str
@@ -37,10 +37,11 @@ class RegisterTOTP(BaseModel):
 
 
 class RemoveTOTP(BaseModel):
-    code: str
-    password: str
+    code: str = Field(..., max_length=6)
+    password: str = Field(..., min_length=8, max_length=100)
 
 
 class ChangePassword(BaseModel):
-    new_password: str
-    old_password: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+    old_password: str = Field(..., min_length=8, max_length=100)
+

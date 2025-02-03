@@ -88,6 +88,7 @@ async def get_create_address(db: AsyncSession, new_address: s_generic.Address) -
     address = m_generic.Address(street=new_address.street, postal_code=postal_code)
 
     db.add(address)
+    await db.flush()
     return address
 
 async def delete_address(db: AsyncSession, address_id: int) -> bool:
@@ -100,4 +101,5 @@ async def delete_address(db: AsyncSession, address_id: int) -> bool:
     res = await db.execute(delete(m_generic.Address).where(m_generic.Address.id == address_id))
     if not res.rowcount:
         return False
+    await db.flush()
     return True

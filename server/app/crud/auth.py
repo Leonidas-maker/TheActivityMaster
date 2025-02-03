@@ -149,6 +149,8 @@ async def delete_token(db: AsyncSession, jti: uuid.UUID) -> int:
     :return: The number of tokens deleted
     """
     res = await db.execute(delete(UserToken).filter(UserToken.id == jti))
+    if res.rowcount:
+        await db.flush()
     return res.rowcount
 
 
@@ -163,6 +165,8 @@ async def delete_auth_tokens(db: AsyncSession, user_id: uuid.UUID, hashed_applic
     res = await db.execute(
         delete(UserToken).filter(UserToken.user_id == user_id, UserToken.application_id_hash == hashed_application_id)
     )
+    if res.rowcount:
+        await db.flush()
     return res.rowcount
 
 
@@ -182,7 +186,7 @@ async def create_email_code(db: AsyncSession, user: User) -> str:
 
     email_2fa = User2FA(user_id=user.id, method=User2FAMethods.EMAIL, public_key=email_code_hash, fails=0)
     db.add(email_2fa)
-
+    await db.flush()
     return email_code
 
 
@@ -195,6 +199,8 @@ async def delete_single_2fa(db: AsyncSession, user_id: uuid.UUID, id_2fa: uuid.U
     :return: The number of 2FA methods deleted
     """
     res = await db.execute(delete(User2FA).filter(User2FA.user_id == user_id, User2FA.id == id_2fa))
+    if res.rowcount:
+        await db.flush()
     return res.rowcount
 
 
@@ -210,7 +216,7 @@ async def create_totp(db: AsyncSession, user: User) -> str:
     
     totp_2fa = User2FA(user_id=user.id, method=User2FAMethods.TOTP, key_handle=encrypted_secret)
     db.add(totp_2fa)
-
+    await db.flush()
     return secret
 
 async def verify_totp(db: AsyncSession, user: User, code: str) -> bool:
@@ -267,7 +273,7 @@ async def clean_tokens(db: AsyncSession) -> int:
 
     # Add audit logs
     audit_log.sys_info("Cleaned up expired tokens completed.", details="Deleted {res.rowcount} expired tokens")
-    await db.commit()
+    await db.flush()
     return res.rowcount
 
 async def totp_key_rotation(db: AsyncSession) -> int:
@@ -295,5 +301,5 @@ async def totp_key_rotation(db: AsyncSession) -> int:
 
     # Add audit logs
     audit_log.sys_info("Rotated TOTP keys completed.", details="Rotated {len(totp_dbs)} TOTP keys")
-    await db.commit()
+    await db.flush()
     return len(totp_dbs)

@@ -17,11 +17,12 @@ from models.m_payment import *
 import schemas.s_generic as s_generic
 from crud import generic as crud_generic
 
-from core.security import jwt_key_manager_dependency, totp_manager_dependency, email_verify_manager_dependency
+from core.security import jwt_key_manager_dependency, totp_manager_dependency, email_verify_manager_dependency, ec_encryptor_dependency
 
 from utils.jwt_keyfile_manager import JWTKeyManager
 from utils.totp_manager import TOTPManager
 from utils.email_verify_manager import EmailVerifyManager
+from utils.asymmetric_ev_encryptor import AsymmetricECEncryptor
 
 from api.v1.router import router as v1_router
 
@@ -47,6 +48,10 @@ async def lifespan(app: FastAPI):
     # Initialize the Email Verify manager
     evm = EmailVerifyManager()
     email_verify_manager_dependency.init(evm)
+
+    # Initialize the EC Encryptor
+    ec_encryptor = AsymmetricECEncryptor()
+    ec_encryptor_dependency.init(ec_encryptor)
 
     yield
     await engine.dispose()

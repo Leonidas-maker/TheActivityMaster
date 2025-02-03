@@ -22,8 +22,12 @@ async def create_generic_roles(db: AsyncSession):
             "description": "Has full system-wide access, including managing users, clubs, courses, and bookings across the entire app.",
         },
         {
+            "name": "Verifier",
+            "description": "Can verify user identity and club information.",
+        },
+        {
             "name": "Club",
-            "description": "Can manage one or more clubs, including approving courses, managing members, and overseeing bookings for those clubs.",
+            "description": "Can manage clubs, courses, and bookings within their own club. Depends on the ClubRole for specific permissions.",
         },
         {
             "name": "NotEmailVerified",

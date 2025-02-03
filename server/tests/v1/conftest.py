@@ -22,7 +22,7 @@ def register_user(client, capsys):
     querry = get_verify_token(capsys)
 
     response = client.post(
-        f"/api/v1/user/verify_email?{querry}",
+        f"/api/v1/verification/verify_email?{querry}",
     )
     assert response.status_code == 200 
 

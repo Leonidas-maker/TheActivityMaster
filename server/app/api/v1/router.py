@@ -1,10 +1,12 @@
 from fastapi import APIRouter
 from api.v1.endpoints import auth
 from api.v1.endpoints import user
+from api.v1.endpoints.verification import base
 
-# Haupt-Router für die API-Version
+# Main-Router
 router = APIRouter()
 
-# Registrieren der Endpunkte
-router.include_router(auth.router, prefix="/auth", tags=["auth"])
-router.include_router(user.router, prefix="/user", tags=["user"])
+# Registering the sub-routers
+router.include_router(auth.router, prefix="/auth")
+router.include_router(user.router, prefix="/user")
+router.include_router(base.router, prefix="/verification")

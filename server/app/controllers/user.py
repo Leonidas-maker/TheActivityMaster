@@ -12,9 +12,8 @@ import schemas.s_user as s_user
 import core.security as core_security
 
 from crud.audit import AuditLogger
-import crud.user as user_crud
-import crud.auth as auth_crud
-import crud.generic as generic_crud
+from crud import user as user_crud, auth as auth_crud, generic as generic_crud, verification as verification_crud
+
 
 from config.security import TOKEN_ISSUER
 from config.settings import DEBUG
@@ -61,32 +60,6 @@ async def register_user(ep_context: EndpointContext, user: s_user.UserCreate) ->
 
     return user_id
 
-async def verify_email(ep_context: EndpointContext, user_id: str, expire: str, signature: str) -> None:
-    """
-    Verify the email of a user
-
-    :param ep_context: The endpoint context
-    :param code: The verification code
-    """
-    db = ep_context.db
-
-    with core_security.email_verify_manager_dependency.get() as evm:
-        if not evm.verify(user_id, expire, signature):
-            raise HTTPException(status_code=400, detail="Invalid email verification code")
-       
-    # Get the user
-    user = await user_crud.get_user_by_id(db, uuid.UUID(user_id))
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Verify the email
-    for role in user.generic_roles:
-        if role.name == "NotEmailVerified":
-            user.generic_roles.remove(role)
-            await db.commit()
-            break
-
 async def user_delete(
     ep_context: EndpointContext, token_details: core_security.TokenDetails, user_delete: s_user.UserDelete
 ) -> None:
@@ -99,9 +72,7 @@ async def user_delete(
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
-
-    # Get the user ID
-    user_id = uuid.UUID(token_details.payload["sub"])
+    user_id = token_details.user_id
 
     # Get the user
     user = await user_crud.get_user_by_id(db, user_id)
@@ -114,6 +85,13 @@ async def user_delete(
 
     # Delete the user
     await user_crud.delete_user(ep_context, user_id, token_details.payload["aud"])
+
+    # Delete the user's identity verification
+    verification = await verification_crud.get_identity_verification_by_id(db, user_id)
+    if verification:
+        await verification_crud.delete_identity_verification(db, verification.id)
+        audit_logger.id_verification_rejected(user_id, user_id, "User self-deletion")
+        audit_logger.id_verification_soft_deleted(user_id, user_id)
 
     # Add audit logs
     audit_logger.user_self_deletion_successful(user_id, token_details.payload["aud"])
@@ -153,7 +131,7 @@ async def totp_register_init(ep_context: EndpointContext, token_details: core_se
     db = ep_context.db
     audit_logger = ep_context.audit_logger
 
-    user = await user_crud.get_user_by_id(db, uuid.UUID(token_details.payload["sub"]))
+    user = await user_crud.get_user_by_id(db, token_details.user_id)
 
     with core_security.totp_manager_dependency.get() as totp_m:
         secret, encrypted_secret = totp_m.generate_totp_secret()
@@ -182,10 +160,11 @@ async def totp_register(
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
+    user_id = token_details.user_id
 
-    # Get the user ID and application ID
-    user_id = uuid.UUID(token_details.payload["sub"])
-    application_id = token_details.payload["aud"]
+
+    # Get the hashed application ID
+    application_id_hash = token_details.payload["aud"]
 
     # Get the TOTP secret
     totp_db = await auth_crud.get_2fa_totp(db, user_id)
@@ -193,7 +172,7 @@ async def totp_register(
     # Verify the TOTP code
     with core_security.totp_manager_dependency.get() as totp_m:
         if not totp_m.verify_totp(totp_db.key_handle, _2fa_code):
-            audit_logger.totp_register_failed(user_id, application_id, "Invalid TOTP code")
+            audit_logger.totp_register_failed(user_id, application_id_hash, "Invalid TOTP code")
             await db.delete(totp_db)
             await db.commit()
             raise HTTPException(status_code=400, detail="Invalid TOTP code. Please retry the registration process.")
@@ -211,7 +190,7 @@ async def totp_register(
         user.backup_codes_2fa = ",".join(core_security.bycrypt_hash(code) for code in backup_codes)
 
     # Add audit logs
-    audit_logger.totp_registered(user_id, application_id)
+    audit_logger.totp_registered(user_id, application_id_hash)
     await db.commit()
     return backup_codes
 
@@ -228,9 +207,7 @@ async def totp_remove(
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
-
-    # Get the user ID
-    user_id = uuid.UUID(token_details.payload["sub"])
+    user_id = token_details.user_id
 
     # Verify the password
     user = await user_crud.get_user_by_id(db, user_id)
@@ -270,9 +247,7 @@ async def change_password(
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
-
-    # Get the user ID
-    user_id = uuid.UUID(token_details.payload["sub"])
+    user_id = token_details.user_id
 
     # Get the user
     user = await user_crud.get_user_by_id(db, user_id)
@@ -301,9 +276,7 @@ async def update_user_address(
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
-
-    # Get the user ID
-    user_id = uuid.UUID(token_details.payload["sub"])
+    user_id = token_details.user_id
 
     # Get the user
     user = await user_crud.get_user_by_id(db, user_id)

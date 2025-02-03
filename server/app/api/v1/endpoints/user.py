@@ -1,9 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
-import traceback
-
-from core.database import get_db
 
 import schemas.s_user as s_user
 import schemas.s_generic as s_generic
@@ -22,33 +18,23 @@ from core.generic import EndpointContext
 router = APIRouter()
 
 
-@router.post("/register")
+@router.post("/register", response_model=s_generic.MessageResponse, tags=["User"])
 async def register_user_v1(user: s_user.UserCreate, ep_context: EndpointContext = Depends(get_endpoint_context)):
     """Register a new user"""
     try:
         user_id = await user_controller.register_user(ep_context, user)
-        return {"message": "User registered", "user_id": user_id}
+        return s_generic.MessageResponse(message=str(user_id))
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=f"Invalid user data: {ve}")
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to register user")
 
-@router.post("/verify_email")
-async def verify_email_v1(user_id: str, expires: str, signature: str, ep_context: EndpointContext = Depends(get_endpoint_context)):
-    """Verify the user's email"""
-    try:
-        await user_controller.verify_email(ep_context, user_id, expires, signature)
-        return {"message": "Email verified"}
-    except Exception as e:
-        await handle_exception(e, ep_context, "Failed to verify email")
-
-
 ###########################################################################
 ################################### /Me ###################################
 ###########################################################################
-@router.get("/me", response_model=s_user.User)
+@router.get("/me", response_model=s_user.User, tags=["User"])
 async def get_user_information(
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Get user information"""
@@ -69,7 +55,7 @@ async def get_user_information(
 @router.patch("/me", tags=["User"])
 async def delete_user_v1(
     user_delete: s_user.UserDelete,
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Delete the user"""
@@ -80,9 +66,9 @@ async def delete_user_v1(
         await handle_exception(e, ep_context, "Failed to delete user")
 
 
-@router.post("/me/totp_register_init", response_model=s_user.RegisterInitTOTP, tags=["TOTP"])
+@router.post("/me/totp_register_init", response_model=s_user.RegisterInitTOTP, tags=["User - TOTP"])
 async def totp_register_init_v1(
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Start registering a TOTP device"""
@@ -93,10 +79,10 @@ async def totp_register_init_v1(
         await handle_exception(e, ep_context, "Failed to start TOTP registration")
 
 
-@router.post("/me/totp_register", response_model=s_user.RegisterTOTP, tags=["TOTP"])
+@router.post("/me/totp_register", response_model=s_user.RegisterTOTP, tags=["User - TOTP"])
 async def totp_register_v1(
     _2fa_code: str,
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Verify a TOTP token"""
@@ -107,10 +93,10 @@ async def totp_register_v1(
         await handle_exception(e, ep_context, "Failed to register TOTP")
 
 
-@router.post("/me/totp_remove", tags=["TOTP"])
+@router.post("/me/totp_remove", tags=["User - TOTP"])
 async def totp_remove_v1(
     remove_totp: s_user.RemoveTOTP,
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Remove the TOTP device"""
@@ -124,7 +110,7 @@ async def totp_remove_v1(
 @router.post("/me/change_password", tags=["User"])
 async def change_password_v1(
     password_change: s_user.ChangePassword,
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Change the user's password"""
@@ -138,7 +124,7 @@ async def change_password_v1(
 @router.put("/me/address", tags=["User"])
 async def update_user_address_v1(
     address: s_generic.Address,
-    token_details: core_security.TokenDetails = Depends(auth_middleware.check_access_token),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Update the user's address"""

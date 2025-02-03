@@ -543,6 +543,108 @@ class AuditLogger:
             details += f" for reason: {reason}"
         self.log_to_audit(issuer, action="User Role Assignment", category=AuditLogCategories.USER, details=details)
 
+    # ======================================================== #
+    # ===================== Verification ===================== #
+    # ======================================================== #
+    def id_verification_submitted(self, user_id: uuid.UUID, verification_id: uuid.UUID):
+        """Log an identity verification initiation action.
+
+        :param user_id: The user ID initiating identity verification
+        """
+        self.log_to_audit(
+            user_id,
+            action="Identity Verification Submitted",
+            category=AuditLogCategories.USER,
+        )
+
+    def id_verification_pending_retrieved(self, user_id: uuid.UUID):
+        """Log a pending identity verification retrieval action.
+
+        :param user_id: The user ID retrieving pending identity verifications
+        """
+        self.log_to_audit(
+            user_id,
+            action="Pending Identity Verification Retrieved",
+            category=AuditLogCategories.USER,
+        )
+
+    def id_verification_retrieved(self, from_user_id: uuid.UUID, to_user_id: uuid.UUID):
+        """Log an identity verification retrieval action.
+
+        :param from_user_id: The user ID retrieving the identity verification
+        :param to_user_id: The user ID whose identity verification is retrieved
+        """
+        self.log_to_audit(
+            from_user_id,
+            action="Identity Verification Retrieved",
+            category=AuditLogCategories.USER,
+            details=f"Identity verification retrieved for user {to_user_id}",
+        )
+
+    def id_verification_image_retrieved(self, user_id: uuid.UUID, verification_id: uuid.UUID, image: str):
+        """Log an identity verification image retrieval action.
+
+        :param user_id: The user ID retrieving the identity verification image
+        """
+        self.log_to_audit(
+            user_id,
+            action="Identity Verification Image Retrieved",
+            category=AuditLogCategories.USER,
+            details=f"Identity verification image retrieved for verification {verification_id}: {image}",
+        )
+
+    def id_verification_approved(self, from_user_id: uuid.UUID, to_user_id: uuid.UUID):
+        """Log an identity verification approval action.
+
+        :param from_user_id: The user ID approving the identity verification
+        :param to_user_id: The user ID whose identity verification is approved
+        """
+        self.log_to_audit(
+            from_user_id,
+            action="Identity Verification Approved",
+            category=AuditLogCategories.USER,
+            details=f"Identity verification approved for user {to_user_id}",
+        )
+
+    def id_verification_rejected(self, from_user_id: uuid.UUID, to_user_id: uuid.UUID, reason: str):
+        """Log an identity verification rejection action.
+
+        :param from_user_id: The user ID rejecting the identity verification
+        :param to_user_id: The user ID whose identity verification is rejected
+        """
+        self.log_to_audit(
+            from_user_id,
+            action="Identity Verification Rejected",
+            category=AuditLogCategories.USER,
+            details=f"Identity verification rejected for user {to_user_id}, reason: {reason}",
+        )
+    
+    def id_verification_soft_deleted(self, user_id: uuid.UUID, verification_id: uuid.UUID):
+        """Log the soft deletion of an identity verification.
+
+        :param user_id: The user ID soft deleting the verification
+        :param verification_id: The ID of the verification
+        """
+        self.log_to_audit(
+            user_id,
+            action="Identity Verification Soft Deleted",
+            category=AuditLogCategories.USER,
+            details=f"Soft deleted identity verification {verification_id}",
+        )
+
+    def id_verification_expired_deleted(self, since_days: int, count: int):
+        """Log the deletion of expired identity verifications.
+
+        :param since_days: The number of days since the verification expired
+        :param count: The number of expired verifications deleted
+        """
+        self.log_to_audit(
+            SYSTEM_USER_ID,
+            action="Expired Identity Verifications Deleted",
+            category=AuditLogCategories.SYSTEM,
+            details=f"Deleted {count} expired identity verifications older than {since_days} days",
+        )
+
 
 ###########################################################################
 ################################## Verify #################################

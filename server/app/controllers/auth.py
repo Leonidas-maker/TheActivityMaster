@@ -111,6 +111,10 @@ async def create_auth_tokens(
     # Get the user ID
     user_id_str = str(user_id)
 
+    # Get generic roles of the user
+    generic_roles = await user_crud.get_user_generic_roles(db, user_id)
+    generic_roles = [role.name for role in generic_roles]
+
     # Hash the application ID
     hashed_application_id = core_security.sha256_salt(application_id)
 
@@ -161,8 +165,6 @@ async def create_auth_tokens(
 ###########################################################################
 ################################### MAIN ##################################
 ###########################################################################
-
-
 async def login(
     ep_context: EndpointContext, login_form: s_auth.LoginRequest, ip_address: str, application_id: str
 ) -> Tuple[str, list[m_user.User2FAMethods]]:

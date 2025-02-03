@@ -10,10 +10,12 @@ import string
 import bcrypt
 import hmac
 import hashlib
+import uuid
 
 from utils.totp_manager import TOTPManager
 from utils.jwt_keyfile_manager import JWTKeyManager
 from utils.email_verify_manager import EmailVerifyManager
+from utils.asymmetric_ev_encryptor import AsymmetricECEncryptor
 
 # Global password hasher
 ph = PasswordHasher()
@@ -128,6 +130,7 @@ def bcrypt_verify(data: str, hashed_data: str) -> bool:
 @dataclass
 class TokenDetails():
     application_id: str
+    user_id: uuid.UUID
     payload: dict
 
 ###########################################################################
@@ -189,3 +192,21 @@ class EmailVerifyManagerDependency:
         yield self._evm
 
 email_verify_manager_dependency = EmailVerifyManagerDependency()
+
+# ======================================================== #
+# ===================== EC Encryptor ===================== #
+# ======================================================== #
+class ECEncryptorDependency:
+    def __init__(self):
+        self._ec_enc: Optional[AsymmetricECEncryptor] = None
+
+    def init(self, ec_enc_instance: AsymmetricECEncryptor):
+        self._ec_enc = ec_enc_instance
+
+    @contextmanager
+    def get(self):
+        if not self._ec_enc:
+            raise RuntimeError("EC Encryptor not initialized")
+        yield self._ec_enc
+
+ec_encryptor_dependency = ECEncryptorDependency()
