@@ -97,7 +97,7 @@ async def get_self_identity_verification_status(
     audit_logger = ep_context.audit_logger
 
     # Get the verification
-    verification = await verification_crud.get_identity_verification_by_user(db, token_details.user_id)
+    verification = await verification_crud.get_identity_verification_by_user(db, token_details.user_id, False)
 
     if not verification:
         raise HTTPException(status_code=404, detail="Identity verification not found")
@@ -217,7 +217,7 @@ async def get_identity_verification_image(ep_context: EndpointContext, verificat
 
     if not verification:
         raise HTTPException(status_code=404, detail="Identity verification not found")
-    
+
     image_path = f"{verification.image_url}/{image}"
 
     # Log the retrieval

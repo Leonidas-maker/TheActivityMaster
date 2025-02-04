@@ -44,7 +44,7 @@ docker_build:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "develop"'
       changes:
-        - server/**
+        - server/app/**
     - when: never
   before_script: []
   services:

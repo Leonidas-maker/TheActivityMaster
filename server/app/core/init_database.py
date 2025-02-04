@@ -10,6 +10,8 @@ from models.m_generic import Country, State, City
 from models.m_user import User, GenericRole
 from config.settings import SYSTEM_USER_ID
 
+import core.security as security_core
+
 
 async def create_generic_roles(db: AsyncSession):
     generic_roles = [
@@ -65,12 +67,31 @@ async def create_system_user(db: AsyncSession):
         user.generic_roles.append(role)
         db.add(user)
 
+async def create_admin_user(db: AsyncSession):
+    res = await db.execute(select(User).where(User.email == "admin@localhost"))
+
+    if not res.scalars().first():
+        user = User(
+            username="admin",
+            first_name="Admin",
+            last_name="User",
+            email="admin@localhost",
+            password=security_core.hash_password("ADMIN_ADMIN"),
+        )
+        res = await db.execute(select(GenericRole).where(GenericRole.name == "Admin"))
+        role = res.scalar_one()
+        user.generic_roles.append(role)
+        db.add(user)
+
 
 async def init_users(db: AsyncSession):
     await create_generic_roles(db)
     await db.flush()
     await create_system_user(db)
+    await db.flush()
+    await create_admin_user(db)
     await db.commit()
+
 
 class init_country_states_city_mode(enum.Enum):
     country_state_city = 1

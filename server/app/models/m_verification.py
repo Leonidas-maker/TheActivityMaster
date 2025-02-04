@@ -32,6 +32,6 @@ class IdentityVerification(Base):
         onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
         nullable=False
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(DEFAULT_TIMEZONE) + timedelta(days=730), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     
     user = relationship("User", back_populates="identity_verifications")

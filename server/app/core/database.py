@@ -36,7 +36,7 @@ async def check_db_connection(engine):
                 await asyncio.sleep(RETRY_WAIT_SECONDS)
             else:
                 raise RuntimeError(
-                    "Database connection failed after {MAX_RETRIES} attempts"
+                    f"Database connection failed after {MAX_RETRIES} attempts (URL: {engine.url})"
                 ) from e
 
 if ENVIRONMENT == "dev":
