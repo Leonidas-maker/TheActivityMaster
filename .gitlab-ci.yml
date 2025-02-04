@@ -13,6 +13,7 @@ variables:
   MARIADB_ROOT_PASSWORD: "root"
   MYSQL_DATABASE: "tam"
   DB_HOST: "mariadb"
+  REDIS_HOST: "redis"
   DOCKER_DRIVER: overlay2
 
 services:
@@ -21,6 +22,9 @@ services:
     command:
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_uca1400_as_ci"
+  - name: redis:latest
+    alias: redis
+    command: redis-server --requirepass root
 
 before_script:
   - apt-get update && apt-get install -y python3-pip python3-venv
