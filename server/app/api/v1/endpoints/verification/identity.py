@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request, Header, File, UploadFile, HTTPE
 from fastapi.responses import FileResponse
 import uuid
 from typing import List, Optional
+import os
 
 from controllers import verification as verification_controller
 
@@ -41,7 +42,7 @@ async def submit_identity_verification_v1(
 
 
 @router.post(
-    "/approve_identity_verification",
+    "/approve",
     response_model=s_generic.MessageResponse,
     tags=["Verification - Identity [Elevated]"],
 )
@@ -59,7 +60,7 @@ async def approve_identity_verification_v1(
 
 
 @router.post(
-    "/reject_identity_verification",
+    "/reject",
     response_model=s_generic.MessageResponse,
     tags=["Verification - Identity [Elevated]"],
 )
@@ -137,7 +138,8 @@ async def get_identity_verification_image_v1(
     """
     try:
         file_name = await verification_controller.get_identity_verification_image(ep_context, verification_id, index)
-
+        if not os.path.exists(file_name):
+            raise HTTPException(status_code=404, detail="Image not found")
         return FileResponse(file_name)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get identity verification image")
