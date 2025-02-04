@@ -4,32 +4,58 @@ services:
     image: mariadb:latest
     container_name: mariadb_container
     environment:
-      MARIADB_ROOT_PASSWORD : root
+      MARIADB_ROOT_PASSWORD: root
       MYSQL_DATABASE: tam
-    command: [
-      "--character-set-server=utf8mb4",
-      "--collation-server=utf8mb4_uca1400_as_ci"
-    ]
+    command: [ "--character-set-server=utf8mb4", "--collation-server=utf8mb4_uca1400_as_ci" ]
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized" ]
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
 
-  python-app:
+  redis:
+    image: redis:latest
+    container_name: redis_container
+    command: redis-server --requirepass root
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
+
+  backend:
     build:
-      context: ./app  
+      context: ./app
       dockerfile: Dockerfile
       args:
-        PYTHON_VERSION: 3.12.8  
-    container_name: python_app
+        PYTHON_VERSION: 3.12.8
+    container_name: backend
     depends_on:
       - mariadb
+      - redis
     volumes:
       - ./app:/app
     working_dir: /app
     ports:
       - "8001:8001"
-    command: ["uvicorn", "main:app", "--host=0.0.0.0", "--port=8001"]
+    command: [ "uvicorn", "main:app", "--host=0.0.0.0", "--port=8001" ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8001/ping" ]
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
 
 volumes:
   mariadb_data:
