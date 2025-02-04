@@ -59,8 +59,7 @@ const Login: React.FC = () => {
       Toast.show({
         type: "error",
         text1: t("inputError_text"),
-        text2: t("inputError_subtext"),
-        autoHide: false
+        text2: t("inputError_subtext")
       });
       return;
     }

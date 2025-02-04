@@ -157,6 +157,16 @@ interface DropdownProps {
   defaultOption?: { key: any; value: any };
 }
 
+interface WeekSelectProps {
+  onBackPress: () => void;
+  onForwardPress: () => void;
+  onTodayPress?: () => void;
+  startDate?: Date;
+  endDate?: Date;
+  currentDate?: Date;
+  mode: string;
+}
+
 export {
   TextProps,
   RadioOptionProps,
@@ -166,4 +176,5 @@ export {
   DefaultTextFieldInputProps,
   OptionSwitchProps,
   DropdownProps,
+  WeekSelectProps,
 };

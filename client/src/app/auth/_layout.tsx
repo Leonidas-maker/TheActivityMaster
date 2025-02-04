@@ -58,6 +58,12 @@ export default function AuthLayout() {
                         headerTitle: t("register_header"),
                     }}
                 />
+                <Stack.Screen
+                    name="(info)/VerifyMail"
+                    options={{
+                        headerTitle: t("register_header"),
+                    }}
+                />
             </Stack>
         </SafeAreaProvider>
     );

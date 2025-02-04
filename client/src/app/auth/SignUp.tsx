@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
+import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 
 // Custom components
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -52,6 +54,15 @@ const SignUp: React.FC = () => {
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [receiveNews, setReceiveNews] = useState(false);
     const [use2fa, setUse2fa] = useState(true);
+
+    // Error states for the fields.
+    const [emailError, setEmailError] = useState(false);
+    const [confirmEmailError, setConfirmEmailError] = useState(false);
+    const [passwordError, setPasswordError] = useState(false);
+    const [confirmPasswordError, setConfirmPasswordError] = useState(false);
+    const [usernameError, setUsernameError] = useState(false);
+    const [firstNameError, setFirstNameError] = useState(false);
+    const [lastNameError, setLastNameError] = useState(false);
 
     // Animated value for step content transitions.
     const fieldAnim = useRef(new Animated.Value(0)).current;
@@ -122,10 +133,84 @@ const SignUp: React.FC = () => {
 
     // Navigation handlers.
     const handleNext = () => {
+        // Validate inputs for step 0
+        if (currentStep === 0) {
+            // Check for empty fields
+            const isEmailEmpty = !email.trim();
+            const isConfirmEmailEmpty = !confirmEmail.trim();
+            const isPasswordEmpty = !password.trim();
+            const isConfirmPasswordEmpty = !confirmPassword.trim();
+    
+            if (isEmailEmpty || isConfirmEmailEmpty || isPasswordEmpty || isConfirmPasswordEmpty) {
+                if (isEmailEmpty) setEmailError(true);
+                if (isConfirmEmailEmpty) setConfirmEmailError(true);
+                if (isPasswordEmpty) setPasswordError(true);
+                if (isConfirmPasswordEmpty) setConfirmPasswordError(true);
+    
+                Toast.show({
+                    type: "error",
+                    text1: t("inputError_text"),
+                    text2: t("inputError_subtext"),
+                });
+                return;
+            }
+    
+            // Check if emails match
+            if (email !== confirmEmail) {
+                setEmailError(true);
+                setConfirmEmailError(true);
+                Toast.show({
+                    type: "error",
+                    text1: t("emailError_text"),
+                    text2: t("emailError_subtext"),
+                });
+                return;
+            } else {
+                setEmailError(false);
+                setConfirmEmailError(false);
+            }
+    
+            // Check if passwords match
+            if (password !== confirmPassword) {
+                setPasswordError(true);
+                setConfirmPasswordError(true);
+                Toast.show({
+                    type: "error",
+                    text1: t("passwordError_text"),
+                    text2: t("passwordError_subtext"),
+                });
+                return;
+            } else {
+                setPasswordError(false);
+                setConfirmPasswordError(false);
+            }
+        }
+    
+        // Validate inputs for step 1
+        if (currentStep === 1) {
+            const isUsernameEmpty = !username.trim();
+            const isFirstNameEmpty = !firstName.trim();
+            const isLastNameEmpty = !lastName.trim();
+    
+            if (isUsernameEmpty || isFirstNameEmpty || isLastNameEmpty) {
+                if (isUsernameEmpty) setUsernameError(true);
+                if (isFirstNameEmpty) setFirstNameError(true);
+                if (isLastNameEmpty) setLastNameError(true);
+    
+                Toast.show({
+                    type: "error",
+                    text1: t("inputError_text"),
+                    text2: t("inputError_subtext"),
+                });
+                return;
+            }
+        }
+    
+        // Move to the next step if not at the last step
         if (currentStep < totalSteps - 1) {
             setCurrentStep(currentStep + 1);
         }
-    };
+    };    
 
     const handleBack = () => {
         if (currentStep > 0) {
@@ -134,7 +219,15 @@ const SignUp: React.FC = () => {
     };
 
     const handleSubmit = () => {
-        router.replace("/(tabs)");
+        if (!acceptedTerms) {
+            Toast.show({
+                type: "error",
+                text1: t("termsError_text"),
+                text2: t("termsError_subtext"),
+            });
+            return
+        }
+        router.replace("/auth/(info)/VerifyMail");
     };
 
     return (
@@ -162,28 +255,121 @@ const SignUp: React.FC = () => {
                             {currentStep === 0 && (
                                 <View className="w-full items-center">
                                     <Subheading text={t("registration_step1_title")} />
-                                    <DefaultTextFieldInput placeholder={t("email_placeholder")} value={email} onChangeText={setEmail} />
-                                    <DefaultTextFieldInput placeholder={t("confirm_email_placeholder")} value={confirmEmail} onChangeText={setConfirmEmail} />
-                                    <DefaultTextFieldInput placeholder={t("password_placeholder")} secureTextEntry value={password} onChangeText={setPassword} />
-                                    <DefaultTextFieldInput placeholder={t("confirm_password_placeholder")} secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("email_placeholder")}
+                                        value={email}
+                                        onChangeText={(text) => {
+                                            setEmail(text);
+                                            if (text.trim()) {
+                                                setEmailError(false);
+                                            }
+                                        }}
+                                        hasError={emailError}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("confirm_email_placeholder")}
+                                        value={confirmEmail}
+                                        onChangeText={(text) => {
+                                            setConfirmEmail(text);
+                                            if (text.trim()) {
+                                                setConfirmEmailError(false);
+                                            }
+                                        }}
+                                        hasError={confirmEmailError}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("password_placeholder")}
+                                        secureTextEntry
+                                        value={password}
+                                        onChangeText={(text) => {
+                                            setPassword(text);
+                                            if (text.trim()) {
+                                                setPasswordError(false);
+                                            }
+                                        }}
+                                        hasError={passwordError}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("confirm_password_placeholder")}
+                                        secureTextEntry
+                                        value={confirmPassword}
+                                        onChangeText={(text) => {
+                                            setConfirmPassword(text);
+                                            if (text.trim()) {
+                                                setConfirmPasswordError(false);
+                                            }
+                                        }}
+                                        hasError={confirmPasswordError}
+                                    />
                                 </View>
                             )}
                             {currentStep === 1 && (
                                 <View className="w-full items-center">
                                     <Subheading text={t("registration_step2_title")} />
-                                    <DefaultTextFieldInput placeholder={t("username_placeholder")} value={username} onChangeText={setUsername} />
-                                    <DefaultTextFieldInput placeholder={t("first_name_placeholder")} value={firstName} onChangeText={setFirstName} />
-                                    <DefaultTextFieldInput placeholder={t("last_name_placeholder")} value={lastName} onChangeText={setLastName} />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("username_placeholder")}
+                                        value={username}
+                                        onChangeText={(text) => {
+                                            setUsername(text);
+                                            if (text.trim()) {
+                                                setUsernameError(false);
+                                            }
+                                        }}
+                                        hasError={usernameError}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("first_name_placeholder")}
+                                        value={firstName}
+                                        onChangeText={(text) => {
+                                            setFirstName(text);
+                                            if (text.trim()) {
+                                                setFirstNameError(false);
+                                            }
+                                        }}
+                                        hasError={firstNameError}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("last_name_placeholder")}
+                                        value={lastName}
+                                        onChangeText={(text) => {
+                                            setLastName(text);
+                                            if (text.trim()) {
+                                                setLastNameError(false);
+                                            }
+                                        }}
+                                        hasError={lastNameError}
+                                    />
                                 </View>
                             )}
                             {currentStep === 2 && (
                                 <View className="w-full items-center">
                                     <Subheading text={t("registration_step3_title")} />
-                                    <Dropdown values={[]} setSelected={setCountry} search={true} placeholder={t("country_placeholder")} />
-                                    <DefaultTextFieldInput placeholder={t("street_placeholder")} value={street} onChangeText={setStreet} />
-                                    <DefaultTextFieldInput placeholder={t("city_placeholder")} value={city} onChangeText={setCity} />
-                                    <DefaultTextFieldInput placeholder={t("zip_placeholder")} value={zip} onChangeText={setZip} />
-                                    <DefaultTextFieldInput placeholder={t("state_placeholder")} value={state} onChangeText={setState} />
+                                    <Dropdown
+                                        values={[]}
+                                        setSelected={setCountry}
+                                        search={true}
+                                        placeholder={t("country_placeholder")}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("street_placeholder")}
+                                        value={street}
+                                        onChangeText={setStreet}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("city_placeholder")}
+                                        value={city}
+                                        onChangeText={setCity}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("zip_placeholder")}
+                                        value={zip}
+                                        onChangeText={setZip}
+                                    />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("state_placeholder")}
+                                        value={state}
+                                        onChangeText={setState}
+                                    />
                                 </View>
                             )}
                             {currentStep === 3 && (
@@ -218,6 +404,7 @@ const SignUp: React.FC = () => {
                     </View>
                 </ScrollView>
             </TouchableWithoutFeedback>
+            <DefaultToast />
         </KeyboardAvoidingView>
     );
 };
