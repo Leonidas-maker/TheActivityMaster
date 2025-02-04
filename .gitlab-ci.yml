@@ -24,7 +24,7 @@ services:
       - "--collation-server=utf8mb4_uca1400_as_ci"
   - name: redis:latest
     alias: redis
-    command: redis-server --requirepass root
+    command: ["redis-server", "--requirepass", "root"]
 
 before_script:
   - apt-get update && apt-get install -y python3-pip python3-venv
