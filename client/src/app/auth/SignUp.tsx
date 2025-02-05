@@ -230,6 +230,14 @@ const SignUp: React.FC = () => {
         router.replace("/auth/(info)/VerifyMail");
     };
 
+    const handleTerms = () => {
+        router.navigate("/auth/(info)/Terms");
+        if (acceptedTerms)
+            setAcceptedTerms(false);
+        else 
+            setAcceptedTerms(true);
+    };
+
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -301,6 +309,7 @@ const SignUp: React.FC = () => {
                                         }}
                                         hasError={confirmPasswordError}
                                     />
+                                    <DefaultButton text={t("next_button")} onPress={() => setCurrentStep(3) } />
                                 </View>
                             )}
                             {currentStep === 1 && (
@@ -380,7 +389,7 @@ const SignUp: React.FC = () => {
                                         texts={[t("accept_terms_text"), t("receive_news_text"), t("use_2fa_text")]}
                                         iconNames={["check", "mail", "key"]}
                                         values={[acceptedTerms, receiveNews, use2fa]}
-                                        onValueChanges={[setAcceptedTerms, setReceiveNews, setUse2fa]}
+                                        onValueChanges={[handleTerms, setReceiveNews, setUse2fa]}
                                     />
                                 </View>
                             )}
