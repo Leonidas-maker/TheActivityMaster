@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import uvicorn
 import os
 
-from core.database import engine, get_async_session, get_db, check_db_connection
+from core.database import engine, get_async_session, check_db_connection
 from config.settings import ENVIRONMENT
 from config.database import Base
 from core.init_database import init_country_states_city, init_country_states_city_mode, init_users
@@ -13,9 +14,6 @@ from models.m_user import *
 from models.m_club import *
 from models.m_audit import *
 from models.m_payment import *
-
-import schemas.s_generic as s_generic
-from crud import generic as crud_generic
 
 from core.security import (
     jwt_key_manager_dependency,
@@ -31,6 +29,7 @@ from utils.asymmetric_ev_encryptor import AsymmetricECEncryptor
 from utils.task_scheduler import TaskSchedulerRedis
 
 from api.v1.router import router as v1_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -80,6 +79,8 @@ app = FastAPI(
 )
 
 app.include_router(v1_router, prefix="/api/v1")
+static_folder = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_folder), name="static")
 
 
 @app.get("/ping")
