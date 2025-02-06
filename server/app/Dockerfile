@@ -11,7 +11,7 @@ ENV REDIS_HOST=redis
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y curl build-essential
 
 ARG UID=10001
 RUN adduser \

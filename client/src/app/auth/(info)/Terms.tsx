@@ -199,7 +199,7 @@ const Terms = () => {
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
 
   // Handler for the scroll event to check if the bottom is reached
-  const handleScroll = (event) => {
+  const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     // Check if the user has scrolled to within 20 pixels of the bottom
     if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 20) {
