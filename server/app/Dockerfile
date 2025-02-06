@@ -1,6 +1,6 @@
 # Verwende das Python-Basisimage
 ARG PYTHON_VERSION=3.12.8
-FROM python:${PYTHON_VERSION}-slim as base
+FROM python:${PYTHON_VERSION}-slim AS base
 
 # Umgebungsvariablen
 ENV PYTHONDONTWRITEBYTECODE=1
