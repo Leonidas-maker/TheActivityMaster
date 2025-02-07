@@ -7,5 +7,6 @@
     "settings_language_header": "Language",
     "back_btn": "Back",
     "login_header": "Sign In",
-    "register_header": "Sign Up"
+    "register_header": "Sign Up",
+    "loginVerfiy_header": "Two-Factor-Authentication"
 }

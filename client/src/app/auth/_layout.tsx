@@ -72,6 +72,12 @@ export default function AuthLayout() {
                         presentation: "modal",
                     }}
                 />
+                <Stack.Screen
+                    name="SignInVerify"
+                    options={{
+                        headerTitle: t("loginVerfiy_header"),
+                    }}
+                />
             </Stack>
         </SafeAreaProvider>
     );

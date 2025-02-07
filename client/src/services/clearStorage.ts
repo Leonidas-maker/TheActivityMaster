@@ -5,6 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const secureStoreKeys = [
   "uuid",
   "savedPassword",
+  "access_token",
+  "refresh_token",
 ];
 
 // Function to clear all data from AsyncStorage

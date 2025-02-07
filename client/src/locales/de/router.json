@@ -7,5 +7,6 @@
     "settings_language_header": "Sprache",
     "back_btn": "Zurück",
     "login_header": "Anmelden",
-    "register_header": "Registrieren"
+    "register_header": "Registrieren",
+    "loginVerfiy_header": "Zwei-Faktor-Authentifizierung"
 }

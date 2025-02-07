@@ -87,8 +87,8 @@ const generateFingerprint = async () => {
         rawData
     );
 
-    console.log('Raw Data:', rawData); // Optional: Log raw data for debugging
-    console.log('Hashed Data:', hashedData); // Log the SHA-512 hash
+    //console.log('Raw Data:', rawData); // Optional: Log raw data for debugging
+    //console.log('Hashed Data:', hashedData); // Log the SHA-512 hash
 
     return hashedData; // Return the hashed fingerprint
 };
