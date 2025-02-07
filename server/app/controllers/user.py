@@ -106,7 +106,7 @@ async def user_information(db: AsyncSession, user_id: uuid.UUID) -> m_user.User:
     :param user_id: The ID of the user
     :return: The user information
     """
-    query_params = [joinedload(m_user.User.generic_roles), joinedload(m_user.User.address)]
+    query_params = [joinedload(m_user.User.generic_roles), joinedload(m_user.User.address), joinedload(m_user.User._2fa)]
     res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_params))
     user = res.unique().scalar_one_or_none()
     if not user:

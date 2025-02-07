@@ -19,6 +19,7 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: str
+    methods_2fa: List[str] = []
 
     class Config:
         from_attributes = True

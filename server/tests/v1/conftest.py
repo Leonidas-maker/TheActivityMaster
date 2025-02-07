@@ -120,7 +120,7 @@ def login_admin_email(client, capsys) -> dict:
     login_response = client.post(
         "/api/v1/auth/login",
         headers={"application-id": pytest.application_id},
-        json={"ident": "admin@localhost", "password": "ADMIN_ADMIN"},
+        json={"ident": "admin@localhost.de", "password": "ADMIN_ADMIN"},
     )
     assert login_response.status_code == status.HTTP_200_OK
     security_token = login_response.json()["security_token"]

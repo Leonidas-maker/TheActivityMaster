@@ -15,8 +15,8 @@ import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
 
-from config import settings
 from api.v1.endpoints.verification import identity
+from api.v1.endpoints.verification import club
 
 
 # Router for the verification endpoints
@@ -24,6 +24,7 @@ router = APIRouter()
 
 # Include the identity router
 router.include_router(identity.router, prefix="/identity")
+router.include_router(club.router, prefix="/club")
 
 
 @router.post("/verify_email", response_model=s_generic.MessageResponse, tags=["Verification"])

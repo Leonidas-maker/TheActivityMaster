@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     DECIMAL,
     Time,
+    Date,
 )
 import uuid
 from datetime import datetime, time
@@ -27,6 +28,43 @@ from models.m_audit import *
 from models.m_payment import *
 
 
+########################################################################
+# Enums
+########################################################################
+
+
+class SessionType(enum.Enum):
+    COURSE = "course"  # Wiederkehrender Kurs
+    EVENT = "event"  # Einmaliges Event
+
+
+class Weekday(enum.Enum):
+    MONDAY = "Monday"
+    TUESDAY = "Tuesday"
+    WEDNESDAY = "Wednesday"
+    THURSDAY = "Thursday"
+    FRIDAY = "Friday"
+    SATURDAY = "Saturday"
+    SUNDAY = "Sunday"
+
+
+class OccurrenceStatus(enum.Enum):
+    SCHEDULED = "scheduled"
+    CANCELLED = "cancelled"
+    RESCHEDULED = "rescheduled"
+
+
+class BookingStatus(enum.Enum):
+    PENDING = "Pending"
+    CONFIRMED = "Confirmed"
+    CANCELLED = "Cancelled"
+    COMPLETED = "Completed"
+    CANCELLED_BY_CLUB = "Cancelled by Club"
+
+
+###########################################################################
+################################### MAIN ##################################
+###########################################################################
 class Club(Base):
     __tablename__ = "clubs"
 
@@ -36,9 +74,7 @@ class Club(Base):
     stripe_account_id: Mapped[str] = mapped_column(String(255), nullable=True)
     address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
 
     address: Mapped["Address"] = relationship("Address")
@@ -46,6 +82,169 @@ class Club(Base):
     programs: Mapped[List["Program"]] = relationship("Program", back_populates="club", uselist=True)
 
 
+###########################################################################
+############################ Program Offerings ############################
+###########################################################################
+class ProgramCategory(Base):
+    __tablename__ = "program_categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    programs: Mapped[List["Program"]] = relationship(
+        "Program", secondary="program_category_association", back_populates="categories"
+    )
+
+
+class ProgramCategoryAssociation(Base):
+    __tablename__ = "program_category_association"
+
+    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), primary_key=True)
+    category_id: Mapped[int] = mapped_column(Integer, ForeignKey("program_categories.id"), primary_key=True)
+
+    __table_args__ = (UniqueConstraint("program_id", "category_id", name="uix_program_category"),)
+
+
+class Program(Base):
+    """A program is a collection of sessions (e.g. a course)"""
+
+    __tablename__ = "programs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+    )
+
+    sessions: Mapped[list["Session"]] = relationship("Session", back_populates="program")
+    club: Mapped["Club"] = relationship("Club", back_populates="programs")
+    memberships: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="program")
+    categories: Mapped[List["ProgramCategory"]] = relationship(
+        "ProgramCategory", secondary="program_category_association", back_populates="programs"
+    )
+
+
+class Session(Base):
+    """A session is a single event or a recurring course"""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
+    session_type: Mapped[SessionType] = mapped_column(Enum(SessionType), nullable=False)
+    capacity: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
+
+    # True if the session requires a membership
+    membership_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Fields for one-time events:
+    start_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Fields for recurring courses:
+    day_of_week: Mapped[Weekday | None] = mapped_column(Enum(Weekday), nullable=True)
+    start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    # Defines the start and end date of the course
+    start_date: Mapped[datetime | None] = mapped_column(Date(), nullable=True)
+    end_date: Mapped[datetime | None] = mapped_column(Date(), nullable=True)
+
+    # Optional: Address of the session (if different from the club address)
+    address_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+    )
+
+    program: Mapped["Program"] = relationship("Program", back_populates="sessions")
+    occurrences: Mapped[list["SessionOccurrence"]] = relationship("SessionOccurrence", back_populates="session")
+
+    address: Mapped["Address"] = relationship("Address")
+    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="session")
+
+
+class SessionOccurrence(Base):
+    """A concrete occurrence of a session (e.g. a planned date)"""
+
+    __tablename__ = "session_occurrences"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
+    # The scheduled date of the occurrence (e.g., the planned appointment)
+    occurrence_date: Mapped[datetime] = mapped_column(Date(), nullable=False)
+    # Optional: Specific start/end times if these deviate from the regular schedule (e.g., for rescheduling)
+    start_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Status of the occurrence (scheduled, cancelled, rescheduled)
+    status: Mapped[OccurrenceStatus] = mapped_column(
+        Enum(OccurrenceStatus), nullable=False, default=OccurrenceStatus.SCHEDULED
+    )
+    # Optional: Notes for the occurrence (e.g., reason for rescheduling or cancellation)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+    )
+
+    session: Mapped["Session"] = relationship("Session", back_populates="occurrences")
+
+
+###########################################################################
+################################# BOOKINGS ################################
+###########################################################################
+class Booking(Base):
+    __tablename__ = "bookings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
+    booking_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("booking_types.id"), nullable=False)
+    status: Mapped[BookingStatus] = mapped_column(Enum(BookingStatus), nullable=False)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="bookings")
+    session: Mapped["Session"] = relationship("Session", back_populates="bookings")
+    booking_type: Mapped["BookingType"] = relationship("BookingType", back_populates="bookings")
+
+
+class BookingType(Base):
+    __tablename__ = "booking_types"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+
+    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="booking_type")
+
+
+###########################################################################
+############################### Memberships ###############################
+###########################################################################
 class Membership(Base):
     __tablename__ = "memberships"
 
@@ -55,41 +254,22 @@ class Membership(Base):
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
     price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
-    duration: Mapped[int] = mapped_column(Integer, nullable=False)  # in Monaten
+    duration: Mapped[int] = mapped_column(Integer, nullable=False)  # Duration in Days
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
     )
 
     club: Mapped["Club"] = relationship("Club", back_populates="memberships")
     programs_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="membership")
-    user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship("MembershipSubscription", back_populates="membership")
-
-
-class MembershipSubscription(Base):
-    __tablename__ = "membership_subscriptions"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    start_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship(
+        "MembershipSubscription", back_populates="membership"
     )
-    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")
-    membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")
-
-
 class MembershipAccess(Base):
     __tablename__ = "membership_access"
 
@@ -103,178 +283,40 @@ class MembershipAccess(Base):
     program: Mapped["Program"] = relationship("Program", back_populates="memberships")
 
 
+class MembershipSubscription(Base):
+    __tablename__ = "membership_subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    start_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    )
+    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")
+    membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")
+    transactions: Mapped[List["MembershipTransaction"]] = relationship("MembershipTransaction", back_populates="membership_subscription")
+
+    
 class MembershipTransaction(Base):
     __tablename__ = "membership_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
+    membership_subscription_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False)
     transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
 
+    membership_subscription: Mapped["MembershipSubscription"] = relationship("MembershipSubscription", back_populates="transactions")
 
-class ProgramType(Base):
-    __tablename__ = "program_types"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
-
-    programs: Mapped[List["Program"]] = relationship("Program", back_populates="program_types")
-
-
-class Program(Base):
-    __tablename__ = "programs"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
-    program_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("program_types.id"), nullable=False)
-    is_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    capacity: Mapped[int] = mapped_column(Integer, nullable=False)
-    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-
-    program_types: Mapped[List["ProgramType"]] = relationship("ProgramType", back_populates="programs")
-    memberships: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="program", uselist=True)
-    club: Mapped["Club"] = relationship("Club", back_populates="programs")
-
-    course: Mapped["Course"] = relationship("Course", back_populates="program")
-    event: Mapped["Event"] = relationship("Event", back_populates="program")
-    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="program")
-
-
-class Event(Base):
-    __tablename__ = "events"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
-    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-
-    program: Mapped["Program"] = relationship("Program", back_populates="event")
-
-
-class Course(Base):
-    __tablename__ = "courses"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
-    price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
-    subscription_required: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-
-    program: Mapped["Program"] = relationship("Program", back_populates="course")
-    sessions: Mapped[List["Session"]] = relationship("Session", back_populates="course", uselist=True)
-
-
-class Weekday(enum.Enum):
-    MONDAY = "Monday"
-    TUESDAY = "Tuesday"
-    WEDNESDAY = "Wednesday"
-    THURSDAY = "Thursday"
-    FRIDAY = "Friday"
-    SATURDAY = "Saturday"
-    SUNDAY = "Sunday"
-
-
-class Session(Base):
-    __tablename__ = "sessions"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    course_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True)
-    day_of_week: Mapped[Weekday] = mapped_column(Enum(Weekday), nullable=False)
-    start_time: Mapped[time] = mapped_column(Time, nullable=False)
-    end_time: Mapped[time] = mapped_column(Time, nullable=False)
-    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)
-
-    course: Mapped["Course"] = relationship("Course", back_populates="sessions")
-
-
-class BookingStatus(enum.Enum):
-    PENDING = "Pending"
-    CONFIRMED = "Confirmed"
-    CANCELLED = "Cancelled"
-    COMPLETED = "Completed"
-    CANCELLED_BY_CLUB = "Cancelled by Club"
-
-
-class Booking(Base):
-    __tablename__ = "bookings"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
-    booking_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("booking_types.id"), nullable=False)
-    status: Mapped[BookingStatus] = mapped_column(Enum(BookingStatus), nullable=False)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
-    )
-
-    user: Mapped["User"] = relationship("User", back_populates="bookings")
-    program: Mapped["Program"] = relationship("Program", back_populates="bookings")
-    booking_types: Mapped["BookingType"] = relationship("BookingType", back_populates="bookings")
-
-
-class BookingType(Base):
-    __tablename__ = "booking_types"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
-
-    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="booking_types")
 
 
 ###########################################################################
 ################################### User ##################################
 ###########################################################################
+
 
 class ClubRole(Base):
     __tablename__ = "club_roles"
@@ -295,9 +337,7 @@ class UserClubRole(Base):
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), primary_key=True)
     club_role_id: Mapped[int] = mapped_column(Integer, ForeignKey("club_roles.id"), primary_key=True)
     assigned_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE)
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
 
     __table_args__ = (UniqueConstraint("user_id", "club_id", "club_role_id", name="unique_user_club_role"),)

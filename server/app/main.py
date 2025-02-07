@@ -22,6 +22,10 @@ from core.security import (
     ec_encryptor_dependency,
 )
 
+from crud.audit import anonymize_ip_addresses
+from crud.auth import clean_tokens, totp_key_rotation
+from crud.verification import delete_expired_identity_verifications
+
 from utils.jwt_keyfile_manager import JWTKeyManager
 from utils.totp_manager import TOTPManager
 from utils.email_verify_manager import EmailVerifyManager
@@ -57,10 +61,30 @@ async def lifespan(app: FastAPI):
     # Initialize the EC Encryptor
     ec_encryptor = AsymmetricECEncryptor()
     ec_encryptor_dependency.init(ec_encryptor)
-
+     
     # Initialize the Task Scheduler
     redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
     scheduler = TaskSchedulerRedis(redis_host=redis_host)
+
+    # Clean up the audit logs
+    scheduler.add_task(
+        "anonymize_ip_addresses", anonymize_ip_addresses, cron="0 0 * * *", on_startup=True, with_console=True
+    )
+
+    # Clean up the tokens
+    scheduler.add_task("clean_tokens", clean_tokens, cron="0 * * * *", on_startup=True, with_console=True)
+
+    # Rotate the TOTP keys every 14 days
+    scheduler.add_task("totp_key_rotation", totp_key_rotation, cron="0 0 */14 * *", on_startup=True, with_console=True)
+
+    # Delete expired identity verifications every 7 days
+    scheduler.add_task(
+        "delete_expired_identity_verifications",
+        delete_expired_identity_verifications,
+        cron="0 0 */7 * *",
+        on_startup=True,
+        with_console=True,
+    )
 
     scheduler.start()
     yield

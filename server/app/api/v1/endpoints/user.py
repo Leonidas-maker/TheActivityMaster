@@ -40,6 +40,8 @@ async def get_user_information(
     """Get user information"""
     try:
         user = await user_controller.user_information(ep_context.db, uuid.UUID(token_details.payload["sub"]))
+        _2fa_methods = [ method.method.value for method in user._2fa ]
+        print(_2fa_methods)
         return s_user.User(
             id=str(user.id),
             username=user.username,
@@ -47,6 +49,7 @@ async def get_user_information(
             first_name=user.first_name,
             last_name=user.last_name,
             address=s_generic.Address(**user.address.get_as_dict()) if user.address else None,
+            methods_2fa=_2fa_methods
         )
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user information")

@@ -5,6 +5,8 @@ import uuid
 from typing import Tuple, Union, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select
+from rich.console import Console
+import traceback
 
 from config.settings import ENVIRONMENT, DEFAULT_TIMEZONE
 from config.security import TOKEN_ISSUER
@@ -258,25 +260,35 @@ async def get_2fa_totp(db: AsyncSession, user_id: uuid.UUID) -> User2FA:
 ###########################################################################
 ############################## Recurring Task #############################
 ###########################################################################
-async def clean_tokens(db: AsyncSession) -> int:
+async def clean_tokens(db: AsyncSession, console: Console) -> bool:
     """Clean up expired tokens
 
     :param db: The database session
+    :param console: The console to print messages to
     :return: The number of tokens deleted
     """
     # Add audit logs
     audit_log = audit_crud.AuditLogger(db)
     audit_log.sys_info("Cleaning up expired tokens")
+    try:
+        # Delete expired tokens
+        res = await db.execute(delete(UserToken).where(UserToken.expires_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE)))
 
-    # Delete expired tokens
-    res = await db.execute(delete(UserToken).where(UserToken.expires_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE)))
+        # Add audit logs
+        audit_log.sys_info("Cleaned up expired tokens completed.", details="Deleted {res.rowcount} expired tokens")
+        await db.commit()
 
-    # Add audit logs
-    audit_log.sys_info("Cleaned up expired tokens completed.", details="Deleted {res.rowcount} expired tokens")
-    await db.flush()
-    return res.rowcount
+        console.log(f"[blue][INFO][/blue]\t\tCleaned up {res.rowcount} expired tokens")
+        return True
+    except Exception as e:
+        await db.rollback()
+        audit_log.sys_error("Error cleaning up expired tokens", traceback=traceback.format_exc())
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tError cleaning up expired tokens")
+        console.print_exception()
+        return False
 
-async def totp_key_rotation(db: AsyncSession) -> int:
+async def totp_key_rotation(db: AsyncSession, console: Console) -> bool:
     """Rotate TOTP keys
 
     :param db: The database session
@@ -286,20 +298,30 @@ async def totp_key_rotation(db: AsyncSession) -> int:
     audit_log = audit_crud.AuditLogger(db)
     audit_log.sys_info("Rotating TOTP keys")
     
+    try:
+        # Rotate TOTP keys
+        with core_security.totp_manager_dependency.get() as totp_m:
+            new_key = totp_m.generate_new_key()
 
-    # Rotate TOTP keys
-    with core_security.totp_manager_dependency.get() as totp_m:
-        new_key = totp_m.generate_new_key()
+            res = await db.execute(select(User2FA).filter(User2FA.method == User2FAMethods.TOTP))
+            totp_dbs = res.scalars().all()
+            for totp_db in totp_dbs:
+                reencrypted_secret = totp_m.rotate_key(new_key, totp_db.key_handle)
+                totp_db.key_handle = reencrypted_secret
+            
+            totp_m.save_new_key()
 
-        res = await db.execute(select(User2FA).filter(User2FA.method == User2FAMethods.TOTP))
-        totp_dbs = res.scalars().all()
-        for totp_db in totp_dbs:
-            reencrypted_secret = totp_m.rotate_key(new_key, totp_db.key_handle)
-            totp_db.key_handle = reencrypted_secret
-        
-        totp_m.save_new_key()
+        # Add audit logs
+        audit_log.sys_info("Rotated TOTP keys completed.", details="Rotated {len(totp_dbs)} TOTP keys")
+        await db.commit()
 
-    # Add audit logs
-    audit_log.sys_info("Rotated TOTP keys completed.", details="Rotated {len(totp_dbs)} TOTP keys")
-    await db.flush()
-    return len(totp_dbs)
+        console.log(f"[blue][INFO][/blue]\t\tRotated {len(totp_dbs)} TOTP keys")
+        return True
+    except Exception as e:
+        await db.rollback()
+        audit_log.sys_error("Error rotating TOTP keys", traceback=traceback.format_exc())
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tError rotating TOTP keys")
+        console.print_exception()
+        return False
+

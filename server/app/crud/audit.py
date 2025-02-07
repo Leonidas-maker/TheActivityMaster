@@ -1,6 +1,3 @@
-from calendar import c
-import datetime
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, select
 from sqlalchemy.sql.expression import and_
@@ -8,6 +5,7 @@ import uuid
 import datetime
 from typing import Optional
 import traceback
+from rich.console import Console
 
 from models.m_audit import AuthenticationLog, AuditLog, AuthMethods, ErrorLog, ErrorLevels, AuditLogCategories
 
@@ -665,7 +663,7 @@ async def forgot_password_allowed(db: AsyncSession, user_id: uuid.UUID) -> bool:
 ###########################################################################
 ############################## Recurring Task #############################
 ###########################################################################
-async def anonymize_ip_addresses(db: AsyncSession) -> Optional[int]:
+async def anonymize_ip_addresses(db: AsyncSession, console: Console) -> bool:
     """Anonymize IP addresses older than four weeks.
 
     :param db: The database session
@@ -684,13 +682,19 @@ async def anonymize_ip_addresses(db: AsyncSession) -> Optional[int]:
             .values(ip_address="[ANONYMIZED]")
             .where(AuthenticationLog.timestamp < four_weeks_ago)
         )
-
         audit_logger.sys_info(f"Anonymized {res.rowcount} IP addresses")
+        await db.commit()
 
-        await db.flush()
-        return res.rowcount
+        console.log(f"[blue][INFO][/blue]\t\tAnonymized {res.rowcount} IP addresses")
+
+        return True
     except Exception as e:
+        await db.rollback()
         audit_logger.sys_error(
             "An error occurred while anonymizing IP addresses",
             traceback=traceback.format_exc(),
         )
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tAn error occurred while anonymizing IP addresses")
+        console.print_exception()
+        return False

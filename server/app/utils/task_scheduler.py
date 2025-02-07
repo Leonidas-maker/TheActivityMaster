@@ -90,15 +90,15 @@ class TaskSchedulerRedis:
         :param level: The severity level of the log (info, warning, error, success, debug).
         """
         if level == "info":
-            self.console.log(f"[blue][INFO][/blue] {message}")
+            self.console.log(f"[blue][INFO][/blue]\t\t{message}")
         elif level == "warning":
-            self.console.log(f"[yellow][WARNING][/yellow] {message}")
+            self.console.log(f"[yellow][WARNING][/yellow]\t{message}")
         elif level == "error":
-            self.console.log(f"[red][ERROR][/red] {message}")
+            self.console.log(f"[red][ERROR][/red]\t\t{message}")
         elif level == "success":
-            self.console.log(f"[green][SUCCESS][/green] {message}")
+            self.console.log(f"[green][SUCCESS][/green]\t{message}")
         elif level == "debug" and self.verbose:
-            self.console.log(f"[purple][DEBUG][/purple] {message}")
+            self.console.log(f"[purple][DEBUG][/purple]\t{message}")
 
     def acquire_lock(self, task_id: str) -> redis_typing.ResponseT:
         """Try to acquire a lock for the task."""

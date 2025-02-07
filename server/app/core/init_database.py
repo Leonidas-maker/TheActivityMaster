@@ -68,14 +68,14 @@ async def create_system_user(db: AsyncSession):
         db.add(user)
 
 async def create_admin_user(db: AsyncSession):
-    res = await db.execute(select(User).where(User.email == "admin@localhost"))
+    res = await db.execute(select(User).where(User.email == "admin@localhost.de"))
 
     if not res.scalars().first():
         user = User(
             username="admin",
             first_name="Admin",
             last_name="User",
-            email="admin@localhost",
+            email="admin@localhost.de",
             password=security_core.hash_password("ADMIN_ADMIN"),
         )
         res = await db.execute(select(GenericRole).where(GenericRole.name == "Admin"))

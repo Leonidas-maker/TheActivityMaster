@@ -100,7 +100,10 @@ async def forgot_password_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to send forgot password email")
 
-@router.post("/reset-password/init", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Forgot-Password"])
+
+@router.post(
+    "/reset-password/init", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Forgot-Password"]
+)
 async def reset_password_init_v1(
     user_id: str,
     expires: str,
@@ -112,10 +115,13 @@ async def reset_password_init_v1(
     """Reset a user's password"""
     try:
         client_ip = request.client.host if request.client else ""
-        security_token = await auth_controller.reset_password_init(ep_context, user_id, expires, signature, application_id, client_ip)
+        security_token = await auth_controller.reset_password_init(
+            ep_context, user_id, expires, signature, application_id, client_ip
+        )
         return s_auth.SecurityTokenResponse(security_token=security_token, methods=None)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to reset password")
+
 
 @router.post("/reset-password", tags=["Authentication - Forgot-Password"])
 async def reset_password_v1(
@@ -125,6 +131,6 @@ async def reset_password_v1(
 ):
     """Reset a user's password"""
     try:
-         await auth_controller.reset_password(ep_context, token_details, reset_form.password)
+        await auth_controller.reset_password(ep_context, token_details, reset_form.password)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to reset password")

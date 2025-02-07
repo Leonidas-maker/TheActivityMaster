@@ -5,6 +5,8 @@ from sqlalchemy.sql.expression import and_, or_
 import uuid
 import datetime
 from typing import List, Tuple
+import traceback
+from rich.console import Console
 
 from models.m_verification import IdentityVerification, VerificationStatus
 from schemas.s_verification import IdentityVerificationRequest
@@ -126,7 +128,7 @@ async def delete_identity_verification(db: AsyncSession, verification_id: uuid.U
 ###########################################################################
 ############################## Recurring Task #############################
 ###########################################################################
-async def delete_expired_identity_verifications(db: AsyncSession, since_days: int = 14) -> int:
+async def delete_expired_identity_verifications(db: AsyncSession, console: Console, since_days: int = 14) -> bool:
     """Delete expired identity verifications.
 
     :param db: The database session
@@ -134,14 +136,24 @@ async def delete_expired_identity_verifications(db: AsyncSession, since_days: in
     """
     audit_log = audit_crud.AuditLogger(db)
 
-    result = await db.execute(
-        delete(IdentityVerification).where(
-            IdentityVerification.expires_at
-            < datetime.datetime.now(DEFAULT_TIMEZONE) - datetime.timedelta(days=since_days)
+    try:
+        audit_log.sys_info("delete_expired_identity_verifications", f"Deleting expired identity verifications since {since_days} days")
+        result = await db.execute(
+            delete(IdentityVerification).where(
+                IdentityVerification.expires_at
+                < datetime.datetime.now(DEFAULT_TIMEZONE) - datetime.timedelta(days=since_days)
+            )
         )
-    )
 
-    audit_log.id_verification_expired_deleted(since_days, result.rowcount)
-    await db.flush()
+        audit_log.id_verification_expired_deleted(since_days, result.rowcount)
+        await db.commit()
+        console.log(f"[blue][INFO][/blue]\t\tDeleted {result.rowcount} expired identity verifications.")
 
-    return result.rowcount
+        return True
+    except Exception as e:
+        await db.rollback()
+        audit_log.sys_error("delete_expired_identity_verifications", traceback=traceback.format_exc())
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tFailed to delete expired identity verifications.")
+        console.print_exception()
+        return False
