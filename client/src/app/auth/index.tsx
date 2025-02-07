@@ -23,6 +23,8 @@ import Subheading from "@/src/components/textFields/Subheading";
 import Heading from "@/src/components/textFields/Heading";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Toast from "react-native-toast-message";
+import { login } from "@/src/services/auth/loginService";
+import { secondsInDay } from "date-fns/constants";
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -35,14 +37,14 @@ const Login: React.FC = () => {
   const [passwordError, setPasswordError] = useState(false);
 
   const { t } = useTranslation("auth");
-  const router = useRouter();       
+  const router = useRouter();
 
   const loggedInTitle = t("saveLoginData_title");
   const loggedInText = [t("saveLoginData_text")];
   const loggedInIcon = ["history"];
 
   // Login handler with validation and highlighting of empty fields
-  const loginPress = () => {
+  const loginPress = async () => {
     let hasError = false;
 
     if (!username.trim()) {
@@ -68,7 +70,20 @@ const Login: React.FC = () => {
     setUsernameError(false);
     setPasswordError(false);
 
-    router.replace("/(tabs)");
+    try {
+      const response = await login(username, password);
+      const { security_token, methods } = response;
+      router.push({ pathname: "/auth/SignInVerify", params: { securityToken: security_token, methods: methods } });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      Toast.show({
+        type: "error",
+        text1: t("loginError_text"),
+        text2: error.message || t("loginError_subtext")
+      });
+    }
+
+    //router.replace("/(tabs)");
     if (saveLogin) {
       saveCredentials();
     }

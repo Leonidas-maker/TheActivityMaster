@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
     View,
     ScrollView,
@@ -9,7 +9,7 @@ import {
     Animated,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 
@@ -20,13 +20,13 @@ import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput"
 import SecondaryButton from "@/src/components/buttons/SecondaryButton";
 import OptionSwitch from "@/src/components/optionSwitch/OptionSwitch";
 import Dropdown from "@/src/components/dropdown/Dropdown";
-
 import StepProgressBar from "@/src/components/stepProgressBar/StepProgressBar";
 import Subheading from "@/src/components/textFields/Subheading";
 
 const SignUp: React.FC = () => {
     const { t } = useTranslation("auth");
     const router = useRouter();
+    const { acceptedTerms: acceptedTermsParam } = useLocalSearchParams();
 
     // Step state and field states.
     const [currentStep, setCurrentStep] = useState(0);
@@ -53,7 +53,6 @@ const SignUp: React.FC = () => {
     // Step 4: Additional Details.
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [receiveNews, setReceiveNews] = useState(false);
-    const [use2fa, setUse2fa] = useState(true);
 
     // Error states for the fields.
     const [emailError, setEmailError] = useState(false);
@@ -66,13 +65,16 @@ const SignUp: React.FC = () => {
 
     // Animated value for step content transitions.
     const fieldAnim = useRef(new Animated.Value(0)).current;
-    // This ref is used to determine if this is the initial page load.
     const isInitialMount = useRef(true);
 
+    useFocusEffect(
+        useCallback(() => {
+            if (acceptedTermsParam === "true") {
+                setAcceptedTerms(true);
+            }
+        }, [acceptedTermsParam]));
+
     useEffect(() => {
-        // When the signup page is first opened on step 0, we want to show the content
-        // immediately without any animation. For all subsequent transitions (including going
-        // back to step 0 from a later step), the animation is applied.
         if (currentStep === 0 && isInitialMount.current) {
             fieldAnim.setValue(1);
             isInitialMount.current = false;
@@ -98,30 +100,38 @@ const SignUp: React.FC = () => {
         ],
     };
 
-    // Compute the field completion progress for the current step (0–1).
     const getStepProgress = (): number => {
         switch (currentStep) {
             case 0: {
                 const totalFields = 4;
                 const filled =
-                    (email.trim() !== "" ? 1 : 0) + (confirmEmail.trim() !== "" ? 1 : 0) + (password.trim() !== "" ? 1 : 0) + (confirmPassword.trim() !== "" ? 1 : 0);
+                    (email.trim() !== "" ? 1 : 0) +
+                    (confirmEmail.trim() !== "" ? 1 : 0) +
+                    (password.trim() !== "" ? 1 : 0) +
+                    (confirmPassword.trim() !== "" ? 1 : 0);
                 return filled / totalFields;
             }
             case 1: {
                 const totalFields = 3;
                 const filled =
-                    (username.trim() !== "" ? 1 : 0) + (firstName.trim() !== "" ? 1 : 0) + (lastName.trim() !== "" ? 1 : 0);
+                    (username.trim() !== "" ? 1 : 0) +
+                    (firstName.trim() !== "" ? 1 : 0) +
+                    (lastName.trim() !== "" ? 1 : 0);
                 return filled / totalFields;
             }
             case 2: {
                 const totalFields = 5;
                 const filled =
-                    (country.trim() !== "" ? 1 : 0) + (street.trim() !== "" ? 1 : 0) + (city.trim() !== "" ? 1 : 0) + (zip.trim() !== "" ? 1 : 0) + (state.trim() !== "" ? 1 : 0);
+                    (country.trim() !== "" ? 1 : 0) +
+                    (street.trim() !== "" ? 1 : 0) +
+                    (city.trim() !== "" ? 1 : 0) +
+                    (zip.trim() !== "" ? 1 : 0) +
+                    (state.trim() !== "" ? 1 : 0);
                 return filled / totalFields;
             }
             case 3: {
                 const totalFields = 1;
-                const filled = (acceptedTerms ? 1 : 0);
+                const filled = acceptedTerms ? 1 : 0;
                 return filled / totalFields;
             }
             default:
@@ -131,86 +141,11 @@ const SignUp: React.FC = () => {
 
     const stepProgress = getStepProgress();
 
-    // Navigation handlers.
     const handleNext = () => {
-        // Validate inputs for step 0
-        if (currentStep === 0) {
-            // Check for empty fields
-            const isEmailEmpty = !email.trim();
-            const isConfirmEmailEmpty = !confirmEmail.trim();
-            const isPasswordEmpty = !password.trim();
-            const isConfirmPasswordEmpty = !confirmPassword.trim();
-    
-            if (isEmailEmpty || isConfirmEmailEmpty || isPasswordEmpty || isConfirmPasswordEmpty) {
-                if (isEmailEmpty) setEmailError(true);
-                if (isConfirmEmailEmpty) setConfirmEmailError(true);
-                if (isPasswordEmpty) setPasswordError(true);
-                if (isConfirmPasswordEmpty) setConfirmPasswordError(true);
-    
-                Toast.show({
-                    type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
-                });
-                return;
-            }
-    
-            // Check if emails match
-            if (email !== confirmEmail) {
-                setEmailError(true);
-                setConfirmEmailError(true);
-                Toast.show({
-                    type: "error",
-                    text1: t("emailError_text"),
-                    text2: t("emailError_subtext"),
-                });
-                return;
-            } else {
-                setEmailError(false);
-                setConfirmEmailError(false);
-            }
-    
-            // Check if passwords match
-            if (password !== confirmPassword) {
-                setPasswordError(true);
-                setConfirmPasswordError(true);
-                Toast.show({
-                    type: "error",
-                    text1: t("passwordError_text"),
-                    text2: t("passwordError_subtext"),
-                });
-                return;
-            } else {
-                setPasswordError(false);
-                setConfirmPasswordError(false);
-            }
-        }
-    
-        // Validate inputs for step 1
-        if (currentStep === 1) {
-            const isUsernameEmpty = !username.trim();
-            const isFirstNameEmpty = !firstName.trim();
-            const isLastNameEmpty = !lastName.trim();
-    
-            if (isUsernameEmpty || isFirstNameEmpty || isLastNameEmpty) {
-                if (isUsernameEmpty) setUsernameError(true);
-                if (isFirstNameEmpty) setFirstNameError(true);
-                if (isLastNameEmpty) setLastNameError(true);
-    
-                Toast.show({
-                    type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
-                });
-                return;
-            }
-        }
-    
-        // Move to the next step if not at the last step
         if (currentStep < totalSteps - 1) {
             setCurrentStep(currentStep + 1);
         }
-    };    
+    };
 
     const handleBack = () => {
         if (currentStep > 0) {
@@ -225,17 +160,18 @@ const SignUp: React.FC = () => {
                 text1: t("termsError_text"),
                 text2: t("termsError_subtext"),
             });
-            return
+            return;
         }
         router.replace("/auth/(info)/VerifyMail");
     };
 
+    // The handleTerms function now just navigates to the Terms screen.
     const handleTerms = () => {
-        router.navigate("/auth/(info)/Terms");
-        if (acceptedTerms)
+        if (!acceptedTerms) {
+            router.push("/auth/(info)/Terms");
+        } else {
             setAcceptedTerms(false);
-        else 
-            setAcceptedTerms(true);
+        }
     };
 
     return (
@@ -258,7 +194,6 @@ const SignUp: React.FC = () => {
                             }}
                         />
 
-                        {/* Animated container for the current step's fields */}
                         <Animated.View style={animatedStyle} className="w-full">
                             {currentStep === 0 && (
                                 <View className="w-full items-center">
@@ -309,7 +244,7 @@ const SignUp: React.FC = () => {
                                         }}
                                         hasError={confirmPasswordError}
                                     />
-                                    <DefaultButton text={t("next_button")} onPress={() => setCurrentStep(3) } />
+                                    <DefaultButton text={t("next_button")} onPress={() => setCurrentStep(3)} />
                                 </View>
                             )}
                             {currentStep === 1 && (
@@ -386,16 +321,15 @@ const SignUp: React.FC = () => {
                                     <Subheading text={t("registration_step4_title")} />
                                     <OptionSwitch
                                         title={t("more_information_title")}
-                                        texts={[t("accept_terms_text"), t("receive_news_text"), t("use_2fa_text")]}
-                                        iconNames={["check", "mail", "key"]}
-                                        values={[acceptedTerms, receiveNews, use2fa]}
-                                        onValueChanges={[handleTerms, setReceiveNews, setUse2fa]}
+                                        texts={[t("accept_terms_text"), t("receive_news_text")]}
+                                        iconNames={["check", "mail"]}
+                                        values={[acceptedTerms, receiveNews]}
+                                        onValueChanges={[handleTerms, setReceiveNews]}
                                     />
                                 </View>
                             )}
                         </Animated.View>
 
-                        {/* Navigation Buttons */}
                         <View className="w-full items-center mt-6">
                             {currentStep < totalSteps - 1 ? (
                                 <DefaultButton text={t("next_button")} onPress={handleNext} />
