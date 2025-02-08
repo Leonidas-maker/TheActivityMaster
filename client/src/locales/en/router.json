@@ -8,5 +8,6 @@
     "back_btn": "Back",
     "login_header": "Sign In",
     "register_header": "Sign Up",
-    "loginVerfiy_header": "Two-Factor-Authentication"
+    "loginVerfiy_header": "Two-Factor-Authentication",
+    "settings_user_header": "User"
 }

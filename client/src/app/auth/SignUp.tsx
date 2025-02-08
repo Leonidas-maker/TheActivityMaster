@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
+import { register } from "@/src/services/user/userService";
 
 // Custom components
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -153,7 +154,7 @@ const SignUp: React.FC = () => {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!acceptedTerms) {
             Toast.show({
                 type: "error",
@@ -162,7 +163,30 @@ const SignUp: React.FC = () => {
             });
             return;
         }
-        router.replace("/auth/(info)/VerifyMail");
+
+        try {
+            const reponse = await register(
+                username,
+                email,
+                firstName,
+                lastName,
+                street,
+                zip,
+                city,
+                state,
+                country,
+                password
+            );
+
+            router.replace("/auth/(info)/VerifyMail");
+        } catch (error: any) {
+            console.error("Registration error:", error);
+            Toast.show({
+                type: "error",
+                text1: t("registrationError_text"),
+                text2: t("registrationError_subtext"),
+            });
+        }
     };
 
     // The handleTerms function now just navigates to the Terms screen.
@@ -288,11 +312,10 @@ const SignUp: React.FC = () => {
                             {currentStep === 2 && (
                                 <View className="w-full items-center">
                                     <Subheading text={t("registration_step3_title")} />
-                                    <Dropdown
-                                        values={[]}
-                                        setSelected={setCountry}
-                                        search={true}
+                                    <DefaultTextFieldInput
                                         placeholder={t("country_placeholder")}
+                                        value={country}
+                                        onChangeText={setCountry}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("street_placeholder")}

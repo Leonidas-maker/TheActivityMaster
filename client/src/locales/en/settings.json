@@ -10,5 +10,6 @@
     "settings_theme_btn": "Theme",
     "settings_lang_btn": "Language",
     "settings_theme_selector": "Select design",
-    "settings_lang_selector": "Select language"
+    "settings_lang_selector": "Select language",
+    "settings_user_btn": "User settings"
 }

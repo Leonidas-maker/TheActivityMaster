@@ -1,16 +1,30 @@
 // Terms.tsx
 import React, { useEffect, useState } from "react";
-import { View, TouchableOpacity, ScrollView } from "react-native";
+import { View, TouchableOpacity, ScrollView, Text } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { useRouter } from "expo-router";
 import { getGerTerms, getEnTerms } from "@/src/services/termsService";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next"
+import { useColorScheme } from "nativewind";
 
 const Terms = () => {
     const router = useRouter();
-    const { i18n } = useTranslation("auth");
+    const { i18n, t } = useTranslation("auth");
     const [termsText, setTermsText] = useState("");
     const [scrolledToBottom, setScrolledToBottom] = useState(false);
+    const [isLight, setIsLight] = useState(false);
+
+    const { colorScheme } = useColorScheme();
+
+    useEffect(() => {
+        if (colorScheme === "light") {
+            setIsLight(true);
+        } else {
+            setIsLight(false);
+        }
+    }, [colorScheme]);
+
+    const textColor = isLight ? "#000" : "#FFFFFF";
 
     // Handler for the scroll event to check if the bottom is reached
     const handleScroll = (event: any) => {
@@ -45,7 +59,7 @@ const Terms = () => {
             >
                 <Markdown
                     style={{
-                        body: { color: "#000", fontSize: 16 },
+                        body: { color: textColor, fontSize: 16 },
                     }}
                 >
                     {termsText}
@@ -62,13 +76,7 @@ const Terms = () => {
                     }}
                     className="p-4 rounded-md"
                 >
-                    <Markdown
-                        style={{
-                            body: { color: "red", fontSize: 18, fontWeight: "bold" },
-                        }}
-                    >
-                        Ablehnen
-                    </Markdown>
+                    <Text style={{ color: "red", fontSize: 18, fontWeight: "bold" }}>{t("terms_decline")}</Text>
                 </TouchableOpacity>
 
                 {/* Accept button */}
@@ -81,19 +89,9 @@ const Terms = () => {
                         }
                     }}
                     disabled={!scrolledToBottom}
-                    className={`p-4 rounded-md ${scrolledToBottom ? "" : "bg-gray-300"}`}
+                    className={`p-4 rounded-md`}
                 >
-                    <Markdown
-                        style={{
-                            body: {
-                                color: scrolledToBottom ? "green" : "gray",
-                                fontSize: 18,
-                                fontWeight: "bold",
-                            },
-                        }}
-                    >
-                        Akzeptieren
-                    </Markdown>
+                    <Text style={{ color: scrolledToBottom ? "green" : "gray", fontSize: 18, fontWeight: "bold" }}>{t("terms_accept")}</Text>
                 </TouchableOpacity>
             </View>
         </View>

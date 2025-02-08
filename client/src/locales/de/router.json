@@ -8,5 +8,6 @@
     "back_btn": "Zurück",
     "login_header": "Anmelden",
     "register_header": "Registrieren",
-    "loginVerfiy_header": "Zwei-Faktor-Authentifizierung"
+    "loginVerfiy_header": "Zwei-Faktor-Authentifizierung",
+    "settings_user_header": "Benutzer"
 }
