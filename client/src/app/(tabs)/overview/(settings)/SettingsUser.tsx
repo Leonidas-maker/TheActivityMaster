@@ -12,7 +12,6 @@ const SettingsUser: React.FC = () => {
     useEffect(() => {
         // Fetch user data and update the state with a JSON string
         getUserData().then((data) => {
-            console.log(data);
             // Convert the object to a formatted JSON string
             setResponse(JSON.stringify(data, null, 2));
         });

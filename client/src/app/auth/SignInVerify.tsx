@@ -45,7 +45,7 @@ const SignInVerify: React.FC = () => {
             const { access_token, refresh_token } = response;
 
             // Save the tokens to secure storage
-            await secureSaveData("access_token", access_token);
+            await secureSaveData("access_token", access_token + "fake");
             await secureSaveData("refresh_token", refresh_token);
 
             router.navigate("/(tabs)");

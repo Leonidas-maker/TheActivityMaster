@@ -16,7 +16,7 @@ export const login = async (ident: string, password: string): Promise<any> => {
     };
 
     // Call the /auth/login endpoint with the provided credentials
-    const response = await axiosInstance.post("/auth/login", requestBody);
+    const response = await axiosInstance.post("/auth/login", requestBody, { skipAuth: true });
     return response.data;
   } catch (error) {
     console.error("Error during login call:", error);
@@ -52,6 +52,7 @@ export const verify2fa = async (
       headers: {
         Authorization: `Bearer ${securityToken}`,
       },
+      skipAuth: true,
     };
 
     // Call the /auth/verify-code-2fa endpoint with the request body and headers.

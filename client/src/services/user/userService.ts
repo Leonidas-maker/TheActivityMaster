@@ -1,20 +1,9 @@
 import { axiosInstance } from "../api";
 import { secureLoadData } from "../secureStorageService";
 
-//TODO: Make this better only for testing!
 export const getUserData = async (): Promise<any> => {
   try {
-    //TODO: Add Logic to get access_token with validation and refresh
-    const access_token = await secureLoadData("access_token");
-
-    // Configure the headers with the access token.
-    const config = {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    };
-
-    const response = await axiosInstance.get("/user/me", config);
+    const response = await axiosInstance.get("/user/me");
 
     return response.data;
   } catch (error) {
@@ -53,7 +42,7 @@ export const register = async (
       };
   
       // Call the /user/register endpoint with the provided credentials
-      const response = await axiosInstance.post("/user/register", requestBody);
+      const response = await axiosInstance.post("/user/register", requestBody, { skipAuth: true });
       return response.data;
     } catch (error) {
       console.error("Error during register call:", error);
