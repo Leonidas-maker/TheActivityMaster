@@ -11,6 +11,10 @@ import DefaultText from "@/src/components/textFields/DefaultText";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import PageNavigator from '@/src/components/pageNavigator/PageNavigator';
 import { goBack } from "expo-router/build/global-state/routing";
+import ProfileView from "@/src/components/userComponents/ProfileView";
+import SecondaryButton from "@/src/components/buttons/SecondaryButton";
+import { axiosInstance } from "@/src/services/api";
+import { asyncRemoveData } from "@/src/services/asyncStorageService";
 
 // ====================================================== //
 // ====================== Component ===================== //
@@ -19,6 +23,13 @@ const OverviewHome: React.FC = () => {
   // ~~~~~~~~~~~ Define navigator ~~~~~~~~~~ //
   const router = useRouter();
   const { t } = useTranslation("overview");
+
+  const handleLogoutPress = async () => {
+    axiosInstance.delete("/auth/logout").then(() => {
+      asyncRemoveData("isLoggedIn");
+      router.navigate("/(tabs)");
+    });
+  };
 
   // ====================================================== //
   // ================== SettingsNavigator ================= //
@@ -60,6 +71,7 @@ const OverviewHome: React.FC = () => {
   // Returns the navigators and the current app version
   return (
     <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
+      <ProfileView />
       <PageNavigator
         title={moduleTitle}
         onPressFunctions={onPressModuleFunctions}
@@ -74,6 +86,7 @@ const OverviewHome: React.FC = () => {
       />
       <View className="justify-center items-center my-2">
         <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} />
+        <SecondaryButton text={t("logout_btn")} onPress={handleLogoutPress} />
       </View>
       <View className="justify-center items-center my-2">
         <DefaultText text={t("app_version") + `: ${expo.version} ❤️`} />

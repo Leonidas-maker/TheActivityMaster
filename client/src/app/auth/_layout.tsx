@@ -1,8 +1,8 @@
-import { Stack } from "expo-router";
+import { Stack, router } from 'expo-router';
 import React, { useEffect, useState } from "react";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
-import { useNavigation } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -10,6 +10,7 @@ export default function AuthLayout() {
     const [isLight, setIsLight] = useState(false);
     const { t } = useTranslation("router");
     const navigation = useNavigation();
+    const router = useRouter();
 
     const { colorScheme } = useColorScheme();
 
@@ -26,6 +27,14 @@ export default function AuthLayout() {
     // Set the icon color based on the color scheme
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
+    const handleBackPress = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            router.push("/(tabs)");
+        }
+    };
+
     return (
         <SafeAreaProvider>
             <Stack
@@ -40,7 +49,7 @@ export default function AuthLayout() {
                             name="close"
                             size={30}
                             color={iconColor}
-                            onPress={() => navigation.goBack()}
+                            onPress={handleBackPress}
                         />
                     ),
                     gestureEnabled: false

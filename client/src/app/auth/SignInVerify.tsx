@@ -10,6 +10,7 @@ import { secureSaveData } from "@/src/services/secureStorageService";
 import Heading from "@/src/components/textFields/Heading";
 import TwoFactorInput from "@/src/components/textInputs/TwoFactorInput";
 import { useRouter } from "expo-router";
+import { asyncSaveData } from "@/src/services/asyncStorageService";
 
 const SignInVerify: React.FC = () => {
     const { t } = useTranslation("auth");
@@ -45,8 +46,10 @@ const SignInVerify: React.FC = () => {
             const { access_token, refresh_token } = response;
 
             // Save the tokens to secure storage
-            await secureSaveData("access_token", access_token + "fake");
+            await secureSaveData("access_token", access_token);
             await secureSaveData("refresh_token", refresh_token);
+            await asyncSaveData("wasLoggedIn", "true");
+            await asyncSaveData("isLoggedIn", "true");
 
             router.navigate("/(tabs)");
         } catch (error: any) {
