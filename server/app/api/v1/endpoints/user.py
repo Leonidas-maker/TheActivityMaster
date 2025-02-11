@@ -55,6 +55,17 @@ async def get_user_information(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user information")
 
+@router.get("/me/roles", response_model=s_user.Roles, tags=["User"])
+async def get_user_roles(
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    """Get user roles"""
+    try:
+        return await user_controller.get_user_roles(ep_context, token_details)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user roles")
+
 
 @router.patch("/me", tags=["User"])
 async def delete_user_v1(

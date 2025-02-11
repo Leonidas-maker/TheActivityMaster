@@ -15,6 +15,7 @@ from crud.audit import AuditLogger
 from crud import user as user_crud, auth as auth_crud, generic as generic_crud, verification as verification_crud
 
 
+
 from config.security import TOKEN_ISSUER
 from config.settings import DEBUG
 
@@ -112,6 +113,35 @@ async def user_information(db: AsyncSession, user_id: uuid.UUID) -> m_user.User:
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+async def get_user_roles(ep_context: EndpointContext, token_details: core_security.TokenDetails) -> s_user.Roles:
+    """
+    Get the roles of a user
+
+    :param ep_context: The endpoint context
+    :param token_details: The token details
+    :return: The generic and club roles of the user
+    """
+    db = ep_context.db
+    user_id = token_details.user_id
+
+    # Get the user
+    generic_roles, club_roles = await user_crud.get_user_roles(db, user_id)
+
+    return s_user.Roles(
+        generic_roles=[s_user.GenericRole(name=role.name, description=role.description) for role in generic_roles],
+        club_roles=[
+            s_user.ClubRole(
+                name=role.name,
+                description=role.description,
+                club_id=str(role.club_id),
+                permissions=[
+                    s_user.Permission(name=perm.name, description=perm.description) for perm in role.permissions
+                ],
+            )
+            for role in club_roles
+        ],
+    )
 
 
 ###########################################################################

@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, literal_column, union_all
 from sqlalchemy.sql.expression import or_
+from sqlalchemy.orm import joinedload, undefer
 import datetime
 import traceback
 from typing import Optional, List, Tuple
@@ -99,7 +100,10 @@ async def get_user_generic_roles(
     )
     return list(res.scalars().all())
 
-async def get_user_club_roles(db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, query_options: list = []) -> List[m_user.ClubRole]:
+
+async def get_user_club_roles(
+    db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, query_options: list = []
+) -> List[m_user.ClubRole]:
     """
     Get the club roles for a user
 
@@ -115,6 +119,35 @@ async def get_user_club_roles(db: AsyncSession, user_id: uuid.UUID, club_id: uui
     )
     return list(res.scalars().all())
 
+
+async def get_user_roles(
+    db: AsyncSession, user_id: uuid.UUID
+) -> Tuple[List[m_user.GenericRole], List[m_club.ClubRole]]:
+    """
+    Get the roles for a user with each description.
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to search for
+    :return: tuple: (generic_roles, club_roles)
+    """
+    query_options = [
+        joinedload(m_user.User.generic_roles).options(undefer(m_user.GenericRole.description)),
+        joinedload(m_user.User.club_roles).options(
+            undefer(m_user.ClubRole.description),
+            joinedload(m_user.ClubRole.permissions).options(undefer(m_user.Permission.description)),
+        ),
+    ]
+
+    res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_options))
+    user = res.unique().scalar_one_or_none()
+    if not user:
+        raise ValueError("User not found")
+    return user.generic_roles, user.club_roles
+
+
+###########################################################################
+################################## Delete #################################
+###########################################################################
 async def delete_user(ep_context: EndpointContext, user_id: uuid.UUID, application_id_hash: str) -> None:
     """
     Soft delete a user by setting their email to a placeholder and anonymizing their name and password

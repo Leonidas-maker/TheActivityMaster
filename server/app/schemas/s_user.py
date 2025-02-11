@@ -21,11 +21,10 @@ class User(UserBase):
     id: str
     methods_2fa: List[str] = []
 
-    class Config:
-        from_attributes = True
 
 class UserDelete(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
+
 
 class RegisterInitTOTP(BaseModel):
     secret: str
@@ -46,3 +45,22 @@ class ChangePassword(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=100)
     old_password: str = Field(..., min_length=8, max_length=100)
 
+
+
+class GenericRole(BaseModel):
+    name: str
+    description: str
+
+class Permission(BaseModel):
+    name: str
+    description: str
+class ClubRole(BaseModel):
+    name: str
+    description: str
+    club_id: str
+    
+    permissions: List[Permission]
+
+class Roles(BaseModel):
+    generic_roles: List[GenericRole]
+    club_roles: List[ClubRole]

@@ -331,7 +331,7 @@ class Permission(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
-    description: Mapped[str] = mapped_column(String(255), nullable=True)
+    description: Mapped[str] = deferred(mapped_column(String(255), nullable=True))
 
     roles: Mapped[List["ClubRole"]] = relationship(
         "ClubRole",
@@ -344,7 +344,7 @@ class ClubRole(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = deferred(mapped_column(String(255), nullable=False))
 
     permissions: Mapped[List["Permission"]] = relationship(
         "Permission",
@@ -358,6 +358,27 @@ class ClubRole(Base):
         secondary="user_club_roles",
         uselist=True
     )
+
+    def as_dict(self) -> dict:
+        """
+        Returns the club role as a dictionary
+        {
+            "ClubOwner": {
+                "description": "The owner of the club, has full control over the club and its settings.",
+                "permissions": [
+                    {"name": "read_club_data", "description": "Allows reading club data."},
+                    {"name": "write_club_data", "description": "Allows writing or modifying club data."}
+                ]
+            }
+        }
+        """
+        return {
+            self.name: {
+                "description": self.description,
+                "permissions": [perm.as_dict() for perm in self.permissions]
+            }
+        }
+        
 
 class UserClubRole(Base):
     __tablename__ = "user_club_roles"
