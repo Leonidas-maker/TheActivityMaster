@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
+import { register } from "@/src/services/user/userService";
 
 // Custom components
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -32,19 +33,19 @@ const SignUp: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const totalSteps = 4;
 
-    // Step 1: Email and Password.
+    // Step 1: Email and Username.
     const [email, setEmail] = useState("");
     const [confirmEmail, setConfirmEmail] = useState("");
+    const [username, setUsername] = useState("");
+
+    // Step 2: Password, first and last name.
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-
-    // Step 2: Username, first and last name.
-    const [username, setUsername] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
 
     // Step 3: Personal Information.
-    const [country, setCountry] = useState("");
+    const [country, setCountry] = useState("Germany");
     const [street, setStreet] = useState("");
     const [city, setCity] = useState("");
     const [zip, setZip] = useState("");
@@ -67,12 +68,19 @@ const SignUp: React.FC = () => {
     const fieldAnim = useRef(new Animated.Value(0)).current;
     const isInitialMount = useRef(true);
 
+    // Helper function to check if an email is valid.
+    const isValidEmail = (email: string): boolean => {
+        const emailRegex = /^\S+@\S+\.\S+$/;
+        return emailRegex.test(email);
+    };
+
     useFocusEffect(
         useCallback(() => {
             if (acceptedTermsParam === "true") {
                 setAcceptedTerms(true);
             }
-        }, [acceptedTermsParam]));
+        }, [acceptedTermsParam])
+    );
 
     useEffect(() => {
         if (currentStep === 0 && isInitialMount.current) {
@@ -103,18 +111,18 @@ const SignUp: React.FC = () => {
     const getStepProgress = (): number => {
         switch (currentStep) {
             case 0: {
-                const totalFields = 4;
+                const totalFields = 3;
                 const filled =
                     (email.trim() !== "" ? 1 : 0) +
                     (confirmEmail.trim() !== "" ? 1 : 0) +
-                    (password.trim() !== "" ? 1 : 0) +
-                    (confirmPassword.trim() !== "" ? 1 : 0);
+                    (username.trim() !== "" ? 1 : 0);
                 return filled / totalFields;
             }
             case 1: {
-                const totalFields = 3;
+                const totalFields = 4;
                 const filled =
-                    (username.trim() !== "" ? 1 : 0) +
+                    (password.trim() !== "" ? 1 : 0) +
+                    (confirmPassword.trim() !== "" ? 1 : 0) +
                     (firstName.trim() !== "" ? 1 : 0) +
                     (lastName.trim() !== "" ? 1 : 0);
                 return filled / totalFields;
@@ -142,6 +150,104 @@ const SignUp: React.FC = () => {
     const stepProgress = getStepProgress();
 
     const handleNext = () => {
+        // Validate inputs for step 0 (Email and Username).
+        if (currentStep === 0) {
+            // Check for empty fields.
+            const isEmailEmpty = !email.trim();
+            const isConfirmEmailEmpty = !confirmEmail.trim();
+            const isUsernameEmpty = !username.trim();
+
+            if (isEmailEmpty || isConfirmEmailEmpty || isUsernameEmpty) {
+                if (isEmailEmpty) setEmailError(true);
+                if (isConfirmEmailEmpty) setConfirmEmailError(true);
+                if (isUsernameEmpty) setUsernameError(true);
+
+                Toast.show({
+                    type: "error",
+                    text1: t("inputError_text"),
+                    text2: t("inputError_subtext"),
+                });
+                return;
+            }
+
+            // Check if the provided emails are valid.
+            if (!isValidEmail(email) || !isValidEmail(confirmEmail)) {
+                setEmailError(true);
+                setConfirmEmailError(true);
+                Toast.show({
+                    type: "error",
+                    text1: t("emailInvalidError_text") || "Invalid Email Address",
+                    text2: t("emailInvalidError_subtext") || "Please enter a valid email address.",
+                });
+                return;
+            }
+
+            // Check if emails match.
+            if (email !== confirmEmail) {
+                setEmailError(true);
+                setConfirmEmailError(true);
+                Toast.show({
+                    type: "error",
+                    text1: t("emailError_text"),
+                    text2: t("emailError_subtext"),
+                });
+                return;
+            } else {
+                setEmailError(false);
+                setConfirmEmailError(false);
+            }
+        }
+
+        // Validate inputs for step 1 (Password and Personal Names).
+        if (currentStep === 1) {
+            const isFirstNameEmpty = !firstName.trim();
+            const isLastNameEmpty = !lastName.trim();
+            const isPasswordEmpty = !password.trim();
+            const isConfirmPasswordEmpty = !confirmPassword.trim();
+
+            if (isFirstNameEmpty || isLastNameEmpty || isPasswordEmpty || isConfirmPasswordEmpty) {
+                if (isFirstNameEmpty) setFirstNameError(true);
+                if (isLastNameEmpty) setLastNameError(true);
+                if (isPasswordEmpty) setPasswordError(true);
+                if (isConfirmPasswordEmpty) setConfirmPasswordError(true);
+
+                Toast.show({
+                    type: "error",
+                    text1: t("inputError_text"),
+                    text2: t("inputError_subtext"),
+                });
+                return;
+            }
+
+            // Check if the password is at least 8 characters long.
+            if (password.length < 8) {
+                setPasswordError(true);
+                setConfirmPasswordError(true);
+                Toast.show({
+                    type: "error",
+                    text1: t("passwordMinLengthError_text") || "Password Too Short",
+                    text2: t("passwordMinLengthError_subtext") || "Password must be at least 8 characters long.",
+                });
+                return;
+            }
+
+            // Check if passwords match.
+            if (password !== confirmPassword) {
+                setPasswordError(true);
+                setConfirmPasswordError(true);
+                Toast.show({
+                    type: "error",
+                    text1: t("passwordError_text"),
+                    text2: t("passwordError_subtext"),
+                });
+                return;
+            } else {
+                setPasswordError(false);
+                setConfirmPasswordError(false);
+            }
+        }
+
+        // Move to the next step if not at the last step.
         if (currentStep < totalSteps - 1) {
             setCurrentStep(currentStep + 1);
         }
@@ -153,7 +259,7 @@ const SignUp: React.FC = () => {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!acceptedTerms) {
             Toast.show({
                 type: "error",
@@ -162,7 +268,30 @@ const SignUp: React.FC = () => {
             });
             return;
         }
-        router.replace("/auth/(info)/VerifyMail");
+
+        try {
+            const response = await register(
+                username,
+                email,
+                firstName,
+                lastName,
+                street,
+                zip,
+                city,
+                state,
+                country,
+                password
+            );
+
+            router.replace("/auth/(info)/VerifyMail");
+        } catch (error: any) {
+            console.error("Registration error:", error);
+            Toast.show({
+                type: "error",
+                text1: t("registrationError_text"),
+                text2: t("registrationError_subtext"),
+            });
+        }
     };
 
     // The handleTerms function now just navigates to the Terms screen.
@@ -221,6 +350,24 @@ const SignUp: React.FC = () => {
                                         hasError={confirmEmailError}
                                     />
                                     <DefaultTextFieldInput
+                                        placeholder={t("username_placeholder")}
+                                        value={username}
+                                        onChangeText={(text) => {
+                                            setUsername(text);
+                                            if (text.trim()) {
+                                                setUsernameError(false);
+                                            }
+                                        }}
+                                        hasError={usernameError}
+                                    />
+                                    {/* This button appears to navigate directly to step 3. */}
+                                    <DefaultButton text={t("next_button")} onPress={() => setCurrentStep(3)} />
+                                </View>
+                            )}
+                            {currentStep === 1 && (
+                                <View className="w-full items-center">
+                                    <Subheading text={t("registration_step2_title")} />
+                                    <DefaultTextFieldInput
                                         placeholder={t("password_placeholder")}
                                         secureTextEntry
                                         value={password}
@@ -243,23 +390,6 @@ const SignUp: React.FC = () => {
                                             }
                                         }}
                                         hasError={confirmPasswordError}
-                                    />
-                                    <DefaultButton text={t("next_button")} onPress={() => setCurrentStep(3)} />
-                                </View>
-                            )}
-                            {currentStep === 1 && (
-                                <View className="w-full items-center">
-                                    <Subheading text={t("registration_step2_title")} />
-                                    <DefaultTextFieldInput
-                                        placeholder={t("username_placeholder")}
-                                        value={username}
-                                        onChangeText={(text) => {
-                                            setUsername(text);
-                                            if (text.trim()) {
-                                                setUsernameError(false);
-                                            }
-                                        }}
-                                        hasError={usernameError}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("first_name_placeholder")}
@@ -288,11 +418,11 @@ const SignUp: React.FC = () => {
                             {currentStep === 2 && (
                                 <View className="w-full items-center">
                                     <Subheading text={t("registration_step3_title")} />
-                                    <Dropdown
-                                        values={[]}
-                                        setSelected={setCountry}
-                                        search={true}
+                                    <DefaultTextFieldInput
                                         placeholder={t("country_placeholder")}
+                                        value={country}
+                                        onChangeText={setCountry}
+                                        editable={false}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("street_placeholder")}

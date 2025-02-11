@@ -10,5 +10,6 @@
     "settings_theme_btn": "Erscheinungsbild",
     "settings_lang_btn": "Sprache",
     "settings_theme_selector": "Design auswählen",
-    "settings_lang_selector": "Sprache auswählen"
+    "settings_lang_selector": "Sprache auswählen",
+    "settings_user_btn": "Benutzereinstellungen"
 }

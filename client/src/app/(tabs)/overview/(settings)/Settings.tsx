@@ -20,13 +20,17 @@ const Settings: React.FC = () => {
     router.navigate("/(tabs)/overview/(settings)/SettingsLanguage");
   };
 
+  const handleUserPress = () => {
+    router.navigate("/(tabs)/overview/(settings)/SettingsUser");
+  };
+
   const moduleTitle = t("settingsPageNavigator_title1");
 
-  const onPressModuleFunctions = [handleThemePress, handleLanguagePress];
+  const onPressModuleFunctions = [handleThemePress, handleLanguagePress, handleUserPress];
 
-  const moduleTexts = [t("settings_theme_btn"), t("settings_lang_btn")];
+  const moduleTexts = [t("settings_theme_btn"), t("settings_lang_btn"), t("settings_user_btn")];
 
-  const moduleIconNames = ["contrast", "language"];
+  const moduleIconNames = ["contrast", "language", "person"];
 
   return (
       <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">

@@ -79,8 +79,10 @@ const Login: React.FC = () => {
       Toast.show({
         type: "error",
         text1: t("loginError_text"),
-        text2: error.message || t("loginError_subtext")
+        text2: t("loginError_subtext")
       });
+      setUsernameError(true);
+      setPasswordError(true);
     }
 
     //router.replace("/(tabs)");

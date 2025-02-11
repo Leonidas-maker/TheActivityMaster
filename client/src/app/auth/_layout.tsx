@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigation } from "expo-router";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { View } from "react-native";
 
 export default function AuthLayout() {
     const [isLight, setIsLight] = useState(false);

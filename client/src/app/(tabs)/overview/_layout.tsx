@@ -55,6 +55,12 @@ export default function OverviewLayout() {
           headerTitle: t("settings_language_header"),
         }}
       />
+      <Stack.Screen
+        name="(settings)/SettingsUser"
+        options={{
+          headerTitle: t("settings_user_header"),
+        }}
+      />
     </Stack>
   );
 }

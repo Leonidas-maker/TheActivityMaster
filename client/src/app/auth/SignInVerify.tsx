@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import { useTranslation } from "react-i18next";
@@ -16,16 +16,23 @@ const SignInVerify: React.FC = () => {
     const router = useRouter();
     const [code, setCode] = useState("");
     const [error, setError] = useState(true);
+    const [isEmail, setIsEmail] = useState(false);
 
     const { securityToken, methods } = useLocalSearchParams();
+
+    useEffect(() => {
+        if (methods.includes("email")) {
+            setIsEmail(true);
+        }
+    }, []);
 
     // Handle the verification button press event
     const handleVerifyPress = async () => {
         if (error) {
             Toast.show({
                 type: "error",
-                text1: t("error_title"),
-                text2: t("error_text"),
+                text1: t("toastErrorSignInVerify_emptyText"),
+                text2: t("toastErrorSignInVerify_emptySubtext"),
             });
             return;
         }
@@ -38,7 +45,7 @@ const SignInVerify: React.FC = () => {
             const { access_token, refresh_token } = response;
 
             // Save the tokens to secure storage
-            await secureSaveData("access_token", access_token);
+            await secureSaveData("access_token", access_token + "fake");
             await secureSaveData("refresh_token", refresh_token);
 
             router.navigate("/(tabs)");
@@ -46,8 +53,8 @@ const SignInVerify: React.FC = () => {
             console.error("2FA error:", error);
             Toast.show({
                 type: "error",
-                text1: t("loginError_text"),
-                text2: error.message || t("loginError_subtext")
+                text1: t("toastErrorSignInVerify_errorText"),
+                text2: t("toastErrorSignInVerify_errorSubtext"),
             });
         }
     };
@@ -60,7 +67,7 @@ const SignInVerify: React.FC = () => {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <View className="flex h-screen items-center bg-light_primary dark:bg-dark_primary">
                     <View className="py-4">
-                        <Heading text={t("signInVerify_text")} />
+                        <Heading text={isEmail ? t("signInVerifyMail_text") : t("signInVerifyApp_text")} />
                     </View>
                     <TwoFactorInput
                         onCodeChange={(text, isComplete) => {
@@ -72,7 +79,7 @@ const SignInVerify: React.FC = () => {
                             }
                         }}
                     />
-                    <DefaultButton text={t("singInVerify_btn")} onPress={handleVerifyPress} />
+                    <DefaultButton text={t("signInVerify_btn")} onPress={handleVerifyPress} />
                 </View>
             </TouchableWithoutFeedback>
             <DefaultToast />
