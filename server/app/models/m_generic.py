@@ -15,7 +15,7 @@ class Address(Base):
     __tablename__ = "addresses"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    street: Mapped[str] = mapped_column(String(255), nullable=False)  # Explizit VARCHAR(255)
+    street: Mapped[str] = mapped_column(String(255), nullable=False)
     postal_code_id: Mapped[int] = mapped_column(Integer, ForeignKey("postal_codes.id"), nullable=False)
     
     postal_code: Mapped["PostalCode"] = relationship("PostalCode", back_populates="addresses", lazy="joined")

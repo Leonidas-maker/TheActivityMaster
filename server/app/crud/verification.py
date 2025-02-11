@@ -108,8 +108,34 @@ async def get_pending_identity_verifications(db: AsyncSession) -> List[Tuple[uui
 
 
 async def get_identity_verification_details(db: AsyncSession, verification_id: uuid.UUID) -> IdentityVerification:
+    """Get the details of an identity verification.
+
+    :param db: The database session
+    :param verification_id: The verification ID
+    :return: The identity verification
+    """
     result = await db.execute(select(IdentityVerification).where(IdentityVerification.id == verification_id))
     return result.scalars().first()
+
+
+async def is_user_identity_verified(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Check if a user has an approved identity verification.
+
+    :param db: The database session
+    :param user_id: The user ID
+    :return: True if the user has an approved identity verification, False otherwise
+    """
+    result = await db.execute(
+        select(IdentityVerification)
+        .where(
+            and_(
+                IdentityVerification.user_id == user_id,
+                IdentityVerification.status == VerificationStatus.APPROVED,
+                IdentityVerification.expires_at > datetime.datetime.now(DEFAULT_TIMEZONE),
+            )
+        )
+    )
+    return result.scalars().first() is not None
 
 
 async def delete_identity_verification(db: AsyncSession, verification_id: uuid.UUID, soft_delete: bool = True):

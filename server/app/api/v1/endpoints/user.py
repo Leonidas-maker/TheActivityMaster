@@ -41,7 +41,8 @@ async def get_user_information(
     try:
         user = await user_controller.user_information(ep_context.db, uuid.UUID(token_details.payload["sub"]))
         _2fa_methods = [ method.method.value for method in user._2fa ]
-        print(_2fa_methods)
+        if not _2fa_methods:
+            _2fa_methods = ["email"]
         return s_user.User(
             id=str(user.id),
             username=user.username,

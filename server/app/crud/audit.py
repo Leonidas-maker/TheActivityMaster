@@ -642,6 +642,22 @@ class AuditLogger:
             category=AuditLogCategories.SYSTEM,
             details=f"Deleted {count} expired identity verifications older than {since_days} days",
         )
+    
+    # ======================================================== #
+    # ========================= Club ========================= #
+    # ======================================================== #
+    def club_created(self, user_id: uuid.UUID, club_id: uuid.UUID):
+        """Log a club creation action.
+
+        :param user_id: The user ID creating the club
+        :param club_id: The ID of the created club
+        """
+        self.log_to_audit(
+            user_id,
+            action="Club Created",
+            category=AuditLogCategories.CLUB,
+            details=f"Created club {club_id}",
+        )
 
 
 ###########################################################################

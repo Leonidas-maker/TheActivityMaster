@@ -10,8 +10,7 @@ import traceback
 from config.settings import DEBUG, DEFAULT_TIMEZONE
 from config.security import TOKEN_ISSUER
 
-import models.m_user as m_user
-import models.m_audit as m_audit
+from models import m_audit, m_user
 
 import schemas.s_auth as s_auth
 

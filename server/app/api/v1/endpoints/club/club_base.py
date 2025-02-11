@@ -3,9 +3,21 @@ import uuid
 
 from api.v1.endpoints.club.club_id import base as club_id
 
+from controllers import club as club_controller
+from schemas import s_club, s_generic
+
+from core.generic import EndpointContext
+import core.security as core_security
+
+from middleware.general import get_endpoint_context
+import middleware.auth as auth_middleware
+
+from utils.exceptions import handle_exception
+
 # Router for club endpouuid.UUIDs
 router = APIRouter()
 router.include_router(club_id.router, prefix="/{club_id}")
+
 
 ###########################################################################
 ################################### Club ##################################
@@ -15,9 +27,23 @@ async def get_clubs_v1():
     pass
 
 
-@router.post("", tags=["Club"])
-async def create_club_v1(request: Request):
-    pass
+@router.post("", response_model=s_club.Club, tags=["Club"])
+async def create_club_v1(
+    club_create: s_club.ClubCreate,
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    try:
+        club = await club_controller.create_club(ep_context, token_details, club_create)
+        return s_club.Club(
+            id=club.id,
+            name=club.name,
+            description=str(club.description),
+            address=s_generic.Address(**club.address.get_as_dict()),
+            owner_ids=[token_details.user_id],
+        )
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to create club")
 
 
 @router.get("/{club_id}", tags=["Club"])
@@ -34,9 +60,11 @@ async def update_club_v1(club_id: uuid.UUID):
 async def delete_club_v1(club_id: uuid.UUID):
     pass
 
+
 @router.get("/{club_id}/sessions", tags=["Club - Program - Session"])
 async def get_sessions_v1(club_id: uuid.UUID):
     pass
+
 
 ###########################################################################
 ################################### User ##################################
@@ -76,6 +104,7 @@ async def search_clubs_v1(query: str):
 async def search_programs_v1(category: str, query: str):
     pass
 
+
 # ======================================================== #
 # ======================= BOOKINGS ======================= #
 # ======================================================== #
@@ -83,9 +112,10 @@ async def search_programs_v1(category: str, query: str):
 async def get_bookings_v1(club_id: uuid.UUID):
     pass
 
+
 # ======================================================== #
 # ================= Employee & Club Roles ================ #
-# ======================================================== # 
+# ======================================================== #
 @router.get("/{club_id}/employees", tags=["Club - Employee"])
 async def get_employees_v1(club_id: uuid.UUID):
     pass

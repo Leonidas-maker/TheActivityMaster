@@ -7,7 +7,7 @@ from models import m_club
 
 import crud.generic as generic_crud
 
-async def create_club(db: AsyncSession, club: s_club.ClubCreate) -> m_club.Club:
+async def create_club(db: AsyncSession, user_id, club: s_club.ClubCreate) -> m_club.Club:
     """Create a club
 
     :param db: The database session
@@ -20,9 +20,25 @@ async def create_club(db: AsyncSession, club: s_club.ClubCreate) -> m_club.Club:
         name=club.name,
         description=club.description,
         address=address
+        
     )
 
     db.add(db_club)
+
+    owner_db = await db.execute(select(m_club.ClubRole).where(m_club.ClubRole.name == "Owner"))
+    owner_role = owner_db.unique().scalar_one()
+
+    if not owner_role:
+        raise ValueError("Club owner role not found")
+    
+    db_user_club_role = m_club.UserClubRole(
+        user_id=user_id,
+        club_role_id=owner_role.id,
+        club = db_club
+    )
+
+    db.add(db_user_club_role)
+
     await db.flush()
     return db_club
 

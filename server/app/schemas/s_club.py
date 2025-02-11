@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
+from typing import List
+import uuid
 
 from schemas import s_generic
+
 
 class ClubBase(BaseModel):
     name: str = Field(..., max_length=50)
@@ -11,8 +14,8 @@ class ClubCreate(ClubBase):
     pass
 
 class Club(ClubBase):
-    id: int
-    owner_id: int
+    id: uuid.UUID
+    owner_ids: List[uuid.UUID]
 
     class Config:
         orm_mode = True

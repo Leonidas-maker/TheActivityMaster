@@ -35,3 +35,33 @@ class IdentityVerification(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     
     user = relationship("User", back_populates="identity_verifications")
+
+class ClubVerification(Base):
+    __tablename__ = "club_verifications"
+    
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
+    
+    # Encrypted data for verification (for example, encrypted registration info or business license)
+    encrypted_registration_data: Mapped[str] = deferred(mapped_column(Text, nullable=False))
+    
+    # Optional fields for additional club information
+    club_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    representative_first_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    representative_last_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    established_date: Mapped[str] = mapped_column(String(10), nullable=True)  # e.g. "YYYY-MM-DD"
+    image_url: Mapped[str] = mapped_column(String(255), nullable=True)
+    
+    # Verification status and timestamps
+    status: Mapped[VerificationStatus] = mapped_column(Enum(VerificationStatus), default=VerificationStatus.PENDING, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(DEFAULT_TIMEZONE), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    
+    # Relationship back to the Club model
+    club = relationship("Club", back_populates="club_verifications")

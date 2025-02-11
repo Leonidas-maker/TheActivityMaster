@@ -26,6 +26,7 @@ from models.m_generic import *
 from models.m_club import *
 from models.m_audit import *
 from models.m_payment import *
+from models.m_verification import *
 
 
 ########################################################################
@@ -80,6 +81,7 @@ class Club(Base):
     address: Mapped["Address"] = relationship("Address")
     memberships: Mapped[List["Membership"]] = relationship("Membership", back_populates="club", uselist=True)
     programs: Mapped[List["Program"]] = relationship("Program", back_populates="club", uselist=True)
+    club_verifications: Mapped[List["ClubVerification"]] = relationship("ClubVerification", back_populates="club")
 
 
 ###########################################################################
@@ -131,6 +133,7 @@ class Program(Base):
     categories: Mapped[List["ProgramCategory"]] = relationship(
         "ProgramCategory", secondary="program_category_association", back_populates="programs"
     )
+    trainers: Mapped[List["User"]] = relationship("User", secondary="user_trainers")
 
 
 class Session(Base):
@@ -316,7 +319,25 @@ class MembershipTransaction(Base):
 ###########################################################################
 ################################### User ##################################
 ###########################################################################
+class ClubRolePermission(Base):
+    __tablename__ = "club_role_permissions"
 
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("club_roles.id"), primary_key=True)
+    permission_id: Mapped[int] = mapped_column(Integer, ForeignKey("permissions.id"), primary_key=True)
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    description: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    roles: Mapped[List["ClubRole"]] = relationship(
+        "ClubRole",
+        secondary="club_role_permissions",
+        back_populates="permissions"
+    )
 
 class ClubRole(Base):
     __tablename__ = "club_roles"
@@ -325,10 +346,18 @@ class ClubRole(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    users: Mapped[List["User"]] = relationship(
-        "User", back_populates="club_roles", secondary="user_club_roles", uselist=True
+    permissions: Mapped[List["Permission"]] = relationship(
+        "Permission",
+        secondary="club_role_permissions",
+        back_populates="roles"
     )
-
+    
+    users: Mapped[List["User"]] = relationship(
+        "User",
+        back_populates="club_roles",
+        secondary="user_club_roles",
+        uselist=True
+    )
 
 class UserClubRole(Base):
     __tablename__ = "user_club_roles"
@@ -341,3 +370,14 @@ class UserClubRole(Base):
     )
 
     __table_args__ = (UniqueConstraint("user_id", "club_id", "club_role_id", name="unique_user_club_role"),)
+
+class UserTrainer(Base):
+    __tablename__ = "user_trainers"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), primary_key=True)
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    )
+
+    __table_args__ = (UniqueConstraint("user_id", "program_id", name="unique_user_trainer"),)
