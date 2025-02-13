@@ -127,7 +127,6 @@ interface DefaultTextFieldInputProps {
   selectTextOnFocus?: boolean;
   textAlign?: "left" | "center" | "right";
   value?: string;
-  isOTP?: boolean;
   hasError?: boolean;
 }
 

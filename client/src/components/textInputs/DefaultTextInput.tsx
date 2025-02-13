@@ -29,14 +29,13 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
       multiline = false,
       onChange,
       onChangeText,
-      onFocus = () => {},
+      onFocus = () => { },
       onKeyPress,
       placeholder = "Eingabe",
       secureTextEntry = false,
       selectTextOnFocus = false,
       textAlign = "left",
       value: initialValue = "",
-      isOTP = false,
       hasError = false,
     },
     ref,
@@ -71,6 +70,10 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
       if (onChangeText) onChangeText(text);
     };
 
+    useEffect(() => {
+      setValue(initialValue);
+    }, [initialValue]);
+
     // ====================================================== //
     // ===================== Styling ======================== //
     // ====================================================== //
@@ -81,18 +84,13 @@ const DefaultTextFieldInput = forwardRef<TextInput, DefaultTextFieldInputProps>(
       : " border-light_secondary dark:border-dark_secondary focus:border-light_action dark:focus:border-dark_action";
 
     let inputClassName = "";
-    if (isOTP) {
-      inputClassName = `${baseClasses} text-center${errorClasses}`;
-    } else {
-      inputClassName = `${baseClasses} w-3/4 h-10 p-2${errorClasses}`;
-    }
+    inputClassName = `${baseClasses} w-3/4 h-10 p-2${errorClasses}`;
 
     // ====================================================== //
     // ================== Return component ================== //
     // ====================================================== //
     return (
       <TextInput
-        style={isOTP ? { width: 40, height: 40 } : {}}
         className={inputClassName}
         ref={ref}
         autoCapitalize={autoCapitalize}

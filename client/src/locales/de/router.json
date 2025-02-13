@@ -9,5 +9,16 @@
     "login_header": "Anmelden",
     "register_header": "Registrieren",
     "loginVerfiy_header": "Zwei-Faktor-Authentifizierung",
-    "settings_user_header": "Benutzer"
+    "settings_user_header": "Benutzer",
+    "settings_security_header": "Sicherheit",
+    "settings_notifications_header": "Benachrichtigungen",
+    "settings_change_address_header": "Adresse ändern",
+    "settings_change_email_header": "E-Mail ändern",
+    "settings_change_password_header": "Passwort ändern",
+    "settings_change_username_header": "Benutzernamen ändern",
+    "settings_delete_user_header": "Benutzer löschen",
+    "settings_logout_header": "Alle Geräte abmelden",
+    "settings_multi_factor_header": "Zwei-Faktor-Authentifizierung",
+    "billing_subscription_header": "Mitgliedschaften",
+    "billing_history_header": "Rechnungshistorie"
 }

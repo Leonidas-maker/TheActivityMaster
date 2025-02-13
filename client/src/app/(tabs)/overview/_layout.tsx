@@ -61,6 +61,72 @@ export default function OverviewLayout() {
           headerTitle: t("settings_user_header"),
         }}
       />
+      <Stack.Screen
+        name="(settings)/SettingsSecurity"
+        options={{
+          headerTitle: t("settings_security_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsNotifications"
+        options={{
+          headerTitle: t("settings_notifications_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsChangeAddress"
+        options={{
+          headerTitle: t("settings_change_address_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsChangeEmail"
+        options={{
+          headerTitle: t("settings_change_email_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsChangeUsername"
+        options={{
+          headerTitle: t("settings_change_username_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsChangePassword"
+        options={{
+          headerTitle: t("settings_change_password_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsDeleteUser"
+        options={{
+          headerTitle: t("settings_delete_user_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsLogout"
+        options={{
+          headerTitle: t("settings_logout_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsMultiFactor"
+        options={{
+          headerTitle: t("settings_multi_factor_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(billing)/BillingHistory"
+        options={{
+          headerTitle: t("billing_history_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(billing)/BillingSubscription"
+        options={{
+          headerTitle: t("billing_subscription_header"),
+        }}
+      />
     </Stack>
   );
 }

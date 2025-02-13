@@ -3,9 +3,12 @@ import { View, Text, Pressable, useColorScheme } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { asyncLoadData } from "@/src/services/asyncStorageService";
 import { axiosInstance } from "@/src/services/api";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from 'expo-router';
+import { getUserData } from "@/src/services/user/userService";
 
 const ProfileView = () => {
+    const router = useRouter();
+
     const [isLight, setIsLight] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [wasLoggedIn, setWasLoggedIn] = useState(false);
@@ -19,10 +22,6 @@ const ProfileView = () => {
             if (wasLoggedIn === "true") {
                 setWasLoggedIn(true);
             }
-            const isLoggedIn = await asyncLoadData("isLoggedIn");
-            if (isLoggedIn === "true") {
-                setIsLoggedIn(true);
-            }
         }
         checkLoginStatus();
     }, []);
@@ -32,9 +31,7 @@ const ProfileView = () => {
           async function checkLoginStatus() {
             // Check current login status
             const isLoggedInData = await asyncLoadData("isLoggedIn");
-            console.log("isLoggedInData", isLoggedInData);
             setIsLoggedIn(isLoggedInData === "true");
-            console.log("isLoggedInData", isLoggedIn);
           }
           checkLoginStatus();
         }, [])
@@ -43,10 +40,10 @@ const ProfileView = () => {
     useEffect(() => {
         try {
             if (isLoggedIn) {
-                axiosInstance.get("/user/me").then((response) => {
-                    setUsername(response.data.username);
-                    setFirstName(response.data.first_name);
-                    setLastName(response.data.last_name);
+                getUserData().then((data) => {
+                    setUsername(data.username);
+                    setFirstName(data.first_name);
+                    setLastName(data.last_name);
                 });
             }
         } catch (error) {
@@ -71,11 +68,15 @@ const ProfileView = () => {
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
     const handleLoginPress = () => {
-        console.log("Login pressed");
+        if (wasLoggedIn) {
+            router.navigate("/auth");
+        } else {
+            router.navigate("/auth/SignUp");
+        }
     };
 
     const handleProfilePress = () => {
-        console.log("Profile pressed");
+        router.navigate("/(tabs)/overview/(settings)/SettingsUser");
     };
 
     return (

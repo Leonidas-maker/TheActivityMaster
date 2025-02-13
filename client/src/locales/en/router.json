@@ -9,5 +9,16 @@
     "login_header": "Sign In",
     "register_header": "Sign Up",
     "loginVerfiy_header": "Two-Factor-Authentication",
-    "settings_user_header": "User"
+    "settings_user_header": "User",
+    "settings_security_header": "Security",
+    "settings_notifications_header": "Notifications",
+    "settings_change_address_header": "Change Address",
+    "settings_change_email_header": "Change Email",
+    "settings_change_password_header": "Change Password",
+    "settings_change_username_header": "Change Username",
+    "settings_delete_user_header": "Delete User",
+    "settings_logout_header": "Sign Out All Devices",
+    "settings_multi_factor_header": "Two-Factor-Authentication",
+    "billing_subscription_header": "Subscriptions",
+    "billing_history_header": "Billing History"
 }

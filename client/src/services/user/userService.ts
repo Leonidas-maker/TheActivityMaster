@@ -49,3 +49,21 @@ export const register = async (
       throw error;
     }
   };  
+
+export const changePassword = async (
+  old_password: string,
+  new_password: string
+): Promise<any> => {
+  try {
+    const requestBody = {
+      new_password,
+      old_password,
+    };
+
+    const response = await axiosInstance.post("/user/me/change_password", requestBody);
+    return response.data;
+  } catch (error) {
+    console.error("Error during changePassword call:", error);
+    throw error;
+  }
+}

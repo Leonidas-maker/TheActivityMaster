@@ -6,5 +6,8 @@
     "pageNavigator_title2": "Developer Pages",
     "login_btn": "Login",
     "signup_btn": "Sign-up",
-    "logout_btn": "Logout"
+    "logout_btn": "Logout",
+    "pageNavigator_title3": "Payment Pages",
+    "billing_subscription_btn": "Subscriptions",
+    "billing_history_btn": "Billing History"
 }

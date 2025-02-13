@@ -6,5 +6,8 @@
     "pageNavigator_title2": "Entwickler Seiten",
     "login_btn": "Anmelden",
     "signup_btn": "Registrieren",
-    "logout_btn": "Abmelden"
+    "logout_btn": "Abmelden",
+    "pageNavigator_title3": "Zahlungsseiten",
+    "billing_subscription_btn": "Mitgliedschaften",
+    "billing_history_btn": "Rechnungshistorie"
 }

@@ -11,5 +11,17 @@
     "settings_lang_btn": "Sprache",
     "settings_theme_selector": "Design auswählen",
     "settings_lang_selector": "Sprache auswählen",
-    "settings_user_btn": "Benutzereinstellungen"
+    "settings_user_btn": "Benutzereinstellungen",
+    "userSettingsPageNavigator_title": "Benutzereinstellungen",
+    "settings_security_btn": "Sicherheit",
+    "settings_notifications_btn": "Benachrichtigungen",
+    "securityPageNavigator_title": "Sicherheitseinstellungen",
+    "settings_changePassword_btn": "Passwort ändern",
+    "settings_multiFactor_btn": "Multifaktor-Authentifizierung",
+    "settings_logout_btn": "Alle Geräte abmelden",
+    "accountSettingsPageNavigator_title": "Kontoeinstellungen",
+    "settings_username_btn": "Benutzername ändern",
+    "settings_email_btn": "E-Mail-Adresse ändern",
+    "settings_deleteUser_btn": "Konto löschen",
+    "settings_address_btn": "Adresse ändern"
 }

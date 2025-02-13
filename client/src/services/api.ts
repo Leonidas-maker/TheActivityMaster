@@ -13,6 +13,7 @@ import {
 // Import the imperative router from expo-router.
 // Do not use the useRouter hook here because this file is not a React component.
 import { router } from "expo-router";
+import { asyncRemoveData } from "./asyncStorageService";
 
 // Extended request configuration interface with custom flags
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -147,6 +148,7 @@ axiosInstance.interceptors.response.use(
             // Clear tokens from storage if refresh fails
             await secureRemoveData("access_token");
             await secureRemoveData("refresh_token");
+            await asyncRemoveData("isLoggedIn");
             // Redirect to the login page
             router.replace("/auth");
             reject(err);

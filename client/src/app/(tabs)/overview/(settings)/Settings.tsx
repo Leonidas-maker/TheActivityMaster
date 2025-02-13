@@ -20,27 +20,53 @@ const Settings: React.FC = () => {
     router.navigate("/(tabs)/overview/(settings)/SettingsLanguage");
   };
 
+  const moduleTitle = t("settingsPageNavigator_title1");
+
+  const onPressModuleFunctions = [handleThemePress, handleLanguagePress];
+
+  const moduleTexts = [t("settings_theme_btn"), t("settings_lang_btn")];
+
+  const moduleIconNames = ["contrast", "language"];
+
+  // ====================================================== //
+  // ==================== UserNavigator ==================== //
+  // ====================================================== //
+
   const handleUserPress = () => {
     router.navigate("/(tabs)/overview/(settings)/SettingsUser");
   };
 
-  const moduleTitle = t("settingsPageNavigator_title1");
+  const handleSecurityPress = () => {
+    router.navigate("/(tabs)/overview/(settings)/SettingsSecurity");
+  };
 
-  const onPressModuleFunctions = [handleThemePress, handleLanguagePress, handleUserPress];
+  const handleNotificationsPress = () => {
+    router.navigate("/(tabs)/overview/(settings)/SettingsNotifications");
+  };
 
-  const moduleTexts = [t("settings_theme_btn"), t("settings_lang_btn"), t("settings_user_btn")];
+  const onPressUserFunctions = [handleUserPress, handleSecurityPress, handleNotificationsPress];
 
-  const moduleIconNames = ["contrast", "language", "person"];
+  const userTexts = [t("settings_user_btn"), t("settings_security_btn"), t("settings_notifications_btn")];
+
+  const userIconNames = ["person", "shield", "notifications"];
+
+  const userModuleTitle = t("accountSettingsPageNavigator_title");
 
   return (
-      <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-        <PageNavigator 
-          title={moduleTitle}
-          onPressFunctions={onPressModuleFunctions}
-          texts={moduleTexts}
-          iconNames={moduleIconNames}
-        />
-      </ScrollView>
+    <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
+      <PageNavigator
+        title={moduleTitle}
+        onPressFunctions={onPressModuleFunctions}
+        texts={moduleTexts}
+        iconNames={moduleIconNames}
+      />
+      <PageNavigator
+        title={userModuleTitle}
+        onPressFunctions={onPressUserFunctions}
+        texts={userTexts}
+        iconNames={userIconNames}
+      />
+    </ScrollView>
   );
 };
 

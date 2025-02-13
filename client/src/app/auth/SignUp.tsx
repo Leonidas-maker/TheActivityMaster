@@ -225,8 +225,8 @@ const SignUp: React.FC = () => {
                 setConfirmPasswordError(true);
                 Toast.show({
                     type: "error",
-                    text1: t("passwordMinLengthError_text") || "Password Too Short",
-                    text2: t("passwordMinLengthError_subtext") || "Password must be at least 8 characters long.",
+                    text1: t("passwordMinLengthError_text"),
+                    text2: t("passwordMinLengthError_subtext"),
                 });
                 return;
             }
@@ -360,8 +360,6 @@ const SignUp: React.FC = () => {
                                         }}
                                         hasError={usernameError}
                                     />
-                                    {/* This button appears to navigate directly to step 3. */}
-                                    <DefaultButton text={t("next_button")} onPress={() => setCurrentStep(3)} />
                                 </View>
                             )}
                             {currentStep === 1 && (

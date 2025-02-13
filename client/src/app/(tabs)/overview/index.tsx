@@ -1,8 +1,8 @@
 // ~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~ //
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { View, ScrollView } from "react-native";
 import { expo } from "@/app.json";
-import { Link, useRouter } from "expo-router";
+import { Link, useFocusEffect, useRouter } from "expo-router";
 import { clearAllStorage } from "@/src/services/clearStorage";
 import { useTranslation } from "react-i18next";
 
@@ -10,11 +10,10 @@ import { useTranslation } from "react-i18next";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import PageNavigator from '@/src/components/pageNavigator/PageNavigator';
-import { goBack } from "expo-router/build/global-state/routing";
 import ProfileView from "@/src/components/userComponents/ProfileView";
 import SecondaryButton from "@/src/components/buttons/SecondaryButton";
 import { axiosInstance } from "@/src/services/api";
-import { asyncRemoveData } from "@/src/services/asyncStorageService";
+import { asyncRemoveData, asyncLoadData } from "@/src/services/asyncStorageService";
 
 // ====================================================== //
 // ====================== Component ===================== //
@@ -24,12 +23,33 @@ const OverviewHome: React.FC = () => {
   const router = useRouter();
   const { t } = useTranslation("overview");
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const handleLogoutPress = async () => {
     axiosInstance.delete("/auth/logout").then(() => {
       asyncRemoveData("isLoggedIn");
       router.navigate("/(tabs)");
     });
   };
+
+  // ~~~~~ Check login status on page focus ~~~~~ //
+  useFocusEffect(
+    useCallback(() => {
+      // Async function to check if user is logged in
+      async function checkLoginStatus() {
+        try {
+          // Try loading the login status from async storage
+          const loginStatus = await asyncLoadData("isLoggedIn");
+          // If a truthy value is returned, user is logged in, otherwise not logged in.
+          setIsLoggedIn(!!loginStatus);
+        } catch (error) {
+          // In case of error, consider user not logged in.
+          setIsLoggedIn(false);
+        }
+      }
+      checkLoginStatus();
+    }, [])
+  );
 
   // ====================================================== //
   // ================== SettingsNavigator ================= //
@@ -45,6 +65,25 @@ const OverviewHome: React.FC = () => {
   const moduleTexts = [t("settings_btn")];
 
   const moduleIconNames = ["settings"];
+
+  // ====================================================== //
+  // ================== BillingNavigator ================== //
+  // ====================================================== //
+  const handleHistoryPress = () => {
+    router.navigate("/(tabs)/overview/(billing)/BillingHistory");
+  };
+
+  const handleSubscriptionPress = () => {
+    router.navigate("/(tabs)/overview/(billing)/BillingSubscription");
+  };
+
+  const billingTitle = t("pageNavigator_title3");
+
+  const onPressBillingFunctions = [handleSubscriptionPress, handleHistoryPress];
+
+  const billingTexts = [t("billing_subscription_btn"), t("billing_history_btn")];
+
+  const billingIconNames = ["payments", "receipt-long"];
 
   // ====================================================== //
   // ==================== DevNavigator ==================== //
@@ -78,15 +117,23 @@ const OverviewHome: React.FC = () => {
         texts={moduleTexts}
         iconNames={moduleIconNames}
       />
-      <PageNavigator 
+      {isLoggedIn && (<PageNavigator
+        title={billingTitle}
+        onPressFunctions={onPressBillingFunctions}
+        texts={billingTexts}
+        iconNames={billingIconNames}
+      />)}
+      {/* <PageNavigator
         title={devTitle}
         onPressFunctions={onPressDevFunctions}
         texts={devTexts}
         iconNames={devIconNames}
-      />
+      /> */}
       <View className="justify-center items-center my-2">
         <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} />
-        <SecondaryButton text={t("logout_btn")} onPress={handleLogoutPress} />
+        {isLoggedIn && (
+          <SecondaryButton text={t("logout_btn")} onPress={handleLogoutPress} />
+        )}
       </View>
       <View className="justify-center items-center my-2">
         <DefaultText text={t("app_version") + `: ${expo.version} ❤️`} />
