@@ -10,6 +10,9 @@ import {
   secureSaveData,
   secureRemoveData,
 } from "./secureStorageService";
+// Import the imperative router from expo-router.
+// Do not use the useRouter hook here because this file is not a React component.
+import { router } from "expo-router";
 
 // Extended request configuration interface with custom flags
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -76,6 +79,11 @@ axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as CustomAxiosRequestConfig;
+    // If skipAuth flag is set, do not attempt token refresh; simply reject the error.
+    if (originalRequest.skipAuth) {
+      return Promise.reject(error);
+    }
+
     // Check if error is a 401 and if the request has not been retried
     if (
       error.response &&
@@ -99,19 +107,27 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
       const refresh_token = await secureLoadData("refresh_token");
 
+      // If there is no refresh token, redirect to login.
       if (!refresh_token) {
+        router.replace("/auth");
         return Promise.reject(error);
       }
 
       const fingerprint = await generateFingerprint();
 
       return new Promise((resolve, reject) => {
-        // Use axiosInstance for the refresh token request and set skipAuth to bypass the expired token attachment
+        // Use axios for the refresh token request and set skipAuth to bypass the expired token attachment
         axios
           .post(
             "/auth/refresh-token",
             {},
-            { headers: { "application-id": fingerprint, "Authorization": "Bearer " + refresh_token } }
+            {
+              baseURL: BASE_URL,
+              headers: {
+                "application-id": fingerprint,
+                Authorization: "Bearer " + refresh_token,
+              },
+            }
           )
           .then(async ({ data }) => {
             // Adjust these keys based on your API response
@@ -131,6 +147,8 @@ axiosInstance.interceptors.response.use(
             // Clear tokens from storage if refresh fails
             await secureRemoveData("access_token");
             await secureRemoveData("refresh_token");
+            // Redirect to the login page
+            router.replace("/auth");
             reject(err);
           })
           .finally(() => {
