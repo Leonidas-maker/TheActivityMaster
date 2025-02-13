@@ -1,7 +1,7 @@
 import json
 import os
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select, exists
 from sqlalchemy.orm import selectinload
 import enum
 from typing import Dict
@@ -172,7 +172,7 @@ async def create_system_user(db: AsyncSession):
 
 
 async def create_admin_user(db: AsyncSession):
-    res = await db.execute(select(User).where(User.email == "admin@localhost.de"))
+    res = await db.execute(select(exists(select(1).select_from(GenericRole).join(User.generic_roles).where(GenericRole.name == "Admin"))))
 
     if not res.scalars().first():
         user = User(

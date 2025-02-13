@@ -17,7 +17,7 @@ from crud import user as user_crud, auth as auth_crud, generic as generic_crud, 
 
 
 from config.security import TOKEN_ISSUER
-from config.settings import DEBUG, DEFAULT_TIMEZONE
+from config.settings import DEBUG, DEFAULT_TIMEZONE, ENVIRONMENT
 
 from core.generic import EndpointContext
 
@@ -140,9 +140,7 @@ async def get_user_roles(ep_context: EndpointContext, token_details: core_securi
             club_id: s_user.ClubRole(
                 name=club_role.name,
                 description=club_role.description,
-                permissions=[
-                    perm.name for perm in club_role.permissions 
-                ],
+                permissions=[perm.name for perm in club_role.permissions],
             )
             for club_id, club_role in club_roles.items()
         },
@@ -286,7 +284,9 @@ async def change_password(
     # Get the user
     user = await user_crud.get_user_by_id(db, user_id)
 
-    if user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(minutes=30) > datetime.datetime.now(DEFAULT_TIMEZONE):
+    if not DEBUG and user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(
+        minutes=30
+    ) > datetime.datetime.now(DEFAULT_TIMEZONE):
         raise HTTPException(status_code=400, detail="Please try again later")
 
     # Check if the old password is correct
@@ -296,7 +296,7 @@ async def change_password(
     # Hash the new password
     user.password = core_security.hash_password(password_change.new_password)
 
-    #TODO Send Email to inform user of password change
+    # TODO Send Email to inform user of password change
 
     # Add audit logs
     audit_logger.user_password_change(user_id, token_details.payload["aud"])
@@ -330,6 +330,7 @@ async def update_user_address(
     audit_logger.user_address_change(user_id, token_details.payload["aud"])
     await db.commit()
 
+
 async def update_user_email(
     ep_context: EndpointContext, token_details: core_security.TokenDetails, email: str, password: str
 ) -> None:
@@ -352,7 +353,9 @@ async def update_user_email(
         raise HTTPException(status_code=400, detail="Invalid password")
 
     # Delay to prevent email enumeration
-    if user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(minutes=30) > datetime.datetime.now(DEFAULT_TIMEZONE):
+    if not DEBUG and user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(
+        minutes=30
+    ) > datetime.datetime.now(DEFAULT_TIMEZONE):
         raise HTTPException(status_code=400, detail="Please try again later")
 
     # Check if the email is already in use
@@ -365,11 +368,16 @@ async def update_user_email(
 
     user.generic_roles.append(await user_crud.get_generic_role_by_name(db, "NotEmailVerified"))
 
-    #TODO Send Email to old email and verify new email
+    # TODO Send Email to old email and verify new email
+    with core_security.email_verify_manager_dependency.get() as evm:
+        url_params = evm.generate_verification_params(user_id)
+        if DEBUG:
+            print(url_params)
 
     # Add audit logs
     audit_logger.user_email_change(user_id, token_details.payload["aud"], old_email_hash)
     await db.commit()
+
 
 async def update_user_username(
     ep_context: EndpointContext, token_details: core_security.TokenDetails, username: str, password: str
@@ -393,9 +401,10 @@ async def update_user_username(
         raise HTTPException(status_code=400, detail="Invalid password")
 
     # Delay to prevent username enumeration
-    if user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(minutes=30) > datetime.datetime.now(DEFAULT_TIMEZONE):
+    if not DEBUG and user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(
+        minutes=30
+    ) > datetime.datetime.now(DEFAULT_TIMEZONE):
         raise HTTPException(status_code=400, detail="Please try again later")
-    
 
     # Check if the username is already in use
     if await user_crud.get_user_by_ident(db, username):
@@ -404,7 +413,7 @@ async def update_user_username(
     # Update the username
     user.username = username
 
-    #TODO Send Email to inform user of username change
+    # TODO Send Email to inform user of username change
 
     # Add audit logs
     audit_logger.user_username_change(user_id, token_details.payload["aud"])

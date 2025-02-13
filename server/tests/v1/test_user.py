@@ -19,7 +19,7 @@ def test_registered_user(capsys):
 ###########################################################################
 ################################## Tests ##################################
 ###########################################################################
-@pytest.mark.dependency(name="test_totp_flow", depends=["test_registered_user"])
+@pytest.mark.dependency(depends=["test_registered_user"])
 def test_change_password(capsys):
     with TestClient(app) as client:
         # Login
@@ -43,7 +43,73 @@ def test_change_password(capsys):
         logout(client, tokens)
 
 
-@pytest.mark.dependency(name="test_totp_flow", depends=["test_registered_user"])
+@pytest.mark.dependency(depends=["test_registered_user"])
+def test_change_username(capsys):
+    with TestClient(app) as client:
+        # Login
+        tokens = login_email(client, capsys)
+
+        # Change username
+        new_username = "new" + pytest.test_user_data["username"]
+        response = client.put(
+            "/api/v1/user/me/username",
+            headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+            json={"new_username": new_username, "password": pytest.test_user_data["password"]},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        # Get user info
+        user_response = client.get(
+            "/api/v1/user/me",
+            headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+        )
+        assert user_response.status_code == status.HTTP_200_OK
+        user_data = user_response.json()
+        pytest.test_user_data["username"] = user_data["username"]
+        assert user_data["username"] == new_username
+
+        # Logout
+        logout(client, tokens)
+
+
+@pytest.mark.dependency(depends=["test_registered_user"])
+def test_change_email(capsys):
+    with TestClient(app) as client:
+        # Login
+        tokens = login_email(client, capsys)
+
+        # Change email
+        new_email = "new" + pytest.test_user_data["email"]
+        response = client.put(
+            "/api/v1/user/me/email",
+            headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+            json={"new_email": new_email, "password": pytest.test_user_data["password"]},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        # Get user info
+        user_response = client.get(
+            "/api/v1/user/me",
+            headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+        )
+        assert user_response.status_code == status.HTTP_200_OK
+        user_data = user_response.json()
+        pytest.test_user_data["email"] = user_data["email"]
+        assert user_data["email"] == new_email
+
+        # Logout
+        logout(client, tokens)
+
+        # Verify new email
+        querry = get_verify_token(capsys)
+
+        response = client.post(
+            f"/api/v1/verification/verify_email?{querry}",
+        )
+        assert response.status_code == 200
+
+
+@pytest.mark.dependency(depends=["test_registered_user"])
 def test_change_address(capsys):
     new_address = {
         "street": "teststreet",
