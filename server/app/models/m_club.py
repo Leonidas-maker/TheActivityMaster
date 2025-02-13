@@ -82,7 +82,7 @@ class Club(Base):
     memberships: Mapped[List["Membership"]] = relationship("Membership", back_populates="club", uselist=True)
     programs: Mapped[List["Program"]] = relationship("Program", back_populates="club", uselist=True)
     club_verifications: Mapped[List["ClubVerification"]] = relationship("ClubVerification", back_populates="club")
-
+    user_club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="club")
 
 ###########################################################################
 ############################ Program Offerings ############################
@@ -349,15 +349,12 @@ class ClubRole(Base):
     permissions: Mapped[List["Permission"]] = relationship(
         "Permission",
         secondary="club_role_permissions",
-        back_populates="roles"
+        back_populates="roles",
+        lazy="joined"
     )
-    
-    users: Mapped[List["User"]] = relationship(
-        "User",
-        back_populates="club_roles",
-        secondary="user_club_roles",
-        uselist=True
-    )
+
+    user_club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="club_role")
+
 
     def as_dict(self) -> dict:
         """
@@ -390,6 +387,10 @@ class UserClubRole(Base):
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
 
+    user: Mapped["User"] = relationship("User", back_populates="club_roles")
+    club_role: Mapped["ClubRole"] = relationship("ClubRole", back_populates="user_club_roles", lazy="joined")
+    club: Mapped["Club"] = relationship("Club", back_populates="user_club_roles")
+    
     __table_args__ = (UniqueConstraint("user_id", "club_id", "club_role_id", name="unique_user_club_role"),)
 
 class UserTrainer(Base):

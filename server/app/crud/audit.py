@@ -431,6 +431,30 @@ class AuditLogger:
             category=AuditLogCategories.USER,
             details=f"Application ID Hash: {application_id_hash}",
         )
+    
+    def user_email_change(self, user_id: uuid.UUID, application_id_hash: str, old_email_hash: str):
+        """Log a user email change action.
+
+        :param user_id: The user ID changing the email
+        """
+        self.log_to_audit(
+            user_id,
+            action="Email Change",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}, Old Email Hash: {old_email_hash}",
+        )
+    
+    def user_username_change(self, user_id: uuid.UUID, application_id_hash: str):
+        """Log a user username change action.
+
+        :param user_id: The user ID changing the username
+        """
+        self.log_to_audit(
+            user_id,
+            action="Username Change",
+            category=AuditLogCategories.USER,
+            details=f"Application ID Hash: {application_id_hash}",
+        )
 
     # ======================================================== #
     # ===================== User Deletion ==================== #

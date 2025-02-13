@@ -29,6 +29,7 @@ async def register_user_v1(user: s_user.UserCreate, ep_context: EndpointContext 
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to register user")
 
+
 ###########################################################################
 ################################### /Me ###################################
 ###########################################################################
@@ -40,7 +41,7 @@ async def get_user_information(
     """Get user information"""
     try:
         user = await user_controller.user_information(ep_context.db, uuid.UUID(token_details.payload["sub"]))
-        _2fa_methods = [ method.method.value for method in user._2fa ]
+        _2fa_methods = [method.method.value for method in user._2fa]
         if not _2fa_methods:
             _2fa_methods = ["email"]
         return s_user.User(
@@ -50,10 +51,11 @@ async def get_user_information(
             first_name=user.first_name,
             last_name=user.last_name,
             address=s_generic.Address(**user.address.get_as_dict()) if user.address else None,
-            methods_2fa=_2fa_methods
+            methods_2fa=_2fa_methods,
         )
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user information")
+
 
 @router.get("/me/roles", response_model=s_user.Roles, tags=["User"])
 async def get_user_roles(
@@ -148,6 +150,38 @@ async def update_user_address_v1(
         return {"message": "Address updated"}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to update address")
+
+
+@router.put("/me/email", tags=["User"])
+async def update_user_email_v1(
+    email_change: s_user.ChangeEmail,
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    """Update the user's email"""
+    try:
+        await user_controller.update_user_email(
+            ep_context, token_details, email_change.new_email, email_change.password
+        )
+        return {"message": "Email updated"}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to update email")
+
+
+@router.put("/me/username", tags=["User"])
+async def update_user_username_v1(
+    username_change: s_user.ChangeUsername,
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    """Update the user's username"""
+    try:
+        await user_controller.update_user_username(
+            ep_context, token_details, username_change.new_username, username_change.password
+        )
+        return {"message": "Username updated"}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to update username")
 
 
 ###########################################################################

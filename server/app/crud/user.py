@@ -1,11 +1,11 @@
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, literal_column, union_all
+from sqlalchemy import select, update, delete, exists
 from sqlalchemy.sql.expression import or_
 from sqlalchemy.orm import joinedload, undefer
 import datetime
 import traceback
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 import models.m_user as m_user
 import models.m_club as m_club
@@ -17,6 +17,8 @@ from crud.generic import get_create_address
 
 from core.generic import EndpointContext
 import core.security as core_security
+
+from config.club import ClubPermissions
 
 
 async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
@@ -82,6 +84,17 @@ async def get_user_by_id(
 ###########################################################################
 ################################## Roles ##################################
 ###########################################################################
+async def get_generic_role_by_name(db: AsyncSession, role_name: str) -> m_user.GenericRole:
+    """
+    Get a generic role by its name
+
+    :param db: AsyncSession: Database session
+    :param role_name: str: Name of the role to search for
+    :return: GenericRole: The role
+    """
+    res = await db.execute(select(m_user.GenericRole).filter(m_user.GenericRole.name == role_name))
+    return res.unique().scalar_one_or_none()
+
 async def get_user_generic_roles(
     db: AsyncSession, user_id: uuid.UUID, query_options: list = []
 ) -> List[m_user.GenericRole]:
@@ -122,7 +135,7 @@ async def get_user_club_roles(
 
 async def get_user_roles(
     db: AsyncSession, user_id: uuid.UUID
-) -> Tuple[List[m_user.GenericRole], List[m_club.ClubRole]]:
+) -> Tuple[List[m_user.GenericRole], Dict[uuid.UUID, m_user.ClubRole]]:
     """
     Get the roles for a user with each description.
 
@@ -132,17 +145,54 @@ async def get_user_roles(
     """
     query_options = [
         joinedload(m_user.User.generic_roles).options(undefer(m_user.GenericRole.description)),
-        joinedload(m_user.User.club_roles).options(
-            undefer(m_user.ClubRole.description),
-            joinedload(m_user.ClubRole.permissions).options(undefer(m_user.Permission.description)),
-        ),
+        joinedload(m_user.User.club_roles)
+        .joinedload(m_club.UserClubRole.club_role)
+        .options(undefer(m_club.ClubRole.description)),
     ]
 
     res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_options))
     user = res.unique().scalar_one_or_none()
     if not user:
         raise ValueError("User not found")
-    return user.generic_roles, user.club_roles
+
+    return user.generic_roles, user.clubs_with_roles
+
+
+async def is_user_elevated(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    """
+    Check if a user has elevated permissions
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to search for
+    :return: bool: If the user has elevated permissions
+    """
+    res = await db.execute(
+        select(m_user.GenericRole)
+        .join(m_user.UserRole)
+        .filter(m_user.UserRole.user_id == user_id, m_user.GenericRole.name == "Admin")
+    )
+    return res.scalar_one_or_none() is not None
+
+
+async def has_user_club_permission(
+    db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, permission: ClubPermissions
+) -> bool:
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.UserClubRole)
+                .join(m_club.UserClubRole.club_role)
+                .join(m_club.ClubRole.permissions)
+                .filter(
+                    m_club.UserClubRole.user_id == user_id,
+                    m_club.UserClubRole.club_id == club_id,
+                    m_club.Permission.name == permission.value,
+                )
+            )
+        )
+    )
+    return res.scalar_one_or_none() is not None
 
 
 ###########################################################################

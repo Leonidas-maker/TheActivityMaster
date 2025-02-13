@@ -13,9 +13,11 @@ from sqlalchemy import (
     Text,
     Index,
 )
+from sqlalchemy.ext.associationproxy import association_proxy
 import uuid
 from datetime import datetime
 import enum
+from typing import Dict
 
 from config.database import Base
 from config.settings import DEFAULT_TIMEZONE
@@ -60,9 +62,10 @@ class User(Base):
     generic_roles: Mapped[List["GenericRole"]] = relationship(
         "GenericRole", secondary="user_roles", uselist=True, back_populates="users", lazy="joined"
     )
-    club_roles: Mapped[List["ClubRole"]] = relationship(
-        "ClubRole", secondary="user_club_roles", uselist=True, back_populates="users"
-    )
+    club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="user", uselist=True)
+    
+    #roles = association_proxy("club_roles", "club_role")
+
     tokens: Mapped[List["UserToken"]] = relationship(
         "UserToken", back_populates="user", uselist=True, cascade="all, delete-orphan"
     )
@@ -79,6 +82,13 @@ class User(Base):
     authentication_logs: Mapped[List["AuthenticationLog"]] = relationship(
         "AuthenticationLog", back_populates="user", uselist=True
     )
+
+    @property
+    def clubs_with_roles(self) -> Dict[uuid.UUID, "ClubRole"]:
+        result = {}
+        for ucr in self.club_roles:
+            result[ucr.club_id] = ucr.club_role
+        return result
 
 
 class GenericRole(Base):

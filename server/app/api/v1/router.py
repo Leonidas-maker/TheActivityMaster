@@ -1,9 +1,8 @@
 from fastapi import APIRouter
-from api.v1.endpoints import auth
-from api.v1.endpoints import user
+from api.v1.endpoints import auth, user
 from api.v1.endpoints.verification import verification_base as verification
 from api.v1.endpoints.club import club_base as club
-
+    
 
 # Main-Router
 router = APIRouter()

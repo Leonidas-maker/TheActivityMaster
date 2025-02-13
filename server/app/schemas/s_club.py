@@ -1,8 +1,14 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List
 import uuid
 
 from schemas import s_generic
+
+class Employee(BaseModel):
+    id: uuid.UUID
+    first_name: str
+    last_name: str
+    email: EmailStr
 
 
 class ClubBase(BaseModel):
@@ -15,7 +21,5 @@ class ClubCreate(ClubBase):
 
 class Club(ClubBase):
     id: uuid.UUID
-    owner_ids: List[uuid.UUID]
-
-    class Config:
-        orm_mode = True
+class ClubDetails(Club):
+    owner_ids: List[Employee]

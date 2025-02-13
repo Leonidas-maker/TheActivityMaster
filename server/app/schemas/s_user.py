@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
-
+from typing import Optional, List, Dict, Union
+import uuid
 
 from .s_generic import Address
 
@@ -45,7 +45,13 @@ class ChangePassword(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=100)
     old_password: str = Field(..., min_length=8, max_length=100)
 
+class ChangeEmail(BaseModel):
+    new_email: EmailStr = Field(..., max_length=255)
+    password: str = Field(..., min_length=8, max_length=100)
 
+class ChangeUsername(BaseModel):
+    new_username: str = Field(..., max_length=50)
+    password: str = Field(..., min_length=8, max_length=100)
 
 class GenericRole(BaseModel):
     name: str
@@ -54,13 +60,14 @@ class GenericRole(BaseModel):
 class Permission(BaseModel):
     name: str
     description: str
+
 class ClubRole(BaseModel):
     name: str
     description: str
-    club_id: str
     
-    permissions: List[Permission]
+    permissions: List[Union[Permission, str]]
 
 class Roles(BaseModel):
     generic_roles: List[GenericRole]
-    club_roles: List[ClubRole]
+    club_roles: Dict[uuid.UUID, ClubRole]
+
