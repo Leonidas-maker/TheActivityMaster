@@ -20,5 +20,6 @@
     "settings_logout_header": "Alle Geräte abmelden",
     "settings_multi_factor_header": "Zwei-Faktor-Authentifizierung",
     "billing_subscription_header": "Mitgliedschaften",
-    "billing_history_header": "Rechnungshistorie"
+    "billing_history_header": "Rechnungshistorie",
+    "settings_change_email_info_header": "E-Mail verifizieren"
 }
