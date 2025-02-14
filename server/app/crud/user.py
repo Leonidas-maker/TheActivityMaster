@@ -7,8 +7,7 @@ import datetime
 import traceback
 from typing import Optional, List, Tuple, Dict
 
-import models.m_user as m_user
-import models.m_club as m_club
+from models import m_user, m_club, m_verification
 
 from schemas.s_user import UserCreate
 
@@ -81,6 +80,23 @@ async def get_user_by_id(
     return user
 
 
+async def get_user_details_by_id(db: AsyncSession, user_id: uuid.UUID) -> m_user.User:
+    """
+    Get a user by their ID
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to search for
+    :return: User: The user
+    """
+    query_options = [
+        joinedload(m_user.User.address),
+        joinedload(m_user.User.identity_verifications),
+        joinedload(m_user.User._2fa),
+    ]
+    res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_options))
+    return res.unique().scalar_one_or_none()
+
+
 ###########################################################################
 ################################## Roles ##################################
 ###########################################################################
@@ -94,6 +110,7 @@ async def get_generic_role_by_name(db: AsyncSession, role_name: str) -> m_user.G
     """
     res = await db.execute(select(m_user.GenericRole).filter(m_user.GenericRole.name == role_name))
     return res.unique().scalar_one_or_none()
+
 
 async def get_user_generic_roles(
     db: AsyncSession, user_id: uuid.UUID, query_options: list = []

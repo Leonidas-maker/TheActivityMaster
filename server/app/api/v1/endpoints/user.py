@@ -11,6 +11,7 @@ import middleware.auth as auth_middleware
 from middleware.general import get_endpoint_context
 
 import controllers.user as user_controller
+import crud.user as user_crud
 
 from core.generic import EndpointContext
 
@@ -33,18 +34,18 @@ async def register_user_v1(user: s_user.UserCreate, ep_context: EndpointContext 
 ###########################################################################
 ################################### /Me ###################################
 ###########################################################################
-@router.get("/me", response_model=s_user.User, tags=["User"])
+@router.get("/me", response_model=s_user.UserDetails, tags=["User"])
 async def get_user_information(
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Get user information"""
     try:
-        user = await user_controller.user_information(ep_context.db, uuid.UUID(token_details.payload["sub"]))
+        user = await user_crud.get_user_details_by_id(ep_context.db, uuid.UUID(token_details.payload["sub"]))
         _2fa_methods = [method.method.value for method in user._2fa]
         if not _2fa_methods:
             _2fa_methods = ["email"]
-        return s_user.User(
+        return s_user.UserDetails(
             id=str(user.id),
             username=user.username,
             email=user.email,
@@ -52,6 +53,7 @@ async def get_user_information(
             last_name=user.last_name,
             address=s_generic.Address(**user.address.get_as_dict()) if user.address else None,
             methods_2fa=_2fa_methods,
+            identity_verified=user.identity_verified,
         )
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user information")
@@ -138,18 +140,18 @@ async def change_password_v1(
         await handle_exception(e, ep_context, "Failed to change password")
 
 
-@router.put("/me/address", tags=["User"])
-async def update_user_address_v1(
-    address: s_generic.Address,
+@router.put("/me", tags=["User"])
+async def update_user_profile_v1(
+    user_update: s_user.UserUpdate,
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
-    """Update the user's address"""
+    """Update the user's profile"""
     try:
-        await user_controller.update_user_address(ep_context, token_details, address)
-        return {"message": "Address updated"}
+        await user_controller.update_user_basic(ep_context, token_details, user_update)
+        return {"message": "Profile updated"}
     except Exception as e:
-        await handle_exception(e, ep_context, "Failed to update address")
+        await handle_exception(e, ep_context, "Failed to update profile")
 
 
 @router.put("/me/email", tags=["User"])

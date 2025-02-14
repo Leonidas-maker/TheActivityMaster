@@ -17,9 +17,64 @@ import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
 
-# Router for club endpouuid.UUIDs
+
 router = APIRouter()
 router.include_router(club_id.router, prefix="/{club_id}")
+
+###########################################################################
+########################### Additional Endpoints ##########################
+###########################################################################
+# ======================================================== #
+# ======================== Search ======================== #
+# ======================================================== #
+@router.get("/search", response_model=List[s_club.Club], tags=["Club"])
+async def search_clubs_v1(
+    query: str = Query(..., min_length=1),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    try:
+        clubs = await club_crud.search_clubs(ep_context.db, query, page, page_size)
+        return [
+            s_club.Club(
+                id=club.id,
+                name=club.name,
+                description=str(club.description),
+                address=s_generic.Address(**club.address.get_as_dict()),
+            )
+            for club in clubs
+        ]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to search clubs")
+
+
+@router.get("/programs/search", tags=["Club - Program"])
+async def search_programs_v1(category: str, query: str):
+    pass
+
+
+###########################################################################
+################################### User ##################################
+###########################################################################
+@router.get("/me", tags=["User"])
+async def get_my_clubs_v1():
+    pass
+
+
+@router.get("/me/memberships", tags=["User"])
+async def get_my_memberships_v1():
+    pass
+
+
+@router.get("/me/booked", tags=["User"])
+async def get_my_booked_sessions_v1():
+    pass
+
+
+@router.get("/me/attended", tags=["User"])
+async def get_my_attended_sessions_v1():
+    pass
 
 
 ###########################################################################
@@ -98,45 +153,6 @@ async def delete_club_v1(club_id: uuid.UUID):
 
 @router.get("/{club_id}/sessions", tags=["Club - Program - Session"])
 async def get_sessions_v1(club_id: uuid.UUID):
-    pass
-
-
-###########################################################################
-################################### User ##################################
-###########################################################################
-@router.get("/me", tags=["User"])
-async def get_my_clubs_v1():
-    pass
-
-
-@router.get("/me/memberships", tags=["User"])
-async def get_my_memberships_v1():
-    pass
-
-
-@router.get("/me/booked", tags=["User"])
-async def get_my_booked_sessions_v1():
-    pass
-
-
-@router.get("/me/attended", tags=["User"])
-async def get_my_attended_sessions_v1():
-    pass
-
-
-###########################################################################
-########################### Additional Endpoints ##########################
-###########################################################################
-# ======================================================== #
-# ======================== Search ======================== #
-# ======================================================== #
-@router.get("/search", tags=["Club"])
-async def search_clubs_v1(query: str):
-    pass
-
-
-@router.get("/programs/search", tags=["Club - Program"])
-async def search_programs_v1(category: str, query: str):
     pass
 
 

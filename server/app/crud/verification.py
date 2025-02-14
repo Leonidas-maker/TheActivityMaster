@@ -1,6 +1,6 @@
 # crud/verification.py
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, exists
 from sqlalchemy.sql.expression import and_, or_
 import uuid
 import datetime
@@ -53,13 +53,14 @@ async def purge_sensitive_fields(
 
 
 async def get_identity_verification_by_user(
-    db: AsyncSession, user_id: uuid.UUID, only_active: bool = True
+    db: AsyncSession, user_id: uuid.UUID, only_active: bool = True, time_limit: int = 30
 ) -> IdentityVerification:
     """Get the latest identity verification for a user.
 
     :param db: The database session
     :param user_id: The user ID
     :param only_active: True to only get active verifications, False to get all verifications, defaults to True
+    :param time_limit: The time limit in days for the verification to be considered active, defaults to 30
     :return: The identity verification
     """
     if only_active:
@@ -72,7 +73,8 @@ async def get_identity_verification_by_user(
                         IdentityVerification.status == VerificationStatus.PENDING,
                         IdentityVerification.status == VerificationStatus.APPROVED,
                     ),
-                    IdentityVerification.expires_at > datetime.datetime.now(DEFAULT_TIMEZONE),
+                    IdentityVerification.expires_at
+                    > datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=time_limit),
                 )
             )
             .order_by(IdentityVerification.created_at.desc())
@@ -126,16 +128,21 @@ async def is_user_identity_verified(db: AsyncSession, user_id: uuid.UUID) -> boo
     :return: True if the user has an approved identity verification, False otherwise
     """
     result = await db.execute(
-        select(IdentityVerification)
-        .where(
-            and_(
-                IdentityVerification.user_id == user_id,
-                IdentityVerification.status == VerificationStatus.APPROVED,
-                IdentityVerification.expires_at > datetime.datetime.now(DEFAULT_TIMEZONE),
+        select(
+            exists(
+                select(1)
+                .select_from(IdentityVerification)
+                .where(
+                    and_(
+                        IdentityVerification.user_id == user_id,
+                        IdentityVerification.status == VerificationStatus.APPROVED,
+                        IdentityVerification.expires_at > datetime.datetime.now(DEFAULT_TIMEZONE),
+                    )
+                )
             )
         )
     )
-    return result.scalars().first() is not None
+    return result.unique().scalar_one_or_none() or False
 
 
 async def delete_identity_verification(db: AsyncSession, verification_id: uuid.UUID, soft_delete: bool = True):
@@ -163,7 +170,9 @@ async def delete_expired_identity_verifications(db: AsyncSession, console: Conso
     audit_log = audit_crud.AuditLogger(db)
 
     try:
-        audit_log.sys_info("delete_expired_identity_verifications", f"Deleting expired identity verifications since {since_days} days")
+        audit_log.sys_info(
+            "delete_expired_identity_verifications", f"Deleting expired identity verifications since {since_days} days"
+        )
         result = await db.execute(
             delete(IdentityVerification).where(
                 IdentityVerification.expires_at

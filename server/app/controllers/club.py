@@ -19,6 +19,7 @@ from crud import audit as audit_crud, verification as verification_crud, club as
 from core.generic import EndpointContext
 import core.security as core_security
 
+
 async def create_club(
     ep_context: EndpointContext, token_details: core_security.TokenDetails, club_create: s_club.ClubCreate
 ) -> s_club.Club:
@@ -55,7 +56,8 @@ async def create_club(
 
 
 async def get_club(
-    ep_context: EndpointContext, club_id: uuid.UUID, 
+    ep_context: EndpointContext,
+    club_id: uuid.UUID,
 ) -> m_user.Club:
     """Get a club by ID
 
@@ -65,11 +67,10 @@ async def get_club(
     :raises HTTPException: If the user is not a member of the club
     :return: The club with the given ID
     """
-    db = ep_context.db  
+    db = ep_context.db
     club = await club_crud.get_club_with_owners(db, club_id)
 
     if not club:
         raise HTTPException(status_code=404, detail="Club not found")
 
     return club
-

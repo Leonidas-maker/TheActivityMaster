@@ -99,27 +99,6 @@ async def user_delete(
     audit_logger.user_self_deletion_successful(user_id, token_details.payload["aud"])
     await db.commit()
 
-
-async def user_information(db: AsyncSession, user_id: uuid.UUID) -> m_user.User:
-    """
-    Get user information
-
-    :param db: The database session
-    :param user_id: The ID of the user
-    :return: The user information
-    """
-    query_params = [
-        joinedload(m_user.User.generic_roles),
-        joinedload(m_user.User.address),
-        joinedload(m_user.User._2fa),
-    ]
-    res = await db.execute(select(m_user.User).filter(m_user.User.id == user_id).options(*query_params))
-    user = res.unique().scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-
 async def get_user_roles(ep_context: EndpointContext, token_details: core_security.TokenDetails) -> s_user.Roles:
     """
     Get the roles of a user
@@ -266,7 +245,9 @@ async def totp_remove(
     audit_logger.totp_removal(user_id, token_details.payload["aud"])
     await db.commit()
 
-
+###########################################################################
+################################# Changes #################################
+###########################################################################
 async def change_password(
     ep_context: EndpointContext, token_details: core_security.TokenDetails, password_change: s_user.ChangePassword
 ) -> None:
@@ -300,34 +281,6 @@ async def change_password(
 
     # Add audit logs
     audit_logger.user_password_change(user_id, token_details.payload["aud"])
-    await db.commit()
-
-
-async def update_user_address(
-    ep_context: EndpointContext, token_details: core_security.TokenDetails, address: s_user.Address
-) -> None:
-    """
-    Change the address of a user
-
-    :param ep_context: The endpoint context
-    :param token_details: The token details
-    :param address: The new address
-    """
-    db = ep_context.db
-    audit_logger = ep_context.audit_logger
-    user_id = token_details.user_id
-
-    # Get the user
-    user = await user_crud.get_user_by_id(db, user_id)
-
-    # Get or create the address
-    address = await generic_crud.get_create_address(db, address)
-
-    # Update the address
-    user.address = address
-
-    # Add audit logs
-    audit_logger.user_address_change(user_id, token_details.payload["aud"])
     await db.commit()
 
 
@@ -417,4 +370,46 @@ async def update_user_username(
 
     # Add audit logs
     audit_logger.user_username_change(user_id, token_details.payload["aud"])
+    await db.commit()
+
+async def update_user_basic(
+    ep_context: EndpointContext, token_details: core_security.TokenDetails, user_update: s_user.UserUpdate
+) -> None:
+    """
+    Change the address of a user
+
+    :param ep_context: The endpoint context
+    :param token_details: The token details
+    :param address: The new address
+    """
+    if not any([user_update.address, user_update.first_name, user_update.last_name]):
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    db = ep_context.db
+    audit_logger = ep_context.audit_logger
+    user_id = token_details.user_id
+    audit_details = ""
+
+    # Get the user
+    user = await user_crud.get_user_by_id(db, user_id)
+
+    if (user_update.first_name or user_update.last_name) and await verification_crud.is_user_identity_verified(db, user_id):
+        raise HTTPException(status_code=400, detail="Cannot change name after identity verification")
+    
+    if user_update.first_name:
+        user.first_name = user_update.first_name
+        audit_details += "First name updated"
+        
+    if user_update.last_name:
+        user.last_name = user_update.last_name
+        audit_details += "; Last name updated"
+
+    if user_update.address:
+        # Get or create the address and update the user
+        user.address = await generic_crud.get_create_address(db, user_update.address)
+        audit_details += "; Address updated"
+
+    # Add audit logs
+    audit_logger.user_profile_update(user_id, token_details.payload["aud"], audit_details)
+        
     await db.commit()

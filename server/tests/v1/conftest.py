@@ -15,6 +15,12 @@ from pytest_dependency import DependencyManager
 ################################# Helpers #################################
 ###########################################################################
 def register_user(client, capsys):
+    # Recreate the user data to avoid conflicts
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    pytest.test_user_data["username"] = f"testuser{timestamp}"
+    pytest.test_user_data["email"] = f"test.user+{timestamp}@example.com"
+    
+
     response = client.post("/api/v1/user/register", json={**pytest.test_user_data, "address": None})
     if response.status_code == 400 and "already exists" in response.json()["detail"]:
         return

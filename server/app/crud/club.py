@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, or_
 from sqlalchemy.orm import undefer, joinedload, selectinload
 from typing import List, Tuple, Optional
 
@@ -77,9 +77,6 @@ async def get_club(db: AsyncSession, club_id: uuid.UUID) -> m_club.Club:
     return res.unique().scalar_one_or_none()
 
 
-from sqlalchemy.orm import joinedload
-
-
 async def get_club_with_owners(db: AsyncSession, club_id: uuid.UUID) -> m_club.Club:
     query_options = [
         joinedload(m_club.Club.address),
@@ -130,3 +127,37 @@ async def get_club_employees(db: AsyncSession, club_id: uuid.UUID) -> Optional[L
 ###########################################################################
 ################################## Roles ##################################
 ###########################################################################
+
+
+###########################################################################
+################################## Search #################################
+###########################################################################
+async def search_clubs(
+    db: AsyncSession, query: str, page: int = 1, page_size: int = 10
+) -> List[m_club.Club]:
+    search_pattern = f"%{query}%"
+    options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
+    stmt = (
+        select(m_club.Club)
+        .options(*options)
+        .join(m_generic.Address, m_club.Club.address_id == m_generic.Address.id)
+        .join(m_generic.PostalCode, m_generic.Address.postal_code_id == m_generic.PostalCode.id)
+        .join(m_generic.City, m_generic.PostalCode.city_id == m_generic.City.id)
+        .join(m_generic.State, m_generic.City.state_id == m_generic.State.id)
+        .join(m_generic.Country, m_generic.State.country_id == m_generic.Country.id)
+        .where(
+            or_(
+                m_club.Club.name.ilike(search_pattern),
+                m_club.Club.description.ilike(search_pattern),
+                m_generic.Address.street.ilike(search_pattern),
+                m_generic.PostalCode.code.ilike(search_pattern),
+                m_generic.City.name.ilike(search_pattern),
+                m_generic.State.name.ilike(search_pattern),
+                m_generic.Country.name.ilike(search_pattern),
+            )
+        )
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

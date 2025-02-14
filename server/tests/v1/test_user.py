@@ -110,7 +110,7 @@ def test_change_email(capsys):
 
 
 @pytest.mark.dependency(depends=["test_registered_user"])
-def test_change_address(capsys):
+def test_change_profile(capsys):
     new_address = {
         "street": "teststreet",
         "postal_code": "testpostal_code",
@@ -125,10 +125,11 @@ def test_change_address(capsys):
 
         # Change address
         response = client.put(
-            "/api/v1/user/me/address",
+            "/api/v1/user/me",
             headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-            json=new_address,
+            json={"address": new_address, "first_name": "NewTest", "last_name": "NewUser"},
         )
+        print(response.json())
         assert response.status_code == status.HTTP_200_OK
 
         # Get user info
@@ -139,6 +140,8 @@ def test_change_address(capsys):
         assert user_response.status_code == status.HTTP_200_OK
         user_data = user_response.json()
         assert user_data["address"] == new_address
+        assert user_data["first_name"] == "NewTest"
+        assert user_data["last_name"] == "NewUser"
 
         # Logout
         logout(client, tokens)

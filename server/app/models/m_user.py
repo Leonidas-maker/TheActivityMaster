@@ -63,8 +63,8 @@ class User(Base):
         "GenericRole", secondary="user_roles", uselist=True, back_populates="users", lazy="joined"
     )
     club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="user", uselist=True)
-    
-    #roles = association_proxy("club_roles", "club_role")
+
+    # roles = association_proxy("club_roles", "club_role")
 
     tokens: Mapped[List["UserToken"]] = relationship(
         "UserToken", back_populates="user", uselist=True, cascade="all, delete-orphan"
@@ -89,6 +89,13 @@ class User(Base):
         for ucr in self.club_roles:
             result[ucr.club_id] = ucr.club_role
         return result
+
+    @property
+    def identity_verified(self) -> bool:
+        return any(
+            iv.status == VerificationStatus.APPROVED and iv.expires_at > datetime.now(DEFAULT_TIMEZONE)
+            for iv in self.identity_verifications
+        )
 
 
 class GenericRole(Base):

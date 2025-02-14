@@ -4,7 +4,30 @@ import uuid
 
 from .s_generic import Address
 
+# ======================================================== #
+# ========================= Roles ======================== #
+# ======================================================== #
+class GenericRole(BaseModel):
+    name: str
+    description: str
 
+class Permission(BaseModel):
+    name: str
+    description: str
+
+class ClubRole(BaseModel):
+    name: str
+    description: str
+    
+    permissions: List[Union[Permission, str]]
+
+class Roles(BaseModel):
+    generic_roles: List[GenericRole]
+    club_roles: Dict[uuid.UUID, ClubRole]
+
+# ======================================================== #
+# ========================= User ========================= #
+# ======================================================== #
 class UserBase(BaseModel):
     username: str = Field(..., max_length=50)
     email: EmailStr = Field(..., max_length=255)
@@ -19,7 +42,11 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: str
+    
+
+class UserDetails(User):
     methods_2fa: List[str] = []
+    identity_verified: bool = False
 
 
 class UserDelete(BaseModel):
@@ -53,21 +80,7 @@ class ChangeUsername(BaseModel):
     new_username: str = Field(..., max_length=50)
     password: str = Field(..., min_length=8, max_length=100)
 
-class GenericRole(BaseModel):
-    name: str
-    description: str
-
-class Permission(BaseModel):
-    name: str
-    description: str
-
-class ClubRole(BaseModel):
-    name: str
-    description: str
-    
-    permissions: List[Union[Permission, str]]
-
-class Roles(BaseModel):
-    generic_roles: List[GenericRole]
-    club_roles: Dict[uuid.UUID, ClubRole]
-
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    address: Optional[Address] = None
