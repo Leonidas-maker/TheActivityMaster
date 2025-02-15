@@ -108,6 +108,10 @@ def test_change_email(capsys):
         )
         assert response.status_code == 200
 
+        # Login with new email
+        tokens = login_email(client, capsys)
+        logout(client, tokens)
+
 
 @pytest.mark.dependency(depends=["test_registered_user"])
 def test_change_profile(capsys):

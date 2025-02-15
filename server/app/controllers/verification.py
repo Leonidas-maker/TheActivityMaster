@@ -2,9 +2,10 @@ from fastapi import HTTPException, UploadFile
 import uuid
 from typing import List, Tuple
 import datetime
+from sqlalchemy.orm import joinedload
 
 from schemas import s_verification
-from models import m_verification
+from models import m_user
 
 from crud import verification as verification_crud
 from crud import user as user_crud
@@ -30,7 +31,7 @@ async def verify_email(ep_context: EndpointContext, user_id: str, expire: str, s
             raise HTTPException(status_code=400, detail="Invalid email verification code")
 
     # Get the user
-    user = await user_crud.get_user_by_id(db, uuid.UUID(user_id))
+    user = await user_crud.get_user_by_id(db, uuid.UUID(user_id), query_options=[joinedload(m_user.User.generic_roles)])
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

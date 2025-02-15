@@ -10,7 +10,7 @@ from models.m_generic import Country, State, City
 from models.m_user import User, GenericRole
 from models.m_club import ClubRole, Permission, ClubRolePermission
 from config.settings import SYSTEM_USER_ID
-from config.club import ClubPermissions
+from config.permissions import ClubPermissions
 
 import core.security as security_core
 
@@ -59,13 +59,20 @@ async def create_permissions(db: AsyncSession):
             "description": "Allows reading club confidential data (e.g. financials).",
         },
         {"name": ClubPermissions.READ_CLUB_DATA.value, "description": "Allows reading club data."},
-        {"name": ClubPermissions.WRITE_CLUB_DATA.value, "description": "Allows writing or modifying club data."},
+        {"name": ClubPermissions.MODIFY_CLUB_DATA.value, "description": "Allows writing or modifying club data."},
         {"name": ClubPermissions.DELETE_CLUB_DATA.value, "description": "Allows deleting club data."},
-        {"name": ClubPermissions.UPDATE_CLUB_SETTINGS.value, "description": "Allows updating club settings."},
+        {"name": ClubPermissions.READ_ROLES.value, "description": "Allows reading club roles."},
+        {"name": ClubPermissions.MODIFY_ROLES.value, "description": "Allows modifying club roles."},
+        {"name": ClubPermissions.DELETE_ROLES.value, "description": "Allows deleting club roles."},
+        {"name": ClubPermissions.READ_EMPLOYEES.value, "description": "Allows reading club employees."},
+        {"name": ClubPermissions.MODIFY_EMPLOYEES.value, "description": "Allows modifying club employees."},
+        {"name": ClubPermissions.DELETE_EMPLOYEES.value, "description": "Allows deleting club employees."},
         {"name": ClubPermissions.READ_PROGRAMS.value, "description": "Allows reading club programs."},
         {"name": ClubPermissions.MODIFY_PROGRAMS.value, "description": "Allows modifying club programs."},
+        {"name": ClubPermissions.DELETE_PROGRAMS.value, "description": "Allows deleting club programs."},
         {"name": ClubPermissions.READ_MEMBERSHIPS.value, "description": "Allows reading club memberships."},
         {"name": ClubPermissions.MODIFY_MEMBERSHIPS.value, "description": "Allows modifying club memberships."},
+        {"name": ClubPermissions.DELETE_MEMBERSHIPS.value, "description": "Allows deleting club memberships."},
         {"name": ClubPermissions.READ_BOOKINGS.value, "description": "Allows reading club bookings."},
     ]
 
@@ -82,75 +89,6 @@ async def create_permissions(db: AsyncSession):
 
     if new_permissions:
         db.add_all(new_permissions)
-
-
-async def create_club_roles(db: AsyncSession):
-    club_roles = {
-        "Owner": {
-            "description": "The owner of the club, has full control over the club and its settings.",
-            "permissions": ["club_*"],
-        },
-        "Manager": {
-            "description": "Can manage club settings, courses, and bookings.",
-            "permissions": [
-                "club_read_club_confidential_data",
-                "club_read_club_data",
-                "club_write_club_data",
-                "club_delete_club_data",
-                "club_update_club_settings",
-                "club_read_programs",
-                "club_modify_programs",
-                "club_read_memberships",
-                "club_modify_memberships",
-                "club_read_bookings",
-            ],
-        },
-        "Instructor": {
-            "description": "Can manage courses and see bookings, but not club settings.",
-            "permissions": ["club_read_club_data", "club_read_programs", "club_modify_programs", "club_read_bookings"],
-        },
-        "Trainer": {
-            "description": "Can see bookings and manage their own courses.",
-            "permissions": ["club_read_club_data", "club_read_programs"],
-        },
-    }
-
-    res = await db.execute(select(ClubRole))
-    existing_roles = {role.name: role for role in res.unique().scalars().all()}
-    new_roles = []
-
-    for role_name, role_data in club_roles.items():
-        if not existing_roles.get(role_name):
-            new_roles.append(ClubRole(name=role_name, description=role_data["description"]))
-
-    if new_roles:
-        db.add_all(new_roles)
-
-    await db.flush()
-
-    res = await db.execute(select(Permission))
-    permissions = {permission.name: permission for permission in res.unique().scalars().all()}
-    new_role_permissions = []
-
-    for role in new_roles:
-        # If * is in the permissions, add all permissions starting with the defined prefix
-        for role_permissions in club_roles[role.name]["permissions"]:
-            if "*" in role_permissions:
-                prefix = role_permissions.split("*")[0]
-                new_role_permissions.extend(
-                    [
-                        ClubRolePermission(role_id=role.id, permission_id=permission.id)
-                        for permission in permissions.values()
-                        if permission.name.startswith(prefix)
-                    ]
-                )
-            else:
-                permission = permissions.get(role_permissions)
-                if permission:
-                    new_role_permissions.append(ClubRolePermission(role_id=role.id, permission_id=permission.id))
-
-    db.add_all(new_role_permissions)
-
 
 async def create_system_user(db: AsyncSession):
     res = await db.execute(select(User).where(User.id == SYSTEM_USER_ID))
@@ -172,7 +110,9 @@ async def create_system_user(db: AsyncSession):
 
 
 async def create_admin_user(db: AsyncSession):
-    res = await db.execute(select(exists(select(1).select_from(GenericRole).join(User.generic_roles).where(GenericRole.name == "Admin"))))
+    res = await db.execute(
+        select(exists(select(1).select_from(GenericRole).join(User.generic_roles).where(GenericRole.name == "Admin")))
+    )
 
     if not res.scalars().first():
         user = User(
@@ -192,8 +132,6 @@ async def init_users(db: AsyncSession):
     await create_permissions(db)
     await db.flush()
     await create_generic_roles(db)
-    await db.flush()
-    await create_club_roles(db)
     await db.flush()
     await create_system_user(db)
     await db.flush()

@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 import uuid
 
-import schemas.s_user as s_user
-import schemas.s_generic as s_generic
+from schemas import s_user, s_generic, s_role
 
 import core.security as core_security
 from utils.exceptions import handle_exception
@@ -42,24 +41,13 @@ async def get_user_information(
     """Get user information"""
     try:
         user = await user_crud.get_user_details_by_id(ep_context.db, uuid.UUID(token_details.payload["sub"]))
-        _2fa_methods = [method.method.value for method in user._2fa]
-        if not _2fa_methods:
-            _2fa_methods = ["email"]
-        return s_user.UserDetails(
-            id=str(user.id),
-            username=user.username,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            address=s_generic.Address(**user.address.get_as_dict()) if user.address else None,
-            methods_2fa=_2fa_methods,
-            identity_verified=user.identity_verified,
-        )
+ 
+        return s_user.UserDetails.model_validate(user)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user information")
 
 
-@router.get("/me/roles", response_model=s_user.Roles, tags=["User"])
+@router.get("/me/roles", response_model=s_role.Roles, tags=["User"])
 async def get_user_roles(
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),

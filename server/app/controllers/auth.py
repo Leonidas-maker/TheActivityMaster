@@ -17,7 +17,7 @@ import schemas.s_auth as s_auth
 from utils.time import unix_timestamp
 
 from crud import audit as audit_crud
-from crud import auth as auth_crud, user as user_crud
+from crud import auth as auth_crud, user as user_crud, role as role_crud
 
 from core import security as core_security
 from core.generic import EndpointContext
@@ -111,7 +111,7 @@ async def create_auth_tokens(
     user_id_str = str(user_id)
 
     # Get generic roles of the user
-    generic_roles = await user_crud.get_user_generic_roles(db, user_id)
+    generic_roles = await role_crud.get_user_generic_roles(db, user_id)
     generic_roles = [role.name for role in generic_roles]
 
     # Hash the application ID

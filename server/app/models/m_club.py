@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+import warnings
+from sqlalchemy.inspection import inspect
 from sqlalchemy import (
     String,
     Integer,
@@ -70,9 +72,11 @@ class Club(Base):
     __tablename__ = "clubs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
-    stripe_account_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    stripe_account_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
+    is_closed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
@@ -82,7 +86,23 @@ class Club(Base):
     memberships: Mapped[List["Membership"]] = relationship("Membership", back_populates="club", uselist=True)
     programs: Mapped[List["Program"]] = relationship("Program", back_populates="club", uselist=True)
     club_verifications: Mapped[List["ClubVerification"]] = relationship("ClubVerification", back_populates="club")
-    user_club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="club")
+    club_roles: Mapped[List["ClubRole"]] = relationship("ClubRole", back_populates="club", uselist=True)
+
+    @property
+    def owners(self) -> List["User"]:
+        """Get the owners of the club"""
+        state = inspect(self)
+        
+        if "club_roles" in state.unloaded:
+            warnings.warn("club_roles not loaded")
+            return []
+        
+        owners = []
+        for role in self.club_roles:
+            if role.name == "Owner":
+                owners.extend([ucr.user for ucr in role.user_club_roles])
+        return owners
+
 
 ###########################################################################
 ############################ Program Offerings ############################
@@ -114,7 +134,7 @@ class Program(Base):
     __tablename__ = "programs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(String(1000), nullable=False)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -253,7 +273,7 @@ class Membership(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
     price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
@@ -273,6 +293,8 @@ class Membership(Base):
     user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship(
         "MembershipSubscription", back_populates="membership"
     )
+
+
 class MembershipAccess(Base):
     __tablename__ = "membership_access"
 
@@ -284,6 +306,8 @@ class MembershipAccess(Base):
 
     membership: Mapped["Membership"] = relationship("Membership", back_populates="programs_access")
     program: Mapped["Program"] = relationship("Program", back_populates="memberships")
+
+    __table_args__ = (UniqueConstraint("membership_id", "program_id", name="unique_membership_access"),)
 
 
 class MembershipSubscription(Base):
@@ -299,21 +323,28 @@ class MembershipSubscription(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")
     membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")
-    transactions: Mapped[List["MembershipTransaction"]] = relationship("MembershipTransaction", back_populates="membership_subscription")
+    transactions: Mapped[List["MembershipTransaction"]] = relationship(
+        "MembershipTransaction", back_populates="membership_subscription"
+    )
 
-    
+    __table_args__ = (UniqueConstraint("membership_id", "user_id", name="unique_membership_subscription"),)
+
+
 class MembershipTransaction(Base):
     __tablename__ = "membership_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_subscription_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False)
+    membership_subscription_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False
+    )
     transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
 
-    membership_subscription: Mapped["MembershipSubscription"] = relationship("MembershipSubscription", back_populates="transactions")
-
+    membership_subscription: Mapped["MembershipSubscription"] = relationship(
+        "MembershipSubscription", back_populates="transactions"
+    )
 
 
 ###########################################################################
@@ -325,6 +356,8 @@ class ClubRolePermission(Base):
     role_id: Mapped[int] = mapped_column(Integer, ForeignKey("club_roles.id"), primary_key=True)
     permission_id: Mapped[int] = mapped_column(Integer, ForeignKey("permissions.id"), primary_key=True)
 
+    __table_args__ = (UniqueConstraint("role_id", "permission_id", name="unique_role_permission"),)
+
 
 class Permission(Base):
     __tablename__ = "permissions"
@@ -334,54 +367,46 @@ class Permission(Base):
     description: Mapped[str] = deferred(mapped_column(String(255), nullable=True))
 
     roles: Mapped[List["ClubRole"]] = relationship(
-        "ClubRole",
-        secondary="club_role_permissions",
-        back_populates="permissions"
+        "ClubRole", secondary="club_role_permissions", back_populates="permissions"
     )
+
 
 class ClubRole(Base):
     __tablename__ = "club_roles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    level: Mapped[int] = mapped_column(Integer, nullable=False)  # Lower level means higher permissions
+    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = deferred(mapped_column(String(255), nullable=False))
 
-    permissions: Mapped[List["Permission"]] = relationship(
-        "Permission",
-        secondary="club_role_permissions",
-        back_populates="roles",
-        lazy="joined"
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+    )
+
+    permissions: Mapped[List["Permission"]] = relationship(
+        "Permission", secondary="club_role_permissions", back_populates="roles", lazy="joined"
+    )
+    club = relationship("Club", back_populates="club_roles")
 
     user_club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="club_role")
 
+    __table_args__ = (
+        UniqueConstraint("club_id", "level", name="unique_club_role"),
+        UniqueConstraint("club_id", "name", name="unique_club_role_name"),
+    )
 
-    def as_dict(self) -> dict:
-        """
-        Returns the club role as a dictionary
-        {
-            "ClubOwner": {
-                "description": "The owner of the club, has full control over the club and its settings.",
-                "permissions": [
-                    {"name": "read_club_data", "description": "Allows reading club data."},
-                    {"name": "write_club_data", "description": "Allows writing or modifying club data."}
-                ]
-            }
-        }
-        """
-        return {
-            self.name: {
-                "description": self.description,
-                "permissions": [perm.as_dict() for perm in self.permissions]
-            }
-        }
-        
 
 class UserClubRole(Base):
     __tablename__ = "user_club_roles"
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), primary_key=True)
     club_role_id: Mapped[int] = mapped_column(Integer, ForeignKey("club_roles.id"), primary_key=True)
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
@@ -389,9 +414,9 @@ class UserClubRole(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="club_roles")
     club_role: Mapped["ClubRole"] = relationship("ClubRole", back_populates="user_club_roles", lazy="joined")
-    club: Mapped["Club"] = relationship("Club", back_populates="user_club_roles")
-    
-    __table_args__ = (UniqueConstraint("user_id", "club_id", "club_role_id", name="unique_user_club_role"),)
+
+    __table_args__ = (UniqueConstraint("user_id", "club_role_id", name="unique_user_club_role"),)
+
 
 class UserTrainer(Base):
     __tablename__ = "user_trainers"

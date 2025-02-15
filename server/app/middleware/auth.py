@@ -3,10 +3,12 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import uuid
+import time
 
+from config.permissions import ClubPermissions
 from core.database import get_db
 
-from crud import auth as auth_crud, user as user_crud
+from crud import auth as auth_crud, user as user_crud, role as role_crud
 
 from core.security import TokenDetails
 
@@ -27,9 +29,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 class AccessTokenChecker:
-    def __init__(self, generic_roles: Optional[list[str]] = None, club_roles: Optional[list[str]] = None):
+    def __init__(self, generic_roles: Optional[list[str]] = None, club_permissions: Optional[list[ClubPermissions]] = None):
+        """
+        :param generic_roles: Legacy generic roles that are required will be migrated to permissions in the future, defaults to None
+        :param club_permissions: Club permissions that are required, defaults to None
+        """
+
         self.generic_roles = [generic_role.lower() for generic_role in generic_roles] if generic_roles else None
-        self.club_roles = [club_role.lower() for club_role in club_roles] if club_roles else None
+        self.club_permissions = club_permissions
 
     async def __call__(
         self,
@@ -46,24 +53,23 @@ class AccessTokenChecker:
         if not payload:
             raise credentials_exception
 
-        # Check Roles
         user_id = uuid.UUID(payload["sub"])
 
+        # Check Generic Roles
         if self.generic_roles:
-            user_generic_roles = await user_crud.get_user_generic_roles(db, user_id)
-            if not any(role.name.lower() in self.generic_roles for role in user_generic_roles):
+            if not await role_crud.has_user_any_generic_role(db, user_id, self.generic_roles):
                 raise roles_exception
-            
-        if self.club_roles:
+            return TokenDetails(payload=payload, application_id=application_id, user_id=user_id)
+        
+        # Check Club Permissions
+        if self.club_permissions:
             try:
                 club_id = uuid.UUID(request.path_params["club_id"])
             except Exception:
-                raise HTTPException(status_code=400, detail="Club ID is required")
+                raise HTTPException(status_code=400, detail="A valid Club-ID is required")
 
-            user_club_roles = await user_crud.get_user_club_roles(db, user_id, club_id)
-            if not any(role.name.lower() in self.club_roles for role in user_club_roles):
+            if not await role_crud.has_user_any_club_permission(db, user_id, club_id, self.club_permissions):
                 raise roles_exception
-
         return TokenDetails(payload=payload, application_id=application_id, user_id=user_id)
 
 

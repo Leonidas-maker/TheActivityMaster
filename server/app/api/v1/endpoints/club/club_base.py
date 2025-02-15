@@ -1,25 +1,27 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, Query
 import uuid
-from typing import Union, List
+from typing import Union, List, Dict
 
-from api.v1.endpoints.club.club_id import base as club_id
+from api.v1.endpoints.club.club_id import base as club_id_router
 
 from controllers import club as club_controller
-from schemas import s_club, s_generic
+from schemas import s_club, s_generic, s_user, s_role
 
 from core.generic import EndpointContext
 import core.security as core_security
 
-from crud import club as club_crud
+from crud import club as club_crud, role as role_crud
 
 from middleware.general import get_endpoint_context
 import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
 
+from config.permissions import ClubPermissions
 
 router = APIRouter()
-router.include_router(club_id.router, prefix="/{club_id}")
+router.include_router(club_id_router.router, prefix="/{club_id}")
+
 
 ###########################################################################
 ########################### Additional Endpoints ##########################
@@ -36,15 +38,7 @@ async def search_clubs_v1(
 ):
     try:
         clubs = await club_crud.search_clubs(ep_context.db, query, page, page_size)
-        return [
-            s_club.Club(
-                id=club.id,
-                name=club.name,
-                description=str(club.description),
-                address=s_generic.Address(**club.address.get_as_dict()),
-            )
-            for club in clubs
-        ]
+        return [s_club.Club.model_validate(club) for club in clubs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to search clubs")
 
@@ -52,6 +46,18 @@ async def search_clubs_v1(
 @router.get("/programs/search", tags=["Club - Program"])
 async def search_programs_v1(category: str, query: str):
     pass
+
+
+# ======================================================== #
+# ========================= Other ======================== #
+# ======================================================== #
+@router.get("/permissions", response_model=List[s_role.Permission], tags=["Club - Role"])
+async def get_club_permissions_v1(ep_context: EndpointContext = Depends(get_endpoint_context)):
+    try:
+        permissions = await role_crud.get_permissions(ep_context.db, "club")
+        return [s_role.Permission.model_validate(permission) for permission in permissions]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get club permissions")
 
 
 ###########################################################################
@@ -89,15 +95,7 @@ async def get_clubs_v1(
 ):
     try:
         clubs = await club_crud.get_clubs(ep_context.db, page, page_size, city)
-        return [
-            s_club.Club(
-                id=club.id,
-                name=club.name,
-                description=str(club.description),
-                address=s_generic.Address(**club.address.get_as_dict()),
-            )
-            for club in clubs
-        ]
+        return [s_club.Club.model_validate(club) for club in clubs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get clubs")
 
@@ -121,29 +119,25 @@ async def get_club_v1(
 ):
     try:
         club = await club_controller.get_club(ep_context, club_id)
-        return s_club.ClubDetails(
-            id=club.id,
-            name=club.name,
-            description=str(club.description),
-            address=s_generic.Address(**club.address.get_as_dict()),
-            owner_ids=[
-                s_club.Employee(
-                    id=user_club_role.user.id,
-                    first_name=user_club_role.user.first_name,
-                    last_name=user_club_role.user.last_name,
-                    email=user_club_role.user.email,
-                )
-                for user_club_role in club.user_club_roles
-            ],
-        )
+        return s_club.ClubDetails.model_validate(club)
 
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get club")
 
 
-@router.put("/{club_id}", tags=["Club"])
-async def update_club_v1(club_id: uuid.UUID):
-    pass
+@router.put("/{club_id}", response_model=s_club.Club, tags=["Club"])
+async def update_club_v1(
+    club_id: uuid.UUID,
+    club_update: s_club.ClubUpdate,
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_CLUB_DATA])
+    ),
+):
+    try:
+        return await club_controller.update_club(ep_context, token_details, club_id, club_update)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to update club")
 
 
 @router.delete("/{club_id}", response_model=s_generic.MessageResponse, tags=["Club"])
@@ -167,6 +161,3 @@ async def get_bookings_v1(club_id: uuid.UUID):
 # ======================================================== #
 # ================= Employee & Club Roles ================ #
 # ======================================================== #
-@router.get("/{club_id}/employees", tags=["Club - Employee"])
-async def get_employees_v1(club_id: uuid.UUID):
-    pass

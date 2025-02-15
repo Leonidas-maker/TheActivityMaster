@@ -26,3 +26,4 @@ alembic
 bcrypt
 apscheduler
 redis
+pytest-dependency

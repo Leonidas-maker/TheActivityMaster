@@ -1,0 +1,18 @@
+{
+  "name": "TheActivityMaster-Backend Dev Container",
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:3.12",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+  "settings": {
+    "python.pythonPath": "/usr/local/bin/python"
+  },
+  "extensions": ["ms-python.python", "ms-azuretools.vscode-docker"],
+  "postCreateCommand": "pip install -r /workspace/server/app/requirements.txt",
+  "forwardPorts": [8000],
+  "containerEnv": {
+    "DB_HOST": "host.docker.internal",
+    "REDIS_HOST": "host.docker.internal"
+  }
+}

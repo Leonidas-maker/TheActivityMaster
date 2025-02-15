@@ -1,4 +1,6 @@
 from typing import List
+import warnings
+from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship, deferred
 from sqlalchemy import (
     TIMESTAMP,
@@ -60,11 +62,9 @@ class User(Base):
     address: Mapped["Address"] = relationship("Address")
     identity_verifications: Mapped[List["IdentityVerification"]] = relationship("IdentityVerification", uselist=True)
     generic_roles: Mapped[List["GenericRole"]] = relationship(
-        "GenericRole", secondary="user_roles", uselist=True, back_populates="users", lazy="joined"
+        "GenericRole", secondary="user_roles", uselist=True, back_populates="users"
     )
     club_roles: Mapped[List["UserClubRole"]] = relationship("UserClubRole", back_populates="user", uselist=True)
-
-    # roles = association_proxy("club_roles", "club_role")
 
     tokens: Mapped[List["UserToken"]] = relationship(
         "UserToken", back_populates="user", uselist=True, cascade="all, delete-orphan"
@@ -85,24 +85,43 @@ class User(Base):
 
     @property
     def clubs_with_roles(self) -> Dict[uuid.UUID, "ClubRole"]:
+        state = inspect(self)
+        if "club_roles" in state.unloaded:
+            raise ValueError("club_roles not loaded")
         result = {}
         for ucr in self.club_roles:
-            result[ucr.club_id] = ucr.club_role
+            result[ucr.club_role.club_id] = ucr.club_role
         return result
 
     @property
     def identity_verified(self) -> bool:
+        state = inspect(self)
+        if "identity_verifications" in state.unloaded:
+            raise ValueError("identity_verifications not loaded")
+
         return any(
             iv.status == VerificationStatus.APPROVED and iv.expires_at > datetime.now(DEFAULT_TIMEZONE)
             for iv in self.identity_verifications
         )
+
+    @property
+    def methods_2fa(self) -> List[str]:
+        state = inspect(self)
+        if "_2fa" in state.unloaded:
+            raise ValueError("_2fa not loaded")
+
+        _2fa_methods = [method.method.value for method in self._2fa]
+        if not _2fa_methods:
+            _2fa_methods = ["email"]
+
+        return _2fa_methods
 
 
 class GenericRole(Base):
     __tablename__ = "generic_roles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[str] = deferred(mapped_column(String(255), nullable=False))
 
     users: Mapped[List["User"]] = relationship(

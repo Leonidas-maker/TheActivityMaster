@@ -115,11 +115,9 @@ async def get_identity_verification_details_v1(
 ):
     """Get the details of an identity verification"""
     try:
-        verification = await verification_controller.get_identity_verification_details(
+        return await verification_controller.get_identity_verification_details(
             ep_context, token_details, verification_id
         ) 
-        return verification
-
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get identity verification details")
 

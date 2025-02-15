@@ -539,7 +539,7 @@ class AuditLogger:
     # ======================================================== #
     # ====================== User-Roles ====================== #
     # ======================================================== #
-    def user_role_removal(self, issuer: uuid.UUID, user_id: uuid.UUID, role: str, reason: str = ""):
+    def user_role_removed(self, issuer: uuid.UUID, user_id: uuid.UUID, role: str, reason: str = ""):
         """Log a user role removal action.
 
         :param issuer: The user ID or system ID that removes the role
@@ -564,6 +564,112 @@ class AuditLogger:
         if reason:
             details += f" for reason: {reason}"
         self.log_to_audit(issuer, action="User Role Assignment", category=AuditLogCategories.USER, details=details)
+
+    # ======================================================== #
+    # ====================== Club-Roles ====================== #
+    # ======================================================== #
+    def club_role_added(self, issuer: uuid.UUID, club_id: uuid.UUID, role_id: int):
+        """Log a club role addition action.
+
+        :param issuer: The user ID adding the role
+        :param club_id: The club ID to which the role is added
+        :param role_id: The ID of the role being added
+        """
+        self.log_to_audit(
+            issuer,
+            action="Club Role Added",
+            category=AuditLogCategories.CLUB,
+            details=f"Role {role_id} added to club {club_id}",
+        )
+
+    def club_role_updated(self, issuer: uuid.UUID, club_id: uuid.UUID, role_id: int, details: str):
+        """Log a club role update action.
+
+        :param issuer: The user ID updating the role
+        :param club_id: The club ID for which the role is updated
+        :param role_id: The ID of the role being updated
+        :param details: The details of the role update
+        """
+        self.log_to_audit(
+            issuer,
+            action="Club Role Updated",
+            category=AuditLogCategories.CLUB,
+            details=f"Role {role_id} updated in club {club_id}: {details}",
+        )
+
+    def club_role_deleted(self, issuer: uuid.UUID, club_id: uuid.UUID, role_id: int):
+        """Log a club role deletion action.
+
+        :param issuer: The user ID removing the role
+        :param club_id: The club ID from which the role is removed
+        :param role_id: The ID of the role being removed
+        """
+        self.log_to_audit(
+            issuer,
+            action="Club Role Deleted",
+            category=AuditLogCategories.CLUB,
+            details=f"Role {role_id} deleted from club {club_id}",
+        )
+
+
+    # ======================================================== #
+    # ======================= Employee ======================= #
+    # ======================================================== #
+    def club_employee_added(self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, club_role_id: int, reason: str = ""):
+        """Log a club employee addition action.
+
+        :param issuer: The user ID assigning the role
+        :param club_id: The club ID to which the role is assigned
+        :param user_id: The user ID whose role is assigned
+        :param club_role_id: The ID of the role being assigned
+        """
+        details = f"User {user_id} assigned role {club_role_id} in club {club_id}"
+        if reason:
+            details += f" for reason: {reason}"
+        self.log_to_audit(
+            issuer,
+            action="Club Employee Added",
+            category=AuditLogCategories.CLUB,
+            details=details,
+        )
+       
+    def club_employee_removed(self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, club_role_id: int, reason: str = ""):
+        """Log a club employee removal action.
+
+        :param issuer: The user ID removing the role
+        :param club_id: The club ID from which the role is removed
+        :param user_id: The user ID whose role is removed
+        :param club_role_id: The ID of the role being removed
+        """
+        details = f"User {user_id} removed role {club_role_id} in club {club_id}"
+        if reason:
+            details += f" for reason: {reason}"
+        self.log_to_audit(
+            issuer,
+            action="Club Employee Removed",
+            category=AuditLogCategories.CLUB,
+            details=details,
+        )
+    
+    def club_employee_updated(self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, from_club_role_id: int, to_club_role_id: int, reason: str = ""):
+        """Log a club employee role update action.
+
+        :param issuer: The user ID updating the role
+        :param club_id: The club ID for which the role is updated
+        :param user_id: The user ID whose role is updated
+        :param from_role: The role being updated from
+        :param to_role: The role being updated to
+        """
+        details = f"User {user_id} role updated from {from_club_role_id} to {to_club_role_id} in club {club_id}"
+        if reason:
+            details += f" for reason: {reason}"
+        self.log_to_audit(
+            issuer,
+            action="Club Employee Role Updated",
+            category=AuditLogCategories.CLUB,
+            details=details,
+        )
+
 
     # ======================================================== #
     # ===================== Verification ===================== #
@@ -681,6 +787,19 @@ class AuditLogger:
             action="Club Created",
             category=AuditLogCategories.CLUB,
             details=f"Created club {club_id}",
+        )
+
+    def club_updated(self, user_id: uuid.UUID, club_id: uuid.UUID, details: str):
+        """Log a club update action.
+
+        :param user_id: The user ID updating the club
+        :param club_id: The ID of the updated club
+        """
+        self.log_to_audit(
+            user_id,
+            action="Club Updated",
+            category=AuditLogCategories.CLUB,
+            details=f"Updated club {club_id}: {details}",
         )
 
 

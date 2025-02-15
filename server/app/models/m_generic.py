@@ -22,17 +22,6 @@ class Address(Base):
 
     __table_args__ = (UniqueConstraint("street", "postal_code_id", name="unique_address_postal_code"),)
 
-    def get_as_dict(self):
-        return {
-            "id": str(self.id),
-            "street": self.street,
-            "postal_code": self.postal_code.code,
-            "city": self.postal_code.city.name,
-            "state": self.postal_code.city.state.name,
-            "country": self.postal_code.city.state.country.name,
-        }
-
-
 class PostalCode(Base):
     __tablename__ = "postal_codes"
 

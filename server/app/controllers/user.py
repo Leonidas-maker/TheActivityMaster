@@ -8,12 +8,18 @@ import datetime
 
 import models.m_user as m_user
 
-import schemas.s_user as s_user
+from schemas import s_user, s_role
 
 import core.security as core_security
 
 from crud.audit import AuditLogger
-from crud import user as user_crud, auth as auth_crud, generic as generic_crud, verification as verification_crud
+from crud import (
+    user as user_crud,
+    auth as auth_crud,
+    generic as generic_crud,
+    verification as verification_crud,
+    role as role_crud,
+)
 
 
 from config.security import TOKEN_ISSUER
@@ -99,7 +105,8 @@ async def user_delete(
     audit_logger.user_self_deletion_successful(user_id, token_details.payload["aud"])
     await db.commit()
 
-async def get_user_roles(ep_context: EndpointContext, token_details: core_security.TokenDetails) -> s_user.Roles:
+
+async def get_user_roles(ep_context: EndpointContext, token_details: core_security.TokenDetails) -> s_role.Roles:
     """
     Get the roles of a user
 
@@ -110,18 +117,13 @@ async def get_user_roles(ep_context: EndpointContext, token_details: core_securi
     db = ep_context.db
     user_id = token_details.user_id
 
-    # Get the user
-    generic_roles, club_roles = await user_crud.get_user_roles(db, user_id)
+    # Get the user with roles
+    user = await role_crud.get_user_with_roles(db, user_id)
 
-    return s_user.Roles(
-        generic_roles=[s_user.GenericRole(name=role.name, description=role.description) for role in generic_roles],
+    return s_role.Roles(
+        generic_roles=[s_role.GenericRole.model_validate(role) for role in user.generic_roles],
         club_roles={
-            club_id: s_user.ClubRole(
-                name=club_role.name,
-                description=club_role.description,
-                permissions=[perm.name for perm in club_role.permissions],
-            )
-            for club_id, club_role in club_roles.items()
+            club_id: s_role.ClubRole.model_validate(club_role) for club_id, club_role in user.clubs_with_roles.items()
         },
     )
 
@@ -245,6 +247,7 @@ async def totp_remove(
     audit_logger.totp_removal(user_id, token_details.payload["aud"])
     await db.commit()
 
+
 ###########################################################################
 ################################# Changes #################################
 ###########################################################################
@@ -299,7 +302,7 @@ async def update_user_email(
     user_id = token_details.user_id
 
     # Get the user
-    user = await user_crud.get_user_by_id(db, user_id)
+    user = await user_crud.get_user_by_id(db, user_id, query_options=[joinedload(m_user.User.generic_roles)])
 
     # Check if the password is correct
     if not core_security.verify_password(password, user.password):
@@ -319,7 +322,8 @@ async def update_user_email(
     old_email_hash = core_security.sha256_salt(user.email)
     user.email = email
 
-    user.generic_roles.append(await user_crud.get_generic_role_by_name(db, "NotEmailVerified"))
+    if not any([role.name == "NotEmailVerified" for role in user.generic_roles]):
+        user.generic_roles.append(await role_crud.get_generic_role_by_name(db, "NotEmailVerified"))
 
     # TODO Send Email to old email and verify new email
     with core_security.email_verify_manager_dependency.get() as evm:
@@ -372,6 +376,7 @@ async def update_user_username(
     audit_logger.user_username_change(user_id, token_details.payload["aud"])
     await db.commit()
 
+
 async def update_user_basic(
     ep_context: EndpointContext, token_details: core_security.TokenDetails, user_update: s_user.UserUpdate
 ) -> None:
@@ -382,9 +387,6 @@ async def update_user_basic(
     :param token_details: The token details
     :param address: The new address
     """
-    if not any([user_update.address, user_update.first_name, user_update.last_name]):
-        raise HTTPException(status_code=400, detail="No fields to update")
-
     db = ep_context.db
     audit_logger = ep_context.audit_logger
     user_id = token_details.user_id
@@ -393,13 +395,15 @@ async def update_user_basic(
     # Get the user
     user = await user_crud.get_user_by_id(db, user_id)
 
-    if (user_update.first_name or user_update.last_name) and await verification_crud.is_user_identity_verified(db, user_id):
+    if (user_update.first_name or user_update.last_name) and await verification_crud.is_user_identity_verified(
+        db, user_id
+    ):
         raise HTTPException(status_code=400, detail="Cannot change name after identity verification")
-    
+
     if user_update.first_name:
         user.first_name = user_update.first_name
         audit_details += "First name updated"
-        
+
     if user_update.last_name:
         user.last_name = user_update.last_name
         audit_details += "; Last name updated"
@@ -411,5 +415,5 @@ async def update_user_basic(
 
     # Add audit logs
     audit_logger.user_profile_update(user_id, token_details.payload["aud"], audit_details)
-        
+
     await db.commit()
