@@ -20,5 +20,6 @@
     "settings_logout_header": "Sign Out All Devices",
     "settings_multi_factor_header": "Two-Factor-Authentication",
     "billing_subscription_header": "Subscriptions",
-    "billing_history_header": "Billing History"
+    "billing_history_header": "Billing History",
+    "settings_change_email_info_header": "Verify Email"
 }

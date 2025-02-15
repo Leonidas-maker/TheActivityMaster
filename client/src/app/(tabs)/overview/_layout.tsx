@@ -86,6 +86,14 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
+        name="(settings)/SettingsChangeEmailInfo"
+        options={{
+          gestureEnabled: false,
+          presentation: "modal",
+          headerTitle: t("settings_change_email_info_header"),
+        }}
+      />
+      <Stack.Screen
         name="(settings)/SettingsChangeUsername"
         options={{
           headerTitle: t("settings_change_username_header"),

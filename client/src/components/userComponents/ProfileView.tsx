@@ -26,16 +26,34 @@ const ProfileView = () => {
         checkLoginStatus();
     }, []);
 
+    // Function to check the login status and fetch the user data if user is logged in
+    // So we can make sure that Username
     useFocusEffect(
         useCallback(() => {
-          async function checkLoginStatus() {
-            // Check current login status
-            const isLoggedInData = await asyncLoadData("isLoggedIn");
-            setIsLoggedIn(isLoggedInData === "true");
-          }
-          checkLoginStatus();
+            async function checkLoginStatus() {
+                // Check current login status
+                const isLoggedInData = await asyncLoadData("isLoggedIn");
+                setIsLoggedIn(isLoggedInData === "true");
+            }
+            async function fetchUserData() {
+                try {
+                    if (isLoggedIn) {
+                        getUserData().then((data) => {
+                            setUsername(data.username);
+                            setFirstName(data.first_name);
+                            setLastName(data.last_name);
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error:", error);
+                };
+            }
+            checkLoginStatus();
+            if (isLoggedIn) {
+                fetchUserData();
+            };
         }, [])
-      );
+    );
 
     useEffect(() => {
         try {

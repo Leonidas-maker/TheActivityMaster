@@ -35,8 +35,8 @@ const SettingsChangePassword = () => {
             }
             Toast.show({
                 type: "error",
-                text1: t("error"),
-                text2: t("fill_all_fields"),
+                text1: t("error_change_password_all_fields"),
+                text2: t("error_fill_all_fields_password_subheading"),
             });
             return;
         };
@@ -47,8 +47,8 @@ const SettingsChangePassword = () => {
             setConfirmNewPasswordError(true);
             Toast.show({
                 type: "error",
-                text1: t("error"),
-                text2: t("passwords_do_not_match"),
+                text1: t("error_change_password_not_match"),
+                text2: t("passwords_do_not_match_subheading_change"),
             });
             return;
         }
@@ -58,8 +58,8 @@ const SettingsChangePassword = () => {
             setConfirmNewPasswordError(true);
             Toast.show({
                 type: "error",
-                text1: t("error"),
-                text2: t("password_too_short"),
+                text1: t("error_change_password_too_short"),
+                text2: t("password_too_short_subheading_change"),
             });
             return;
         }
@@ -73,8 +73,8 @@ const SettingsChangePassword = () => {
             setOldPasswordError(true);
             Toast.show({
                 type: "error",
-                text1: "Error",
-                text2: "Failed to change password",
+                text1: t("error_change_password_failed"),
+                text2: t("error_change_password_failed_subheading"),
             });
         }
     };
@@ -87,6 +87,7 @@ const SettingsChangePassword = () => {
                         <Heading text={t("change_password_heading")} />
                     </View>
                     <DefaultTextFieldInput
+                        secureTextEntry={true}
                         placeholder={t("change_password_old_placeholder")}
                         value={oldPassword}
                         onChangeText={(text) => {
@@ -98,6 +99,7 @@ const SettingsChangePassword = () => {
                         hasError={oldPasswordError}
                     />
                     <DefaultTextFieldInput
+                        secureTextEntry={true}
                         placeholder={t("change_password_placeholder")}
                         value={newPassword}
                         onChangeText={(text) => {
@@ -109,6 +111,7 @@ const SettingsChangePassword = () => {
                         hasError={newPasswordError}
                     />
                     <DefaultTextFieldInput
+                        secureTextEntry={true}
                         placeholder={t("change_password_confirm_placeholder")}
                         value={confirmNewPassword}
                         onChangeText={(text) => {
