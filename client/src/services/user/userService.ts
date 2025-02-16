@@ -118,17 +118,37 @@ export const changeAddress = async (
 ): Promise<any> => {
   try {
     const requestBody = {
-      street,
-      postal_code,
-      city,
-      state,
-      country,
+      address: {
+        street,
+        postal_code,
+        city,
+        state,
+        country,
+      },
     };
 
-    const response = await axiosInstance.put("user/me/email", requestBody);
+    const response = await axiosInstance.put("user/me", requestBody);
     return response.data;
   } catch (error) {
     console.error("Error during changeAddress call:", error);
+    throw error;
+  }
+};
+
+export const changeName = async (
+  first_name: string,
+  last_name: string
+): Promise<any> => {
+  try {
+    const requestBody = {
+      first_name,
+      last_name,
+    };
+
+    const response = await axiosInstance.put("/user/me", requestBody);
+    return response.data;
+  } catch (error) {
+    console.error("Error during changeName call:", error);
     throw error;
   }
 };

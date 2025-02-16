@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, useColorScheme } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { asyncLoadData } from "@/src/services/asyncStorageService";
+import { asyncLoadData, asyncSaveData } from "@/src/services/asyncStorageService";
 import { axiosInstance } from "@/src/services/api";
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getUserData } from "@/src/services/user/userService";
@@ -15,6 +15,7 @@ const ProfileView = () => {
     const [username, setUsername] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [isVerified, setIsVerified] = useState(false);
 
     useEffect(() => {
         async function checkLoginStatus() {
@@ -31,28 +32,26 @@ const ProfileView = () => {
     useFocusEffect(
         useCallback(() => {
             async function checkLoginStatus() {
-                // Check current login status
                 const isLoggedInData = await asyncLoadData("isLoggedIn");
-                setIsLoggedIn(isLoggedInData === "true");
-            }
-            async function fetchUserData() {
-                try {
-                    if (isLoggedIn) {
-                        getUserData().then((data) => {
-                            setUsername(data.username);
-                            setFirstName(data.first_name);
-                            setLastName(data.last_name);
-                        });
+                const loggedIn = isLoggedInData === "true";
+                setIsLoggedIn(loggedIn);
+
+                if (loggedIn) {
+                    try {
+                        const data = await getUserData();
+                        setUsername(data.username);
+                        setFirstName(data.first_name);
+                        setLastName(data.last_name);
+                        setIsVerified(data.identity_verified);
+                        // Save verified status directly from data to avoid stale state issues
+                        await asyncSaveData("isVerified", data.identity_verified.toString());
+                    } catch (error) {
+                        console.error("Error fetching user data:", error);
                     }
-                } catch (error) {
-                    console.error("Error:", error);
-                };
+                }
             }
             checkLoginStatus();
-            if (isLoggedIn) {
-                fetchUserData();
-            };
-        }, [])
+        }, [isLoggedIn])
     );
 
     useEffect(() => {
@@ -109,7 +108,7 @@ const ProfileView = () => {
                             <Icon name="person" size={40} color={iconColor} />
                             <View className="ml-2">
                                 <Text className="text-black dark:text-white font-bold text-2xl">
-                                    {firstName} {lastName}
+                                    {firstName} {lastName} {isVerified && <Icon name="verified" size={15} color={iconColor} />}
                                 </Text>
                                 <Text className="text-black dark:text-white font-bold text-xs">
                                     @{username}

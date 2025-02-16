@@ -60,6 +60,8 @@
     "error_change_email_failed": "E-Mail-Änderung fehlgeschlagen",
     "error_change_email_failed_subheading": "Eventuell ist die E-Mail-Adresse bereits vergeben oder überprüfe das Passwort oder versuche es später erneut",
     "emailInvalidError_text": "E-Mail ungültig",
-    "emailInvalidError_subtext": "Bitte geben Sie eine gültige E-Mail-Adresse ein"
-    
+    "emailInvalidError_subtext": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "userSettingsPageNavigator_subheading": "Du kannst deinen Namen, Benutzernamen, E-Mail, Adresse und Passwort nur alle 30 Minuten ändern. Wurde eine Sache geändert musst du 30 Minuten warten bis die anderen Daten geändert werden können.",
+    "userSettingsPageNavigator_alert_heading": "Benutzereinstellungen Informationen",
+    "settings_name_btn": "Namen ändern"
 }
