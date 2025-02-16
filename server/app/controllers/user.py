@@ -62,7 +62,7 @@ async def register_user(ep_context: EndpointContext, user: s_user.UserCreate) ->
     with core_security.email_verify_manager_dependency.get() as evm:
         url_params = evm.generate_verification_params(user_id)
         # TODO: Send email
-        if DEBUG:
+        if ENVIRONMENT == "dev":
             print(url_params)
 
     return user_id
@@ -328,7 +328,7 @@ async def update_user_email(
     # TODO Send Email to old email and verify new email
     with core_security.email_verify_manager_dependency.get() as evm:
         url_params = evm.generate_verification_params(user_id)
-        if DEBUG:
+        if ENVIRONMENT == "dev":
             print(url_params)
 
     # Add audit logs

@@ -7,7 +7,7 @@ import datetime
 from typing import List, Union
 import traceback
 
-from config.settings import DEBUG, DEFAULT_TIMEZONE
+from config.settings import DEBUG, DEFAULT_TIMEZONE, ENVIRONMENT
 from config.security import TOKEN_ISSUER
 
 from models import m_audit, m_user
@@ -217,7 +217,7 @@ async def login(
         # Create a new email code and potentially add a new 2FA entry
         email_code = await auth_crud.create_email_code(db, user)
         # TODO: Send the email with the 2FA code here
-        if DEBUG:
+        if ENVIRONMENT == "dev":
             print(f"Email code: {email_code}")
 
     await db.commit()
@@ -385,7 +385,7 @@ async def forgot_password(ep_context: EndpointContext, ident: str, ip_address: s
     with core_security.email_verify_manager_dependency.get() as emv:
         url_params = emv.generate_verification_params(user.id, 300)
         # TODO send email
-        if DEBUG:
+        if ENVIRONMENT == "dev":
             print(url_params)
     audit_logger.user_forgot_password(user.id, ip_address)
     await db.commit()

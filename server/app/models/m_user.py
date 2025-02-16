@@ -100,7 +100,7 @@ class User(Base):
             raise ValueError("identity_verifications not loaded")
 
         return any(
-            iv.status == VerificationStatus.APPROVED and iv.expires_at > datetime.now(DEFAULT_TIMEZONE)
+            iv.status == VerificationStatus.APPROVED and iv.expires_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.now(DEFAULT_TIMEZONE)
             for iv in self.identity_verifications
         )
 

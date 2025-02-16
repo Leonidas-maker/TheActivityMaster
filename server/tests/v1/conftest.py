@@ -1,3 +1,4 @@
+# type: ignore
 import pytest
 from datetime import datetime
 from fastapi import status
@@ -19,13 +20,13 @@ def register_user(client, capsys):
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
     pytest.test_user_data["username"] = f"testuser{timestamp}"
     pytest.test_user_data["email"] = f"test.user+{timestamp}@example.com"
-    
 
     response = client.post("/api/v1/user/register", json={**pytest.test_user_data, "address": None})
     if response.status_code == 400 and "already exists" in response.json()["detail"]:
         return
 
     assert response.status_code == 200
+    pytest.user_id = response.json()["message"]
 
     querry = get_verify_token(capsys)
 
@@ -95,6 +96,41 @@ def submit_identity_verification(client, tokens, check_status=True):
         f.close()
 
 
+def verify_identity(client, capsys):
+    tokens = login_admin_email(client, capsys)
+
+    response = client.get(
+        "/api/v1/verification/identity/pending",
+        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.json()) > 0
+
+    identity_verification_id = ""
+    for identity_verification in response.json():
+        if identity_verification["user_id"] == pytest.user_id:
+            identity_verification_id = identity_verification["id"]
+            break
+
+    assert identity_verification_id, "Identity verification ID not found for user."
+
+    response = client.post(
+        f"/api/v1/verification/identity/approve",
+        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+        params={"verification_id": identity_verification_id},
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+
+def check_identity_verification_status(client, tokens):
+    response = client.get(
+        "/api/v1/verification/identity/self",
+        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"] == "approved"
+
+
 ###########################################################################
 ############################ Standart Auth Flow ###########################
 ###########################################################################
@@ -145,6 +181,16 @@ def login_admin_email(client, capsys) -> dict:
     assert "refresh_token" in tokens
     return tokens
 
+def get_admin_user_details(client, capsys):
+    tokens = login_admin_email(client, capsys)
+    response = client.get(
+        "/api/v1/user/me",
+        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    logout(client, tokens)
+    return response.json()
+
 
 def login_totp(client) -> dict:
     login_response = client.post(
@@ -189,6 +235,9 @@ def logout(client, tokens):
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
 
+# ======================================================== #
+# ========================= User ========================= #
+# ======================================================== #
 pytest.test_user_data = {
     "username": f"testuser{timestamp}",
     "email": f"test.user+{timestamp}@example.com",
@@ -196,6 +245,30 @@ pytest.test_user_data = {
     "first_name": "Test",
     "last_name": "User",
 }
+pytest.user_id = None
 pytest.totp_secret = None
 pytest.application_id = uuid.uuid4().hex
 pytest.last_totp_code = None
+
+# ======================================================== #
+# ========================= Club ========================= #
+# ======================================================== #
+pytest.club_data = {
+    "name": f"Test Club {timestamp}",
+    "description": "Test Description",
+    "address": {
+        "street": "123 Test St",
+        "city": "Test City",
+        "state": "TS",
+        "postal_code": "12345",
+        "country": "Germany",
+    },
+}
+pytest.club_id = None
+
+pytest.club_role_data = {
+    "level": 5,
+    "name": "Test Role",
+    "description": "Test Description",
+    "permissions": []
+}

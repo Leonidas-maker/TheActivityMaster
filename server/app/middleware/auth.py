@@ -8,7 +8,7 @@ import time
 from config.permissions import ClubPermissions
 from core.database import get_db
 
-from crud import auth as auth_crud, user as user_crud, role as role_crud
+from crud import auth as auth_crud, role as role_crud, verification as verification_crud
 
 from core.security import TokenDetails
 
@@ -43,7 +43,7 @@ class AccessTokenChecker:
         request: Request,
         db: AsyncSession = Depends(get_db),
         token: str = Depends(oauth2_scheme),
-        application_id: str = Header(...),
+        application_id: str = Header(..., description="The application ID that the token is for", alias="Application-Id"),
     ) -> TokenDetails:
         # Check Token
         if not application_id:
@@ -67,6 +67,9 @@ class AccessTokenChecker:
                 club_id = uuid.UUID(request.path_params["club_id"])
             except Exception:
                 raise HTTPException(status_code=400, detail="A valid Club-ID is required")
+            
+            if not await verification_crud.is_user_identity_verified(db, user_id) and not await role_crud.is_user_elevated(db, user_id):
+                raise HTTPException(status_code=403, detail="User identity not verified. Please verify your identity to access this resource.")
 
             if not await role_crud.has_user_any_club_permission(db, user_id, club_id, self.club_permissions):
                 raise roles_exception

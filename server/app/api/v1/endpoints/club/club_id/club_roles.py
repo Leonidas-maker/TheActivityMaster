@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
 import uuid
 from typing import List
 
@@ -26,8 +26,8 @@ router = APIRouter()
 
 @router.post("", response_model=s_role.ClubRole, tags=["Club - Role"])
 async def create_club_role_v1(
-    club_id: uuid.UUID,
-    club_role_create: s_role.ClubRoleCreate,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    club_role_create: s_role.ClubRoleCreate = Body(..., description="The role data to create"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_ROLES])
@@ -39,9 +39,9 @@ async def create_club_role_v1(
         await handle_exception(e, ep_context, "Failed to create club role")
 
 
-@router.get("", response_model=List[s_role.ClubRole], tags=["Club - Role"])
+@router.get("/all", response_model=List[s_role.ClubRole], tags=["Club - Role"])
 async def get_club_roles_v1(
-    club_id: uuid.UUID,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(
@@ -58,7 +58,14 @@ async def get_club_roles_v1(
 
 @router.get("/{role_id}", response_model=s_role.ClubRole, tags=["Club - Role"])
 async def get_club_role_v1(
-    club_id: uuid.UUID, role_id: int, ep_context: EndpointContext = Depends(get_endpoint_context)
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    role_id: int = Path(..., description="The ID of the role to retrieve"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.READ_ROLES, ClubPermissions.MODIFY_ROLES, ClubPermissions.DELETE_ROLES]
+        )
+    ),
 ):
     try:
         club_role = await role_crud.get_club_role(ep_context.db, club_id, role_id=role_id, with_details=True)
@@ -71,9 +78,9 @@ async def get_club_role_v1(
 
 @router.put("/{role_id}", response_model=s_role.ClubRole, tags=["Club - Role"])
 async def update_club_role_v1(
-    club_id: uuid.UUID,
-    role_id: int,
-    club_role_update: s_role.ClubRoleUpdate,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    role_id: int = Path(..., description="The ID of the role to update"),
+    club_role_update: s_role.ClubRoleUpdate = Body(..., description="The updated role data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_ROLES])
@@ -87,8 +94,8 @@ async def update_club_role_v1(
 
 @router.delete("/{role_id}", response_model=s_generic.MessageResponse, tags=["Club - Role"])
 async def delete_club_role_v1(
-    club_id: uuid.UUID,
-    role_id: int,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    role_id: int = Path(..., description="The ID of the role to delete"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.DELETE_ROLES])
@@ -103,8 +110,8 @@ async def delete_club_role_v1(
 
 @router.get("/{role_id}/members", tags=["Club - Role"])
 async def get_club_role_members_v1(
-    club_id: uuid.UUID,
-    role_id: int,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    role_id: int = Path(..., description="The ID of the role"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_ROLES])

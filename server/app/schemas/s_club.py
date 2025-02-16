@@ -10,6 +10,10 @@ class Employee(BaseModel):
     last_name: str
     email: EmailStr
 
+class EmployeeResponse(Employee):
+    role_name: str
+    role_level: int
+    
 
 class ClubBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

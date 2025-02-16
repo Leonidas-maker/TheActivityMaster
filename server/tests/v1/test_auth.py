@@ -1,3 +1,4 @@
+# type: ignore
 import pytest
 from .conftest import *
 from fastapi import status

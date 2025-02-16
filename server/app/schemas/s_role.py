@@ -34,6 +34,7 @@ class ClubRole(BaseModel):
 
 class ClubRoleUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=50)
+    level: int = Field(..., gt=0, le=10)
     description: Optional[str] = Field(None, max_length=255)
     permissions: Optional[List[ClubPermissions]] = None
 

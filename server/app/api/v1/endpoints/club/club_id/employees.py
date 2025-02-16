@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Query
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
 import uuid
 from typing import Union, List, Dict
 
@@ -20,9 +20,9 @@ from config.permissions import ClubPermissions
 
 router = APIRouter()
 
-@router.get("", response_model=Dict[str, List[s_club.Employee]]	, tags=["Club - Employee"])
+@router.get("/all", response_model=Dict[str, List[s_club.Employee]]	, tags=["Club - Employee"])
 async def get_employees_v1(
-    club_id: uuid.UUID,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(
@@ -45,11 +45,41 @@ async def get_employees_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get employees")
 
+@router.get(f"", response_model=s_club.EmployeeResponse, tags=["Club - Employee"])
+async def get_employee_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    user_id: uuid.UUID = Query(..., description="The User ID of the employee"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[
+                ClubPermissions.READ_EMPLOYEES
+            ]
+        )
+    ),
+):
+    """Get all employees of a club"""
+    try:
+        user_club_roles = await club_crud.get_club_employee_by_id(ep_context.db, club_id, user_id)
+
+        if not user_club_roles:
+            raise HTTPException(status_code=404, detail="This user is not an employee of this club")
+
+        return s_club.EmployeeResponse(
+            role_name=user_club_roles.club_role.name,
+            role_level=user_club_roles.club_role.level,
+            id=user_club_roles.user.id,
+            first_name=user_club_roles.user.first_name,
+            last_name=user_club_roles.user.last_name,
+            email=user_club_roles.user.email,
+        )
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get employees")
 
 @router.post("", response_model=s_generic.MessageResponse, tags=["Club - Employee"])
 async def add_employee_v1(
-    club_id: uuid.UUID,
-    role_assignment: s_club.UserClubRoleAssignment,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    role_assignment: s_club.UserClubRoleAssignment = Body(..., description="The role assignment data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_EMPLOYEES])
@@ -62,11 +92,10 @@ async def add_employee_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to add employee")
 
-
 @router.put("", tags=["Club - Employee"])
 async def update_employee_v1(
-    club_id: uuid.UUID,
-    role_change: s_club.UserClubRoleChange,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    role_change: s_club.UserClubRoleChange = Body(..., description="The role change data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_EMPLOYEES])
@@ -82,8 +111,8 @@ async def update_employee_v1(
 
 @router.delete("", response_model=s_generic.MessageResponse, tags=["Club - Employee"])
 async def remove_club_role_v1(
-    club_id: uuid.UUID,
-    user_id: uuid.UUID,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    user_id: uuid.UUID = Query(..., description="The ID of the user to remove from the role"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.DELETE_EMPLOYEES])

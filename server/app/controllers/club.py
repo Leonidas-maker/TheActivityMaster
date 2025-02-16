@@ -41,6 +41,9 @@ async def create_club(
     ):
         raise HTTPException(status_code=403, detail="User identity not verified")
 
+    if await club_crud.club_exists(db, club_create.name):
+        raise HTTPException(status_code=400, detail="Club name already exists")
+
     club = await club_crud.create_club(db, user_id, club_create)
 
     audit_log.club_created(user_id, club.id)
@@ -86,11 +89,15 @@ async def update_club(
     """
     db = ep_context.db
     user_id = token_details.user_id
+
+    if club_update.name and await club_crud.club_exists(db, club_update.name):
+        raise HTTPException(status_code=400, detail="Club name already exists")
+
     try:
         club = await club_crud.update_club(ep_context, club_id, club_update, user_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-
+    
     response = s_club.Club.model_validate(club)
     await db.commit()
     return response
@@ -165,6 +172,7 @@ async def update_club_role(
     if not club_role:
         raise HTTPException(status_code=404, detail="Role not found")
 
+
     if not await role_crud.has_user_higher_club_level(db, issuer_id, club_id, level=club_role.level):
         raise HTTPException(status_code=403, detail="User has higher or equal level than role")
 
@@ -177,7 +185,14 @@ async def update_club_role(
         details += f"Description: {club_role.description} -> {club_role_update.description}"
         club_role.description = club_role_update.description
 
+    if club_role_update.level and club_role.level != club_role_update.level:
+        details += f"Level: {club_role.level} -> {club_role_update.level}"
+        club_role.level = club_role_update.level
+
     if club_role_update.permissions and club_role.permissions != club_role_update.permissions:
+        if club_role.level == 10 and ClubPermissions.READ_PROGRAMS.value not in club_role_update.permissions:
+            raise HTTPException(status_code=403, detail="Cannot remove READ_PROGRAMS permission from least privileged role")
+
         permission_details = ""
         permissions_db = await role_crud.get_permissions(db, "club")
         available_permissions = dict([(permission.name, permission) for permission in permissions_db])

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Query
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
 import uuid
 from typing import Union, List, Dict
 
@@ -31,9 +31,9 @@ router.include_router(club_id_router.router, prefix="/{club_id}")
 # ======================================================== #
 @router.get("/search", response_model=List[s_club.Club], tags=["Club"])
 async def search_clubs_v1(
-    query: str = Query(..., min_length=1),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=50),
+    query: str = Query(..., min_length=1, max_length=50, description="The search query"),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
@@ -88,9 +88,9 @@ async def get_my_attended_sessions_v1():
 ###########################################################################
 @router.get("", response_model=List[s_club.Club], tags=["Club", "Public"])
 async def get_clubs_v1(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=50),
-    city: str = Query(default="", min_length=0, max_length=20),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    city: str = Query(default="", min_length=0, max_length=20, description="The city name to filter by"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
@@ -102,7 +102,7 @@ async def get_clubs_v1(
 
 @router.post("", response_model=s_club.Club, tags=["Club"])
 async def create_club_v1(
-    club_create: s_club.ClubCreate,
+    club_create: s_club.ClubCreate = Body(..., description="The club data to create"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -114,7 +114,7 @@ async def create_club_v1(
 
 @router.get("/{club_id}", response_model=Union[s_club.ClubDetails, s_club.ClubDetails], tags=["Club", "Public"])
 async def get_club_v1(
-    club_id: uuid.UUID,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
@@ -127,8 +127,8 @@ async def get_club_v1(
 
 @router.put("/{club_id}", response_model=s_club.Club, tags=["Club"])
 async def update_club_v1(
-    club_id: uuid.UUID,
-    club_update: s_club.ClubUpdate,
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    club_update: s_club.ClubUpdate = Body(..., description="The updated club data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_CLUB_DATA])
@@ -141,12 +141,12 @@ async def update_club_v1(
 
 
 @router.delete("/{club_id}", response_model=s_generic.MessageResponse, tags=["Club"])
-async def delete_club_v1(club_id: uuid.UUID):
+async def delete_club_v1(club_id: uuid.UUID = Path(..., description="The ID of the club")):
     return {"message": "Not available yet. Please contact support."}
 
 
 @router.get("/{club_id}/sessions", tags=["Club - Program - Session"])
-async def get_sessions_v1(club_id: uuid.UUID):
+async def get_sessions_v1(club_id: uuid.UUID = Path(..., description="The ID of the club")):
     pass
 
 
@@ -154,7 +154,7 @@ async def get_sessions_v1(club_id: uuid.UUID):
 # ======================= BOOKINGS ======================= #
 # ======================================================== #
 @router.get("/{club_id}/bookings", tags=["Club - Booking"])
-async def get_bookings_v1(club_id: uuid.UUID):
+async def get_bookings_v1(club_id: uuid.UUID = Path(..., description="The ID of the club")):
     pass
 
 

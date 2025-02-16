@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_
+from sqlalchemy import select, delete, or_, exists
 from sqlalchemy.orm import undefer, joinedload, selectinload
 from typing import List, Tuple, Optional
 import uuid
@@ -11,6 +11,17 @@ from models import m_club, m_user, m_generic
 import crud.generic as generic_crud, crud.role as role_crud
 
 from core.generic import EndpointContext
+
+
+async def club_exists(db: AsyncSession, club_name: str) -> bool:
+    """Check if a club with the given name exists
+
+    :param db: The database session
+    :param club_name: The name of the club to check
+    :return: True if a club with the given name exists, False otherwise
+    """
+    res = await db.execute(select(exists(select(1).select_from(m_club.Club).where(m_club.Club.name == club_name))))
+    return bool(res.scalar())
 
 
 async def create_club(db: AsyncSession, user_id: uuid.UUID, club: s_club.ClubCreate) -> m_club.Club:
@@ -26,19 +37,18 @@ async def create_club(db: AsyncSession, user_id: uuid.UUID, club: s_club.ClubCre
 
     db.add(db_club)
     await db.flush()
-    await role_crud.create_default_club_roles(db, db_club.id)
+    default_roles = await role_crud.create_default_club_roles(db, db_club.id)
 
-    res = await db.execute(
-        select(m_club.ClubRole.id).filter(m_club.ClubRole.level == 0, m_club.ClubRole.club_id == db_club.id)
-    )
-    owner_role_id = res.scalar_one_or_none()
+    owner_role = None
+    for role in default_roles:
+        if role.level == 0:
+            owner_role = role
+            break
 
-    if not owner_role_id:
+    if not owner_role:
         raise ValueError("Club owner role not found")
 
-    print("owner_role_id", owner_role_id)
-
-    db_user_club_role = m_club.UserClubRole(user_id=user_id, club_role_id=owner_role_id)
+    db_user_club_role = m_club.UserClubRole(user_id=user_id, club_role=owner_role)
     db.add(db_user_club_role)
 
     await db.flush()
@@ -64,6 +74,7 @@ async def get_clubs(db: AsyncSession, page: int, page_size: int, city: str) -> L
             .join(m_generic.Address.postal_code)
             .join(m_generic.PostalCode.city)
             .filter(m_generic.City.name == city)
+            .order_by(m_club.Club.name)
         )
 
     stmt = stmt.limit(page_size).offset((page - 1) * page_size)
@@ -164,9 +175,36 @@ async def get_club_employees(db: AsyncSession, club_id: uuid.UUID) -> List[m_clu
         joinedload(m_club.ClubRole.user_club_roles).joinedload(m_club.UserClubRole.user),
     ]
 
-    res = await db.execute(select(m_club.ClubRole).options(*query_options).filter(m_club.ClubRole.club_id == club_id))
+    res = await db.execute(
+        select(m_club.ClubRole)
+        .options(*query_options)
+        .filter(m_club.ClubRole.club_id == club_id)
+        .order_by(m_club.ClubRole.level)
+    )
     club_roles = res.unique().scalars().all()
     return list(club_roles)
+
+
+async def get_club_employee_by_id(db: AsyncSession, club_id: uuid.UUID, user_id: uuid.UUID) -> m_club.UserClubRole:
+    """Get a club employee by ID
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :param user_id: The ID of the user
+    :return: The user club role
+    """
+    query_options = [
+        joinedload(m_club.UserClubRole.user), 
+        joinedload(m_club.UserClubRole.club_role)
+    ]
+
+    res = await db.execute(
+        select(m_club.UserClubRole)
+        .options(*query_options)
+        .join(m_club.ClubRole)
+        .filter(m_club.UserClubRole.user_id == user_id, m_club.ClubRole.club_id == club_id)
+    )
+    return res.unique().scalar_one_or_none()
 
 
 # TODO - Implement Delete Club workflow
@@ -216,6 +254,7 @@ async def search_clubs(db: AsyncSession, query: str, page: int = 1, page_size: i
         )
         .limit(page_size)
         .offset((page - 1) * page_size)
+        .order_by(m_club.Club.name)
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())

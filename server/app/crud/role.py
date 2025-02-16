@@ -10,7 +10,9 @@ from models import m_club, m_user
 from config.permissions import ClubPermissions, DEFAULT_CLUB_ROLES
 
 
-async def get_permissions(db: AsyncSession, prefix: Optional[str] = None, names: Optional[List[ClubPermissions]] = None) -> List[m_club.Permission]:
+async def get_permissions(
+    db: AsyncSession, prefix: Optional[str] = None, names: Optional[List[ClubPermissions]] = None
+) -> List[m_club.Permission]:
     """Get all permissions
 
     :param db: The database session
@@ -107,25 +109,28 @@ async def is_user_elevated(db: AsyncSession, user_id: uuid.UUID) -> bool:
 ###########################################################################
 ################################ Club Role ################################
 ###########################################################################
-async def create_default_club_roles(db: AsyncSession, club_id: uuid.UUID):
-    res = await db.execute(select(m_club.ClubRole))
-    existing_roles = {role.name: role for role in res.unique().scalars().all()}
+async def create_default_club_roles(db: AsyncSession, club_id: uuid.UUID) -> List[m_club.ClubRole]:
+    """Create the default club roles for a club
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :return: The created roles
+    """
     new_roles = []
 
     for role_name, role_data in DEFAULT_CLUB_ROLES.items():
-        if not existing_roles.get(role_name):
-            new_role = m_club.ClubRole(
-                name=role_name, description=role_data["description"], club_id=club_id, level=role_data["level"]
-            )
-            new_roles.append(new_role)
+        new_role = m_club.ClubRole(
+            name=role_name, description=role_data["description"], club_id=club_id, level=role_data["level"]
+        )
+        new_roles.append(new_role)
 
     if new_roles:
         db.add_all(new_roles)
 
     await db.flush()
 
-    res = await db.execute(select(m_club.Permission))
-    permissions = {permission.name: permission for permission in res.unique().scalars().all()}
+    permissions_db = await get_permissions(db, prefix="club")
+    permissions = {permission.name: permission for permission in permissions_db}
     new_role_permissions = []
 
     for role in new_roles:
@@ -147,6 +152,7 @@ async def create_default_club_roles(db: AsyncSession, club_id: uuid.UUID):
 
     db.add_all(new_role_permissions)
     await db.flush()
+    return new_roles
 
 
 async def get_club_role(
@@ -166,15 +172,17 @@ async def get_club_role(
     :param role_id: Optional[int]: ID of the role to search for
     :return: Tuple[ClubRole, int]: The role and its ID
     """
+    if not role_name and role_id is None and level is None:
+        raise ValueError("Role name, ID, or level must be provided")
 
     query = select(m_club.ClubRole).filter(m_club.ClubRole.club_id == club_id)
     if role_name:
         query = query.filter(m_club.ClubRole.name == role_name)
-    if role_id:
+    if role_id is not None:
         query = query.filter(m_club.ClubRole.id == role_id)
-    if level:
+    if level is not None:
         query = query.filter(m_club.ClubRole.level == level)
-    
+
     if with_details:
         query = query.options(
             undefer(m_club.ClubRole.description),
@@ -233,8 +241,10 @@ async def club_role_exists(db: AsyncSession, club_id: uuid.UUID, role_name: str,
                 .select_from(m_club.ClubRole)
                 .filter(
                     m_club.ClubRole.club_id == club_id,
-                    m_club.ClubRole.name == role_name,
-                    m_club.ClubRole.level == level,
+                    or_(
+                        m_club.ClubRole.name == role_name,
+                        m_club.ClubRole.level == level,
+                    ),
                 )
             )
         )
@@ -354,7 +364,11 @@ async def update_employee(db: AsyncSession, club_id: uuid.UUID, user_id: uuid.UU
     :param role_id: The ID of the new role
     :return: None
     """
-    result = await db.execute(select(m_club.UserClubRole).where(m_club.UserClubRole.user_id == user_id))
+    result = await db.execute(
+        select(m_club.UserClubRole)
+        .join(m_club.ClubRole)
+        .filter(m_club.ClubRole.club_id == club_id, m_club.UserClubRole.user_id == user_id)
+    )
     user_club_role = result.unique().scalar_one_or_none()
 
     if user_club_role is None:
