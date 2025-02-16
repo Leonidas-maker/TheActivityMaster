@@ -60,5 +60,8 @@
     "error_change_email_failed": "Email change failed",
     "error_change_email_failed_subheading": "Maybe the email is already taken or check password or try again later",
     "emailInvalidError_text": "Email invalid",
-    "emailInvalidError_subtext": "Please enter a valid email address"
+    "emailInvalidError_subtext": "Please enter a valid email address",
+    "userSettingsPageNavigator_subheading": "You can only your name, username, email, address and password every 30 minutes. Once you have changed one of the things you have to wait 30 minutes to change another one.",
+    "userSettingsPageNavigator_alert_heading": "User Settings Information",
+    "settings_name_btn": "Change name"
 }

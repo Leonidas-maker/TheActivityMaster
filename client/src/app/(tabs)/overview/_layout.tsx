@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
+import { Alert, Button } from "react-native";
 
 export default function OverviewLayout() {
   const [isLight, setIsLight] = useState(false);
@@ -121,6 +122,12 @@ export default function OverviewLayout() {
         name="(settings)/SettingsMultiFactor"
         options={{
           headerTitle: t("settings_multi_factor_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsChangeName"
+        options={{
+          headerTitle: t("settings_name_header"),
         }}
       />
       <Stack.Screen

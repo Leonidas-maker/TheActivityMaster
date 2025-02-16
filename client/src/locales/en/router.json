@@ -21,5 +21,6 @@
     "settings_multi_factor_header": "Two-Factor-Authentication",
     "billing_subscription_header": "Subscriptions",
     "billing_history_header": "Billing History",
-    "settings_change_email_info_header": "Verify Email"
+    "settings_change_email_info_header": "Verify Email",
+    "settings_name_header": "Name"
 }
