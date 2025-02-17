@@ -71,7 +71,7 @@ const SettingsUser: React.FC = () => {
 
     const userIconNames = ["person", "account-circle", "email", "home", "delete"];
 
-    // Filter out the user option (index 0) if the user is verified
+    // Filter out the user option (index 0) if the user is verifiedQ   
     const filteredUserTexts = isVerified ? userTexts.slice(1) : userTexts;
     const filteredOnPressUserFunctions = isVerified ? onPressUserFunctions.slice(1) : onPressUserFunctions;
     const filteredUserIconNames = isVerified ? userIconNames.slice(1) : userIconNames;

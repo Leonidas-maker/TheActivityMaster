@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, useColorScheme } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { asyncLoadData, asyncSaveData } from "@/src/services/asyncStorageService";
-import { axiosInstance } from "@/src/services/api";
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getUserData } from "@/src/services/user/userService";
 
