@@ -161,7 +161,7 @@ def test_change_user_newsletter(capsys):
         response = client.put(
             "/api/v1/user/me/newsletter",
             headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-            params={"newsletter_subscripe": True},
+            params={"newsletter_subscribe": True},
         )
         assert response.status_code == status.HTTP_200_OK
 
