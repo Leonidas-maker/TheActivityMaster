@@ -28,7 +28,7 @@ async def get_employees_v1(
         auth_middleware.AccessTokenChecker(
             club_permissions=[
                 ClubPermissions.READ_EMPLOYEES,
-                ClubPermissions.MODIFY_EMPLOYEES,
+                ClubPermissions.UPDATE_EMPLOYEES,
                 ClubPermissions.DELETE_EMPLOYEES,
             ]
         )
@@ -82,7 +82,7 @@ async def add_employee_v1(
     role_assignment: s_club.UserClubRoleAssignment = Body(..., description="The role assignment data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_EMPLOYEES])
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_EMPLOYEES])
     ),
 ):
     """Assign a user to a club role"""
@@ -98,7 +98,7 @@ async def update_employee_v1(
     role_change: s_club.UserClubRoleChange = Body(..., description="The role change data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_EMPLOYEES])
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_EMPLOYEES])
     ),
 ):
     """Update a user's role in a club"""

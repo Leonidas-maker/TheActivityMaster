@@ -7,7 +7,7 @@ import os
 from core.database import engine, get_async_session, check_db_connection
 from config.settings import ENVIRONMENT
 from config.database import Base
-from core.init_database import init_country_states_city, init_country_states_city_mode, init_users
+import core.init_database as init_db 
 
 from models.m_generic import *
 from models.m_user import *
@@ -43,8 +43,9 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
 
     async with get_async_session() as db:
-        await init_users(db)
-        await init_country_states_city(db, mode=init_country_states_city_mode.country)
+        await init_db.init_users(db)
+        await init_db.init_country_states_city(db, mode=init_db.init_country_states_city_mode.country)
+        await init_db.init_program_categories(db)
 
     # Initialize the JWT key manager
     km = JWTKeyManager()
@@ -61,7 +62,7 @@ async def lifespan(app: FastAPI):
     # Initialize the EC Encryptor
     ec_encryptor = AsymmetricECEncryptor()
     ec_encryptor_dependency.init(ec_encryptor)
-     
+
     # Initialize the Task Scheduler
     redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
     scheduler = TaskSchedulerRedis(redis_host=redis_host)
@@ -92,6 +93,20 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 
+from fastapi import FastAPI
+
+tags_metadata = [
+    {
+        "name": "Access: Public",
+        "description": "Public endpoints doesn't require authentication.",
+    },
+    {
+        "name": "Access: Hybrid",
+        "description": """Hybrid endpoints doesn't require authentication 
+                but the response is different based on the user's permissions. **See the notes in the endpoints for more details.**""",
+    },
+]
+
 app = FastAPI(
     lifespan=lifespan,
     swagger_ui_parameters={"operationsSorter": "tag"},
@@ -100,6 +115,7 @@ app = FastAPI(
     contact={
         "name": "TheActivityMaster Support",
     },
+    openapi_tags=tags_metadata,
 )
 
 app.include_router(v1_router, prefix="/api/v1")

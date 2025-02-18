@@ -20,10 +20,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=100)
+    newsletter_subscribed: bool = Field(False)
+
 
 
 class User(UserBase):
     id: uuid.UUID
+    is_newsletter_subscribed: bool = Field(..., description="True if the user is subscribed to the newsletter")
     
 
 class UserDetails(User):

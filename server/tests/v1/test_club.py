@@ -208,9 +208,9 @@ def test_create_club_role(capsys):
         assert all(
             permission["name"] in pytest.club_role_data["permissions"] for permission in response.json()["permissions"]
         ), "Expected permissions not found"
-        
+
         pytest.club_role_id = response.json()["id"]
-       
+
         # Logout
         logout(client, tokens)
 
@@ -274,6 +274,7 @@ def test_get_club_role(capsys):
         # Logout
         logout(client, tokens)
 
+
 @pytest.mark.dependency(depends=["test_create_club_role"])
 def test_delete_club_role(capsys):
     with TestClient(app) as client:
@@ -317,7 +318,7 @@ def test_get_club_employees(capsys):
         employees = []
         for role in response.json().values():
             employees.extend(role)
-        
+
         assert len(employees) > 0, "No employees found"
 
         # Logout
@@ -380,6 +381,7 @@ def test_update_employee(capsys):
 
         # Logout
         logout(client, tokens)
+
 
 @pytest.mark.dependency(depends=["test_create_employee"])
 def test_delete_employee(capsys):

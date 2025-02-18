@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Body, Query, Path
 import uuid
 
 from schemas import s_user, s_generic, s_role
@@ -19,7 +19,10 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=s_generic.MessageResponse, tags=["User"])
-async def register_user_v1(user: s_user.UserCreate, ep_context: EndpointContext = Depends(get_endpoint_context)):
+async def register_user_v1(
+    user: s_user.UserCreate = Body(..., description="User data"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
     """Register a new user"""
     try:
         user_id = await user_controller.register_user(ep_context, user)
@@ -41,7 +44,7 @@ async def get_user_information(
     """Get user information"""
     try:
         user = await user_crud.get_user_details_by_id(ep_context.db, uuid.UUID(token_details.payload["sub"]))
- 
+
         return s_user.UserDetails.model_validate(user)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user information")
@@ -61,7 +64,7 @@ async def get_user_roles(
 
 @router.patch("/me", tags=["User"])
 async def delete_user_v1(
-    user_delete: s_user.UserDelete,
+    user_delete: s_user.UserDelete = Body(..., description="Password to delete the user"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -88,7 +91,7 @@ async def totp_register_init_v1(
 
 @router.post("/me/totp_register", response_model=s_user.RegisterTOTP, tags=["User - TOTP"])
 async def totp_register_v1(
-    _2fa_code: str,
+    _2fa_code: str = Query(..., description="The TOTP code"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -102,7 +105,7 @@ async def totp_register_v1(
 
 @router.post("/me/totp_remove", tags=["User - TOTP"])
 async def totp_remove_v1(
-    remove_totp: s_user.RemoveTOTP,
+    remove_totp: s_user.RemoveTOTP = Body(..., description="Password ans TOTP code to remove the TOTP device"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -116,7 +119,7 @@ async def totp_remove_v1(
 
 @router.post("/me/change_password", tags=["User"])
 async def change_password_v1(
-    password_change: s_user.ChangePassword,
+    password_change: s_user.ChangePassword = Body(..., description="New and old password"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -130,7 +133,7 @@ async def change_password_v1(
 
 @router.put("/me", tags=["User"])
 async def update_user_profile_v1(
-    user_update: s_user.UserUpdate,
+    user_update: s_user.UserUpdate = Body(..., description="User data to update"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -144,7 +147,7 @@ async def update_user_profile_v1(
 
 @router.put("/me/email", tags=["User"])
 async def update_user_email_v1(
-    email_change: s_user.ChangeEmail,
+    email_change: s_user.ChangeEmail = Body(..., description="New email and password"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -160,7 +163,7 @@ async def update_user_email_v1(
 
 @router.put("/me/username", tags=["User"])
 async def update_user_username_v1(
-    username_change: s_user.ChangeUsername,
+    username_change: s_user.ChangeUsername = Body(..., description="New username and password"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -172,6 +175,23 @@ async def update_user_username_v1(
         return {"message": "Username updated"}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to update username")
+
+
+@router.put("/me/newsletter", tags=["User"])
+async def update_user_newsletter_v1(
+    newsletter_subscripe: bool = Query(..., description="True to subscribe, False to unsubscribe"),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    """Update the user's notification settings"""
+    try:
+        user = await user_crud.get_user_by_id(ep_context.db, uuid.UUID(token_details.payload["sub"]))
+        user.is_newsletter_subscribed = newsletter_subscripe
+        await ep_context.db.commit()
+
+        return {"message": "Notifications updated"}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to update notifications")
 
 
 ###########################################################################

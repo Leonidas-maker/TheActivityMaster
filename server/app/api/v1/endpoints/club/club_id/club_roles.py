@@ -30,7 +30,7 @@ async def create_club_role_v1(
     club_role_create: s_role.ClubRoleCreate = Body(..., description="The role data to create"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_ROLES])
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_ROLES])
     ),
 ):
     try:
@@ -45,7 +45,7 @@ async def get_club_roles_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(
-            club_permissions=[ClubPermissions.READ_ROLES, ClubPermissions.MODIFY_ROLES, ClubPermissions.DELETE_ROLES]
+            club_permissions=[ClubPermissions.READ_ROLES, ClubPermissions.UPDATE_ROLES, ClubPermissions.DELETE_ROLES]
         )
     ),
 ):
@@ -63,7 +63,7 @@ async def get_club_role_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(
-            club_permissions=[ClubPermissions.READ_ROLES, ClubPermissions.MODIFY_ROLES, ClubPermissions.DELETE_ROLES]
+            club_permissions=[ClubPermissions.READ_ROLES, ClubPermissions.UPDATE_ROLES, ClubPermissions.DELETE_ROLES]
         )
     ),
 ):
@@ -83,7 +83,7 @@ async def update_club_role_v1(
     club_role_update: s_role.ClubRoleUpdate = Body(..., description="The updated role data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_ROLES])
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_ROLES])
     ),
 ):
     try:

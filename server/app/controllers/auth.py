@@ -202,8 +202,8 @@ async def login(
     security_token = await create_security_token(ep_context, user.id, application_id, ["2fa"], ip_address)
 
     # Get the 2FA methods
-    res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method).filter(m_user.User2FA.user_id == user.id))
-    methods_2fa = {method: id for id, method in res.all()}
+    res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method, m_user.User2FA.fails).filter(m_user.User2FA.user_id == user.id))
+    methods_2fa = {method: id for id, method, fails in res.all() if fails != -1}
 
     # Handle case where EMAIL is the only 2FA method
     if not methods_2fa or (len(methods_2fa) == 1 and m_user.User2FAMethods.EMAIL in methods_2fa):
@@ -357,6 +357,23 @@ async def logout(ep_context: EndpointContext, token_details: core_security.Token
     # Delete the tokens
     await auth_crud.delete_auth_tokens(db, user_id, token_details.payload["aud"])
     audit_logger.user_logout(user_id, client_ip, token_details.payload["aud"])
+
+    await db.commit()
+
+async def logout_all_sessions(ep_context: EndpointContext, token_details: core_security.TokenDetails, client_ip: str):
+    """Logout the user from all sessions
+
+    :param ep_context: The endpoint context
+    :param application_id: The application ID
+    :param refresh_token: The refresh token
+    """
+    db = ep_context.db
+    audit_logger = ep_context.audit_logger
+    user_id = token_details.user_id
+
+    # Delete the tokens
+    await auth_crud.delete_all_auth_tokens(db, user_id)
+    audit_logger.user_logout_all_sessions(user_id, client_ip, token_details.application_id)
 
     await db.commit()
 

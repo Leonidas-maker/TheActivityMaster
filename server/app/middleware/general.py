@@ -1,8 +1,9 @@
-from fastapi import Depends
+from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.generic import EndpointContext
+from core.context import current_language_var
 
 from crud.audit import AuditLogger
 

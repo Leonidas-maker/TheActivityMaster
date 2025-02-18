@@ -1,0 +1,1342 @@
+{
+    "1": {
+        "en": {
+            "name": "Yoga",
+            "description": "Category focusing on yoga exercises and meditation."
+        },
+        "de": {
+            "name": "Yoga",
+            "description": "Kategorie mit Fokus auf Yoga-\u00dcbungen und Meditation."
+        }
+    },
+    "2": {
+        "en": {
+            "name": "Pilates",
+            "description": "Programs aimed at strengthening the core and improving flexibility."
+        },
+        "de": {
+            "name": "Pilates",
+            "description": "Programme zur St\u00e4rkung der K\u00f6rpermitte und Verbesserung der Flexibilit\u00e4t."
+        }
+    },
+    "3": {
+        "de": {
+            "name": "Krafttraining",
+            "description": "Kurse f\u00fcr Muskelaufbau und Krafttraining."
+        },
+        "en": {
+            "name": "Strength Training",
+            "description": "Courses for muscle building and strength training."
+        }
+    },
+    "4": {
+        "en": {
+            "name": "Cardio",
+            "description": "Programs to improve cardiovascular fitness."
+        },
+        "de": {
+            "name": "Cardio",
+            "description": "Programme zur Verbesserung der Herz-Kreislauf-Fitness."
+        }
+    },
+    "5": {
+        "de": {
+            "name": "Tanz",
+            "description": "Kurse rund um verschiedene Tanzstile und Bewegungsformen."
+        },
+        "en": {
+            "name": "Dance",
+            "description": "Courses covering various dance styles and movement forms."
+        }
+    },
+    "6": {
+        "de": {
+            "name": "Kampfsport",
+            "description": "Selbstverteidigungs- und Kampfsportkurse."
+        },
+        "en": {
+            "name": "Martial Arts",
+            "description": "Self-defense and combat sport courses."
+        }
+    },
+    "7": {
+        "de": {
+            "name": "Schwimmen",
+            "description": "Programme zur Verbesserung der Schwimmtechnik und Ausdauer."
+        },
+        "en": {
+            "name": "Swimming",
+            "description": "Programs to improve swimming technique and endurance."
+        }
+    },
+    "8": {
+        "de": {
+            "name": "Radfahren",
+            "description": "Indoor- und Outdoor-Cycling-Kurse f\u00fcr alle Leistungsstufen."
+        },
+        "en": {
+            "name": "Cycling",
+            "description": "Indoor and outdoor cycling courses for all levels."
+        }
+    },
+    "9": {
+        "de": {
+            "name": "Laufen",
+            "description": "Trainingsprogramme zur Verbesserung der Laufleistung."
+        },
+        "en": {
+            "name": "Running",
+            "description": "Training programs to improve running performance."
+        }
+    },
+    "10": {
+        "en": {
+            "name": "HIIT",
+            "description": "High-intensity interval training for fat burning."
+        },
+        "de": {
+            "name": "HIIT",
+            "description": "Hochintensive Intervalltrainings zur Fettverbrennung."
+        }
+    },
+    "11": {
+        "en": {
+            "name": "Zumba",
+            "description": "Dance-based fitness classes with Latin rhythms."
+        },
+        "de": {
+            "name": "Zumba",
+            "description": "Tanzbasierte Fitnesskurse mit lateinamerikanischen Rhythmen."
+        }
+    },
+    "12": {
+        "en": {
+            "name": "Crossfit",
+            "description": "Full-body workouts that combine strength and endurance."
+        },
+        "de": {
+            "name": "Crossfit",
+            "description": "Ganzk\u00f6rper-Workouts, die Kraft und Ausdauer kombinieren."
+        }
+    },
+    "13": {
+        "en": {
+            "name": "Meditation",
+            "description": "Programs for relaxation and mental clarity."
+        },
+        "de": {
+            "name": "Meditation",
+            "description": "Programme zur Entspannung und mentalen Klarheit."
+        }
+    },
+    "14": {
+        "de": {
+            "name": "Achtsamkeit",
+            "description": "Achtsamkeits\u00fcbungen f\u00fcr den Alltag und Stressabbau."
+        },
+        "en": {
+            "name": "Mindfulness",
+            "description": "Mindfulness exercises for daily life and stress reduction."
+        }
+    },
+    "15": {
+        "de": {
+            "name": "Boxen",
+            "description": "Kampfsport-Workouts, die Boxtechniken und Kondition kombinieren."
+        },
+        "en": {
+            "name": "Boxing",
+            "description": "Combat sport workouts combining boxing techniques and conditioning."
+        }
+    },
+    "16": {
+        "de": {
+            "name": "Kickboxen",
+            "description": "Kurse, die Boxen und Tritte in einem intensiven Workout vereinen."
+        },
+        "en": {
+            "name": "Kickboxing",
+            "description": "Classes that combine punches and kicks in an intense workout."
+        }
+    },
+    "17": {
+        "de": {
+            "name": "Sprinttraining",
+            "description": "Trainingsprogramme zur Verbesserung der Schnellkraft und Explosivit\u00e4t."
+        },
+        "en": {
+            "name": "Sprinting",
+            "description": "Training programs to improve speed and explosiveness."
+        }
+    },
+    "18": {
+        "de": {
+            "name": "Rudern",
+            "description": "Workouts, die Rudertechniken und Ausdauer f\u00f6rdern."
+        },
+        "en": {
+            "name": "Rowing",
+            "description": "Workouts that promote rowing technique and endurance."
+        }
+    },
+    "19": {
+        "de": {
+            "name": "Mannschaftssportarten",
+            "description": "Kurse und Trainings f\u00fcr Mannschaftssportarten."
+        },
+        "en": {
+            "name": "Team Sports",
+            "description": "Courses and training for team sports."
+        }
+    },
+    "20": {
+        "de": {
+            "name": "Outdoor-Training",
+            "description": "Programme im Freien zur F\u00f6rderung von Fitness und Naturverbundenheit."
+        },
+        "en": {
+            "name": "Outdoor Training",
+            "description": "Outdoor programs to promote fitness and a connection with nature."
+        }
+    },
+    "21": {
+        "de": {
+            "name": "Funktionelles Training",
+            "description": "Workouts, die alltagsrelevante Bewegungen und Stabilit\u00e4t verbessern."
+        },
+        "en": {
+            "name": "Functional Training",
+            "description": "Workouts that improve everyday movements and stability."
+        }
+    },
+    "22": {
+        "de": {
+            "name": "Gymnastik",
+            "description": "Programme zur F\u00f6rderung von Flexibilit\u00e4t, St\u00e4rke und Koordination."
+        },
+        "en": {
+            "name": "Gymnastics",
+            "description": "Programs to improve flexibility, strength, and coordination."
+        }
+    },
+    "23": {
+        "en": {
+            "name": "Barre",
+            "description": "Classes that combine elements of ballet, pilates, and yoga."
+        },
+        "de": {
+            "name": "Barre",
+            "description": "Kurse, die Elemente aus Ballett, Pilates und Yoga kombinieren."
+        }
+    },
+    "24": {
+        "en": {
+            "name": "Aerobics",
+            "description": "Traditional aerobics classes to improve endurance and coordination."
+        },
+        "de": {
+            "name": "Aerobics",
+            "description": "Klassische Aerobic-Kurse zur Steigerung von Ausdauer und Koordination."
+        }
+    },
+    "25": {
+        "de": {
+            "name": "Step Aerobic",
+            "description": "Workouts mit Step-Boards zur Verbesserung von Herz-Kreislauf und Balance."
+        },
+        "en": {
+            "name": "Step Aerobics",
+            "description": "Step board workouts to enhance cardiovascular health and balance."
+        }
+    },
+    "26": {
+        "de": {
+            "name": "Zirkeltraining",
+            "description": "Intensive Workouts, die mehrere \u00dcbungen in einem Zirkel kombinieren."
+        },
+        "en": {
+            "name": "Circuit Training",
+            "description": "Intense workouts that combine multiple exercises in a circuit."
+        }
+    },
+    "27": {
+        "en": {
+            "name": "Stretching",
+            "description": "Programs to improve flexibility and prevent injuries."
+        },
+        "de": {
+            "name": "Stretching",
+            "description": "Programme zur Verbesserung der Beweglichkeit und Verletzungsvorbeugung."
+        }
+    },
+    "28": {
+        "en": {
+            "name": "Balance",
+            "description": "Exercises to enhance body balance and stability."
+        },
+        "de": {
+            "name": "Balance",
+            "description": "\u00dcbungen zur F\u00f6rderung der K\u00f6rperbalance und Stabilit\u00e4t."
+        }
+    },
+    "29": {
+        "de": {
+            "name": "Flexibilit\u00e4t",
+            "description": "Kurse zur Verbesserung der Beweglichkeit und Dehnbarkeit."
+        },
+        "en": {
+            "name": "Flexibility",
+            "description": "Classes to improve mobility and flexibility."
+        }
+    },
+    "30": {
+        "de": {
+            "name": "Ausdauer",
+            "description": "Trainingsprogramme zur Steigerung der Ausdauerleistung."
+        },
+        "en": {
+            "name": "Endurance",
+            "description": "Training programs to boost endurance performance."
+        }
+    },
+    "31": {
+        "en": {
+            "name": "Powerlifting",
+            "description": "Specialized classes for maximum strength training."
+        },
+        "de": {
+            "name": "Powerlifting",
+            "description": "Spezialisierte Kurse f\u00fcr maximales Krafttraining."
+        }
+    },
+    "32": {
+        "de": {
+            "name": "Eigengewichtstraining",
+            "description": "Workouts, die ausschlie\u00dflich das eigene K\u00f6rpergewicht nutzen."
+        },
+        "en": {
+            "name": "Bodyweight Training",
+            "description": "Workouts that exclusively use body weight."
+        }
+    },
+    "33": {
+        "de": {
+            "name": "Widerstandstraining",
+            "description": "Programme mit Widerstands\u00fcbungen zur Muskelst\u00e4rkung."
+        },
+        "en": {
+            "name": "Resistance Training",
+            "description": "Programs with resistance exercises for muscle strengthening."
+        }
+    },
+    "34": {
+        "de": {
+            "name": "Sportkonditionierung",
+            "description": "Trainingsprogramme zur Verbesserung der sportlichen Leistung."
+        },
+        "en": {
+            "name": "Sports Conditioning",
+            "description": "Training programs to enhance athletic performance."
+        }
+    },
+    "35": {
+        "de": {
+            "name": "Agilit\u00e4tstraining",
+            "description": "\u00dcbungen zur Steigerung von Schnelligkeit und Reaktionsverm\u00f6gen."
+        },
+        "en": {
+            "name": "Agility Training",
+            "description": "Exercises to boost speed and reaction time."
+        }
+    },
+    "36": {
+        "de": {
+            "name": "Mobilit\u00e4t",
+            "description": "Programme zur Verbesserung der Gelenkbeweglichkeit und Flexibilit\u00e4t."
+        },
+        "en": {
+            "name": "Mobility",
+            "description": "Programs to improve joint mobility and flexibility."
+        }
+    },
+    "37": {
+        "de": {
+            "name": "Tanzfitness",
+            "description": "Kombination aus Tanz und Fitness f\u00fcr Spa\u00df und Kondition."
+        },
+        "en": {
+            "name": "Dance Fitness",
+            "description": "A combination of dance and fitness for fun and conditioning."
+        }
+    },
+    "38": {
+        "de": {
+            "name": "Ballett",
+            "description": "Kurse, die Balletttechniken und K\u00f6rperhaltung f\u00f6rdern."
+        },
+        "en": {
+            "name": "Ballet",
+            "description": "Classes that promote ballet techniques and posture."
+        }
+    },
+    "39": {
+        "en": {
+            "name": "Jazz Dance",
+            "description": "Dynamic dance classes with jazzy movements."
+        },
+        "de": {
+            "name": "Jazz Dance",
+            "description": "Dynamische Tanzkurse mit jazzigen Bewegungen."
+        }
+    },
+    "40": {
+        "en": {
+            "name": "Hip-Hop Dance",
+            "description": "Modern dance programs in the hip-hop style."
+        },
+        "de": {
+            "name": "Hip-Hop Dance",
+            "description": "Moderne Tanzprogramme im Hip-Hop-Stil."
+        }
+    },
+    "41": {
+        "en": {
+            "name": "Salsa",
+            "description": "Dance classes featuring Latin rhythms and figures."
+        },
+        "de": {
+            "name": "Salsa",
+            "description": "Tanzkurse mit lateinamerikanischen Rhythmen und Figuren."
+        }
+    },
+    "42": {
+        "de": {
+            "name": "Zeitgen\u00f6ssischer Tanz",
+            "description": "Ausdrucksstarke Tanzprogramme, die moderne Techniken nutzen."
+        },
+        "en": {
+            "name": "Contemporary Dance",
+            "description": "Expressive dance programs utilizing modern techniques."
+        }
+    },
+    "43": {
+        "de": {
+            "name": "Lateinamerikanischer Tanz",
+            "description": "Tanzkurse mit verschiedenen lateinamerikanischen Stilen."
+        },
+        "en": {
+            "name": "Latin Dance",
+            "description": "Dance classes featuring various Latin American styles."
+        }
+    },
+    "44": {
+        "de": {
+            "name": "Gesellschaftstanz",
+            "description": "Elegante Tanzkurse f\u00fcr Standard- und Lateint\u00e4nze."
+        },
+        "en": {
+            "name": "Ballroom Dance",
+            "description": "Elegant dance classes for standard and Latin dances."
+        }
+    },
+    "45": {
+        "de": {
+            "name": "Stepptanz",
+            "description": "Rhythmusorientierte Tanzprogramme mit Klatschen und Stampfen."
+        },
+        "en": {
+            "name": "Tap Dance",
+            "description": "Rhythm-focused dance programs with clapping and stamping."
+        }
+    },
+    "46": {
+        "de": {
+            "name": "Volkstanz",
+            "description": "Traditionelle Tanzkurse aus unterschiedlichen Kulturen."
+        },
+        "en": {
+            "name": "Folk Dance",
+            "description": "Traditional dance classes from various cultures."
+        }
+    },
+    "47": {
+        "en": {
+            "name": "Country Dance",
+            "description": "Dance programs in a rural style with partner figures."
+        },
+        "de": {
+            "name": "Country Dance",
+            "description": "Tanzprogramme im l\u00e4ndlichen Stil mit Partnerfiguren."
+        }
+    },
+    "48": {
+        "de": {
+            "name": "Moderner Tanz",
+            "description": "Kreative Tanzkurse, die neue Ausdrucksformen f\u00f6rdern."
+        },
+        "en": {
+            "name": "Modern Dance",
+            "description": "Creative dance classes promoting new forms of expression."
+        }
+    },
+    "49": {
+        "en": {
+            "name": "Urban Dance",
+            "description": "Stylish dance programs inspired by street dance."
+        },
+        "de": {
+            "name": "Urban Dance",
+            "description": "Stilvolle Tanzprogramme, inspiriert von Streetdance."
+        }
+    },
+    "50": {
+        "de": {
+            "name": "Klassische Musik",
+            "description": "Programme rund um klassische Musik und ihre Geschichte."
+        },
+        "en": {
+            "name": "Classical Music",
+            "description": "Programs revolving around classical music and its history."
+        }
+    },
+    "51": {
+        "de": {
+            "name": "Rockmusik",
+            "description": "Kurse und Workshops zu Rockmusik und Instrumentalspiel."
+        },
+        "en": {
+            "name": "Rock Music",
+            "description": "Classes and workshops on rock music and instrumental performance."
+        }
+    },
+    "52": {
+        "de": {
+            "name": "Jazzmusik",
+            "description": "Workshops und Kurse, die sich auf Jazz und Improvisation konzentrieren."
+        },
+        "en": {
+            "name": "Jazz Music",
+            "description": "Workshops and classes focusing on jazz and improvisation."
+        }
+    },
+    "53": {
+        "de": {
+            "name": "Popmusik",
+            "description": "Programme, die Popmusik analysieren und performen."
+        },
+        "en": {
+            "name": "Pop Music",
+            "description": "Programs that analyze and perform pop music."
+        }
+    },
+    "54": {
+        "de": {
+            "name": "Hip-Hop Musik",
+            "description": "Workshops, die sich mit Hip-Hop-Kultur und Musik besch\u00e4ftigen."
+        },
+        "en": {
+            "name": "Hip-Hop Music",
+            "description": "Workshops that delve into hip-hop culture and music."
+        }
+    },
+    "55": {
+        "de": {
+            "name": "Elektronische Musik",
+            "description": "Kurse zu Produktion und Theorie elektronischer Musik."
+        },
+        "en": {
+            "name": "Electronic Music",
+            "description": "Classes on the production and theory of electronic music."
+        }
+    },
+    "56": {
+        "de": {
+            "name": "Countrymusik",
+            "description": "Programme, die traditionelle und moderne Country-Kl\u00e4nge verbinden."
+        },
+        "en": {
+            "name": "Country Music",
+            "description": "Programs that blend traditional and modern country sounds."
+        }
+    },
+    "57": {
+        "en": {
+            "name": "Reggae",
+            "description": "Classes exploring the relaxed vibe and rhythms of reggae."
+        },
+        "de": {
+            "name": "Reggae",
+            "description": "Kurse, die die entspannte Atmosph\u00e4re und Rhythmen von Reggae erkunden."
+        }
+    },
+    "58": {
+        "en": {
+            "name": "Blues",
+            "description": "Workshops dedicated to blues and its musical roots."
+        },
+        "de": {
+            "name": "Blues",
+            "description": "Workshops, die sich dem Blues und seinen musikalischen Wurzeln widmen."
+        }
+    },
+    "59": {
+        "en": {
+            "name": "Opera",
+            "description": "Programs focused on opera performance and history."
+        },
+        "de": {
+            "name": "Oper",
+            "description": "Programme zur Auff\u00fchrung und Geschichte der Oper."
+        }
+    },
+    "60": {
+        "de": {
+            "name": "Instrumentalmusik",
+            "description": "Kurse, die sich auf das Spielen von Instrumenten konzentrieren."
+        },
+        "en": {
+            "name": "Instrumental Music",
+            "description": "Classes focused on playing musical instruments."
+        }
+    },
+    "61": {
+        "de": {
+            "name": "Musikproduktion",
+            "description": "Workshops zur Musikproduktion und Tontechnik."
+        },
+        "en": {
+            "name": "Music Production",
+            "description": "Workshops on music production and audio engineering."
+        }
+    },
+    "62": {
+        "de": {
+            "name": "Kreative K\u00fcnste",
+            "description": "Programme, die verschiedene k\u00fcnstlerische Ausdrucksformen verbinden."
+        },
+        "en": {
+            "name": "Creative Arts",
+            "description": "Programs that combine various forms of artistic expression."
+        }
+    },
+    "63": {
+        "de": {
+            "name": "Malerei",
+            "description": "Kurse zum Erlernen von Maltechniken und Farbenlehre."
+        },
+        "en": {
+            "name": "Painting",
+            "description": "Classes to learn painting techniques and color theory."
+        }
+    },
+    "64": {
+        "de": {
+            "name": "Zeichnen",
+            "description": "Workshops, die Grundlagen und fortgeschrittene Zeichenk\u00fcnste vermitteln."
+        },
+        "en": {
+            "name": "Drawing",
+            "description": "Workshops teaching basic and advanced drawing skills."
+        }
+    },
+    "65": {
+        "de": {
+            "name": "Bildhauerei",
+            "description": "Kurse zur dreidimensionalen Kunst und Bildhauerei."
+        },
+        "en": {
+            "name": "Sculpture",
+            "description": "Classes on three-dimensional art and sculpture."
+        }
+    },
+    "66": {
+        "de": {
+            "name": "Fotografie",
+            "description": "Workshops zur Fotografie und Bildbearbeitung."
+        },
+        "en": {
+            "name": "Photography",
+            "description": "Workshops on photography and image editing."
+        }
+    },
+    "67": {
+        "de": {
+            "name": "Digitale Kunst",
+            "description": "Programme, die digitale Kreativit\u00e4t und Grafikdesign f\u00f6rdern."
+        },
+        "en": {
+            "name": "Digital Art",
+            "description": "Programs that foster digital creativity and graphic design."
+        }
+    },
+    "68": {
+        "de": {
+            "name": "Handarbeiten",
+            "description": "Kurse zu Handarbeiten, DIY-Projekten und Basteltechniken."
+        },
+        "en": {
+            "name": "Crafts",
+            "description": "Classes on handicrafts, DIY projects, and crafting techniques."
+        }
+    },
+    "69": {
+        "de": {
+            "name": "Selbermachen",
+            "description": "Workshops f\u00fcr Do-it-yourself-Projekte und kreatives Selbermachen."
+        },
+        "en": {
+            "name": "DIY",
+            "description": "Workshops for DIY projects and creative self-making."
+        }
+    },
+    "70": {
+        "de": {
+            "name": "Kochen",
+            "description": "Kochkurse, die kulinarische Grundlagen und Rezepte vermitteln."
+        },
+        "en": {
+            "name": "Cooking",
+            "description": "Cooking classes that teach culinary basics and recipes."
+        }
+    },
+    "71": {
+        "de": {
+            "name": "Backen",
+            "description": "Programme rund ums Backen von Brot, Kuchen und Geb\u00e4ck."
+        },
+        "en": {
+            "name": "Baking",
+            "description": "Programs focused on baking bread, cakes, and pastries."
+        }
+    },
+    "72": {
+        "de": {
+            "name": "Kochkunst",
+            "description": "Intensivkurse f\u00fcr fortgeschrittene Kochtechniken und Gourmetk\u00fcche."
+        },
+        "en": {
+            "name": "Culinary Arts",
+            "description": "Intensive courses on advanced cooking techniques and gourmet cuisine."
+        }
+    },
+    "73": {
+        "de": {
+            "name": "Weinverkostung",
+            "description": "Workshops zur Verkostung und Bewertung von Weinen."
+        },
+        "en": {
+            "name": "Wine Tasting",
+            "description": "Workshops for wine tasting and evaluation."
+        }
+    },
+    "74": {
+        "de": {
+            "name": "Ern\u00e4hrung",
+            "description": "Programme zur gesunden Ern\u00e4hrung und Ern\u00e4hrungsberatung."
+        },
+        "en": {
+            "name": "Nutrition",
+            "description": "Programs for healthy eating and nutritional advice."
+        }
+    },
+    "75": {
+        "de": {
+            "name": "Gartenarbeit",
+            "description": "Kurse rund um Gartenpflege, Pflanzenkunde und Urban Gardening."
+        },
+        "en": {
+            "name": "Gardening",
+            "description": "Classes on garden care, botany, and urban gardening."
+        }
+    },
+    "76": {
+        "de": {
+            "name": "Selbstverteidigung",
+            "description": "Workshops, die Techniken zur Selbstverteidigung vermitteln."
+        },
+        "en": {
+            "name": "Self-defense",
+            "description": "Workshops teaching self-defense techniques."
+        }
+    },
+    "77": {
+        "en": {
+            "name": "Karate",
+            "description": "Martial arts classes focusing on karate techniques and discipline."
+        },
+        "de": {
+            "name": "Karate",
+            "description": "Kampfsportkurse mit Fokus auf Karate-Techniken und Disziplin."
+        }
+    },
+    "78": {
+        "en": {
+            "name": "Judo",
+            "description": "Training programs that teach the fundamentals of judo."
+        },
+        "de": {
+            "name": "Judo",
+            "description": "Trainingsprogramme, die die Grundtechniken des Judo vermitteln."
+        }
+    },
+    "79": {
+        "en": {
+            "name": "Taekwondo",
+            "description": "Classes that teach taekwondo techniques and forms."
+        },
+        "de": {
+            "name": "Taekwondo",
+            "description": "Kurse, die Taekwondo-Techniken und Formen lehren."
+        }
+    },
+    "80": {
+        "en": {
+            "name": "Kung Fu",
+            "description": "Programs focused on traditional kung fu exercises."
+        },
+        "de": {
+            "name": "Kung Fu",
+            "description": "Programme, die sich mit traditionellen Kung-Fu-\u00dcbungen besch\u00e4ftigen."
+        }
+    },
+    "81": {
+        "en": {
+            "name": "Capoeira",
+            "description": "Classes that combine martial arts and dance in a dynamic style."
+        },
+        "de": {
+            "name": "Capoeira",
+            "description": "Kurse, die Kampfkunst und Tanz in einem dynamischen Stil verbinden."
+        }
+    },
+    "82": {
+        "de": {
+            "name": "Ringen",
+            "description": "Trainingsprogramme f\u00fcr Ringen und Grappling-Techniken."
+        },
+        "en": {
+            "name": "Wrestling",
+            "description": "Training programs for wrestling and grappling techniques."
+        }
+    },
+    "83": {
+        "de": {
+            "name": "Fechten",
+            "description": "Kurse zur Fechtkunst und strategischen Bewegungsabl\u00e4ufen."
+        },
+        "en": {
+            "name": "Fencing",
+            "description": "Classes on fencing and strategic movement."
+        }
+    },
+    "84": {
+        "en": {
+            "name": "Esports",
+            "description": "Programs focused on competitive gaming and strategy."
+        },
+        "de": {
+            "name": "Esports",
+            "description": "Programme rund um kompetitives Gaming und Strategie."
+        }
+    },
+    "85": {
+        "de": {
+            "name": "Brettspiele",
+            "description": "Workshops und Turniere rund um Brett- und Gesellschaftsspiele."
+        },
+        "en": {
+            "name": "Board Games",
+            "description": "Workshops and tournaments for board and party games."
+        }
+    },
+    "86": {
+        "de": {
+            "name": "Strategiespiele",
+            "description": "Kurse, die taktisches Denken und Strategie in Spielen f\u00f6rdern."
+        },
+        "en": {
+            "name": "Strategy Games",
+            "description": "Classes that promote tactical thinking and strategy in games."
+        }
+    },
+    "87": {
+        "de": {
+            "name": "Puzzlespiele",
+            "description": "Programme, die logisches Denken und Probleml\u00f6sungsf\u00e4higkeiten st\u00e4rken."
+        },
+        "en": {
+            "name": "Puzzle Games",
+            "description": "Programs that strengthen logical thinking and problem-solving skills."
+        }
+    },
+    "88": {
+        "de": {
+            "name": "Kartenspiele",
+            "description": "Workshops zu Kartenspielen und strategischem Kartenspiel."
+        },
+        "en": {
+            "name": "Card Games",
+            "description": "Workshops on card games and strategic card play."
+        }
+    },
+    "89": {
+        "de": {
+            "name": "Tabletop-Rollenspiele",
+            "description": "Kurse und Sessions f\u00fcr Rollenspiele am Tisch."
+        },
+        "en": {
+            "name": "Tabletop RPG",
+            "description": "Classes and sessions for tabletop role-playing games."
+        }
+    },
+    "90": {
+        "de": {
+            "name": "Kreatives Schreiben",
+            "description": "Workshops zur Entwicklung von Schreibf\u00e4higkeiten und kreativen Texten."
+        },
+        "en": {
+            "name": "Creative Writing",
+            "description": "Workshops to develop writing skills and creative texts."
+        }
+    },
+    "91": {
+        "de": {
+            "name": "Literatur",
+            "description": "Programme, die sich mit klassischer und moderner Literatur befassen."
+        },
+        "en": {
+            "name": "Literature",
+            "description": "Programs that explore classical and modern literature."
+        }
+    },
+    "92": {
+        "de": {
+            "name": "Poesie",
+            "description": "Kurse, die Poesie und kreativen Ausdruck f\u00f6rdern."
+        },
+        "en": {
+            "name": "Poetry",
+            "description": "Classes that encourage poetry and creative expression."
+        }
+    },
+    "93": {
+        "de": {
+            "name": "Geschichtenerz\u00e4hlen",
+            "description": "Workshops zur Kunst des Geschichtenerz\u00e4hlens."
+        },
+        "en": {
+            "name": "Storytelling",
+            "description": "Workshops on the art of storytelling."
+        }
+    },
+    "94": {
+        "de": {
+            "name": "\u00d6ffentliches Reden",
+            "description": "Kurse zur Verbesserung von Rhetorik und Pr\u00e4sentationsf\u00e4higkeiten."
+        },
+        "en": {
+            "name": "Public Speaking",
+            "description": "Classes to improve rhetoric and presentation skills."
+        }
+    },
+    "95": {
+        "de": {
+            "name": "Sprachenlernen",
+            "description": "Programme zum Erlernen neuer Sprachen und kultureller Hintergr\u00fcnde."
+        },
+        "en": {
+            "name": "Language Learning",
+            "description": "Programs for learning new languages and exploring cultural backgrounds."
+        }
+    },
+    "96": {
+        "de": {
+            "name": "Programmieren",
+            "description": "Workshops und Kurse rund um Programmierung und Softwareentwicklung."
+        },
+        "en": {
+            "name": "Coding",
+            "description": "Workshops and classes on programming and software development."
+        }
+    },
+    "97": {
+        "de": {
+            "name": "Technologie",
+            "description": "Kurse, die aktuelle Technologietrends und Anwendungen vermitteln."
+        },
+        "en": {
+            "name": "Technology",
+            "description": "Classes that teach current technology trends and applications."
+        }
+    },
+    "98": {
+        "de": {
+            "name": "Robotik",
+            "description": "Programme, die sich mit Robotik und automatisierten Systemen befassen."
+        },
+        "en": {
+            "name": "Robotics",
+            "description": "Programs that deal with robotics and automated systems."
+        }
+    },
+    "99": {
+        "de": {
+            "name": "Elektronik",
+            "description": "Kurse zur Grundlagenvermittlung und praktischen Anwendung von Elektronik."
+        },
+        "en": {
+            "name": "Electronics",
+            "description": "Classes on the fundamentals and practical applications of electronics."
+        }
+    },
+    "100": {
+        "de": {
+            "name": "Astronomie",
+            "description": "Programme, die den Himmel, Sterne und das Universum erforschen."
+        },
+        "en": {
+            "name": "Astronomy",
+            "description": "Programs that explore the sky, stars, and the universe."
+        }
+    },
+    "101": {
+        "de": {
+            "name": "Wissenschaft",
+            "description": "Workshops und Vortr\u00e4ge zu verschiedenen naturwissenschaftlichen Themen."
+        },
+        "en": {
+            "name": "Science",
+            "description": "Workshops and lectures on various scientific topics."
+        }
+    },
+    "102": {
+        "de": {
+            "name": "Mathematik",
+            "description": "Kurse, die mathematische Konzepte und Probleml\u00f6sungen vertiefen."
+        },
+        "en": {
+            "name": "Math",
+            "description": "Classes that deepen mathematical concepts and problem-solving."
+        }
+    },
+    "103": {
+        "de": {
+            "name": "Geschichte",
+            "description": "Programme, die historische Ereignisse und Epochen beleuchten."
+        },
+        "en": {
+            "name": "History",
+            "description": "Programs that shed light on historical events and eras."
+        }
+    },
+    "104": {
+        "de": {
+            "name": "Philosophie",
+            "description": "Kurse zur Einf\u00fchrung in philosophische Denkweisen und Theorien."
+        },
+        "en": {
+            "name": "Philosophy",
+            "description": "Classes introducing philosophical ways of thinking and theories."
+        }
+    },
+    "105": {
+        "de": {
+            "name": "Psychologie",
+            "description": "Programme, die psychologische Konzepte und menschliches Verhalten erkl\u00e4ren."
+        },
+        "en": {
+            "name": "Psychology",
+            "description": "Programs that explain psychological concepts and human behavior."
+        }
+    },
+    "106": {
+        "de": {
+            "name": "Soziologie",
+            "description": "Workshops, die sich mit gesellschaftlichen Strukturen und Dynamiken auseinandersetzen."
+        },
+        "en": {
+            "name": "Sociology",
+            "description": "Workshops that deal with social structures and dynamics."
+        }
+    },
+    "107": {
+        "en": {
+            "name": "Business",
+            "description": "Classes on business management and leadership methods."
+        },
+        "de": {
+            "name": "Wirtschaft",
+            "description": "Kurse zur Unternehmensf\u00fchrung und Managementmethoden."
+        }
+    },
+    "108": {
+        "de": {
+            "name": "Unternehmertum",
+            "description": "Programme, die Gr\u00fcnder und Start-up-Konzepte f\u00f6rdern."
+        },
+        "en": {
+            "name": "Entrepreneurship",
+            "description": "Programs that support founders and startup concepts."
+        }
+    },
+    "109": {
+        "en": {
+            "name": "Marketing",
+            "description": "Workshops on strategies, advertising, and digital marketing."
+        },
+        "de": {
+            "name": "Marketing",
+            "description": "Workshops zu Strategien, Werbung und digitalem Marketing."
+        }
+    },
+    "110": {
+        "de": {
+            "name": "Finanzen",
+            "description": "Kurse, die finanzielle Grundlagen und Investitionsstrategien vermitteln."
+        },
+        "en": {
+            "name": "Finance",
+            "description": "Classes that teach financial basics and investment strategies."
+        }
+    },
+    "111": {
+        "de": {
+            "name": "Immobilien",
+            "description": "Programme zur Immobilienwirtschaft und -investition."
+        },
+        "en": {
+            "name": "Real Estate",
+            "description": "Programs on real estate management and investment."
+        }
+    },
+    "112": {
+        "de": {
+            "name": "Reisen",
+            "description": "Kurse und Workshops rund um Reisetrends und Kulturerlebnisse."
+        },
+        "en": {
+            "name": "Travel",
+            "description": "Classes and workshops about travel trends and cultural experiences."
+        }
+    },
+    "113": {
+        "de": {
+            "name": "Abenteuer",
+            "description": "Programme, die abenteuerliche Aktivit\u00e4ten und Outdoor-Erlebnisse f\u00f6rdern."
+        },
+        "en": {
+            "name": "Adventure",
+            "description": "Programs that promote adventurous activities and outdoor experiences."
+        }
+    },
+    "114": {
+        "de": {
+            "name": "Wandern",
+            "description": "Workshops zur Planung und Durchf\u00fchrung von Wanderungen."
+        },
+        "en": {
+            "name": "Hiking",
+            "description": "Workshops for planning and undertaking hikes."
+        }
+    },
+    "115": {
+        "en": {
+            "name": "Camping",
+            "description": "Classes about outdoor living, camping, and nature experiences."
+        },
+        "de": {
+            "name": "Camping",
+            "description": "Kurse \u00fcber Outdoor-Leben, Zeltlager und Naturerlebnisse."
+        }
+    },
+    "116": {
+        "de": {
+            "name": "Angeln",
+            "description": "Programme rund um Angeltechniken und Gew\u00e4sserkunde."
+        },
+        "en": {
+            "name": "Fishing",
+            "description": "Programs about fishing techniques and water body knowledge."
+        }
+    },
+    "117": {
+        "de": {
+            "name": "Segeln",
+            "description": "Workshops zu Segeltechniken und nautischen F\u00e4higkeiten."
+        },
+        "en": {
+            "name": "Sailing",
+            "description": "Workshops on sailing techniques and nautical skills."
+        }
+    },
+    "118": {
+        "de": {
+            "name": "Skaten",
+            "description": "Kurse f\u00fcr Roll- oder Eislaufen und Tricks."
+        },
+        "en": {
+            "name": "Skating",
+            "description": "Classes for roller or ice skating and tricks."
+        }
+    },
+    "119": {
+        "de": {
+            "name": "Surfen",
+            "description": "Programme, die sich mit Wellenreiten und Strandfitness befassen."
+        },
+        "en": {
+            "name": "Surfing",
+            "description": "Programs that deal with surfing and beach fitness."
+        }
+    },
+    "120": {
+        "de": {
+            "name": "Wintersport",
+            "description": "Kurse rund um Skifahren, Snowboarden und Winteraktivit\u00e4ten."
+        },
+        "en": {
+            "name": "Snow Sports",
+            "description": "Classes focused on skiing, snowboarding, and winter activities."
+        }
+    },
+    "121": {
+        "de": {
+            "name": "Klettern",
+            "description": "Programme zur F\u00f6rderung von Kletterf\u00e4higkeiten und Sicherheit."
+        },
+        "en": {
+            "name": "Climbing",
+            "description": "Programs to enhance climbing skills and safety."
+        }
+    },
+    "122": {
+        "de": {
+            "name": "Meditative K\u00fcnste",
+            "description": "Kurse, die Kunst und Meditation miteinander verbinden."
+        },
+        "en": {
+            "name": "Meditative Arts",
+            "description": "Classes that combine art and meditation."
+        }
+    },
+    "123": {
+        "de": {
+            "name": "Achtsame Bewegung",
+            "description": "Programme, die achtsame Bewegungen und sanfte Workouts bieten."
+        },
+        "en": {
+            "name": "Mindful Movement",
+            "description": "Programs offering mindful movements and gentle workouts."
+        }
+    },
+    "124": {
+        "de": {
+            "name": "Spiritualit\u00e4t",
+            "description": "Workshops und Vortr\u00e4ge zu spirituellen Themen und Praktiken."
+        },
+        "en": {
+            "name": "Spirituality",
+            "description": "Workshops and lectures on spiritual topics and practices."
+        }
+    },
+    "125": {
+        "en": {
+            "name": "Wellness",
+            "description": "Holistic programs to promote body and mind wellness."
+        },
+        "de": {
+            "name": "Wellness",
+            "description": "Ganzheitliche Programme zur F\u00f6rderung von K\u00f6rper und Geist."
+        }
+    },
+    "126": {
+        "de": {
+            "name": "Therapie",
+            "description": "Workshops, die therapeutische Techniken und Selbsterkenntnis f\u00f6rdern."
+        },
+        "en": {
+            "name": "Therapy",
+            "description": "Workshops that promote therapeutic techniques and self-awareness."
+        }
+    },
+    "127": {
+        "de": {
+            "name": "Beratung",
+            "description": "Programme, die Beratung und psychologische Unterst\u00fctzung bieten."
+        },
+        "en": {
+            "name": "Counseling",
+            "description": "Programs that offer counseling and psychological support."
+        }
+    },
+    "128": {
+        "de": {
+            "name": "Fitness-Herausforderungen",
+            "description": "Wettbewerbsbasierte Programme zur Steigerung der Fitness."
+        },
+        "en": {
+            "name": "Fitness Challenges",
+            "description": "Competitive programs aimed at boosting fitness."
+        }
+    },
+    "129": {
+        "de": {
+            "name": "Outdoor-Abenteuer",
+            "description": "Erlebniskurse, die Naturerlebnisse und k\u00f6rperliche Aktivit\u00e4ten verbinden."
+        },
+        "en": {
+            "name": "Outdoor Adventures",
+            "description": "Experience-based courses that combine nature and physical activities."
+        }
+    },
+    "130": {
+        "de": {
+            "name": "Virtuelle Realit\u00e4t",
+            "description": "Programme, die VR-Technologien in Training und Unterhaltung einsetzen."
+        },
+        "en": {
+            "name": "Virtual Reality",
+            "description": "Programs that utilize VR technology in training and entertainment."
+        }
+    },
+    "131": {
+        "de": {
+            "name": "Erweiterte Realit\u00e4t",
+            "description": "Workshops, die AR-Anwendungen in der Bildung und Fitness erkunden."
+        },
+        "en": {
+            "name": "Augmented Reality",
+            "description": "Workshops exploring AR applications in education and fitness."
+        }
+    },
+    "132": {
+        "de": {
+            "name": "E-Learning",
+            "description": "Online-Kurse und digitale Lernprogramme zu diversen Themen."
+        },
+        "en": {
+            "name": "eLearning",
+            "description": "Online courses and digital learning programs on various topics."
+        }
+    },
+    "133": {
+        "de": {
+            "name": "Online-Kurse",
+            "description": "Programme, die sich auf Fernunterricht und digitale Weiterbildung konzentrieren."
+        },
+        "en": {
+            "name": "Online Courses",
+            "description": "Programs focused on distance learning and digital education."
+        }
+    },
+    "134": {
+        "de": {
+            "name": "DIY-Technik",
+            "description": "Workshops, in denen Technik und Bastelprojekte kombiniert werden."
+        },
+        "en": {
+            "name": "DIY Tech",
+            "description": "Workshops combining technology and DIY projects."
+        }
+    }
+}

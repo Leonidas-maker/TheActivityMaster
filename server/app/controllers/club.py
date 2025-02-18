@@ -1,8 +1,6 @@
 from fastapi import HTTPException
-from typing import Tuple
 import uuid
-from sqlalchemy import select, delete
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Tuple
 
 from config.settings import DEBUG, DEFAULT_TIMEZONE
 from config.permissions import ClubPermissions
@@ -88,16 +86,24 @@ async def update_club(
     :return: The updated club object
     """
     db = ep_context.db
+    audit_log = ep_context.audit_logger
     user_id = token_details.user_id
+
+    club = await club_crud.get_club(db, club_id, with_details=True)
+
+    if not club:
+        raise HTTPException(status_code=404, detail="Club not found")
 
     if club_update.name and await club_crud.club_exists(db, club_update.name):
         raise HTTPException(status_code=400, detail="Club name already exists")
 
     try:
-        club = await club_crud.update_club(ep_context, club_id, club_update, user_id)
+        details = await club_crud.update_club(db, club, club_update)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    
+
+    audit_log.club_updated(user_id, club_id, details)
+
     response = s_club.Club.model_validate(club)
     await db.commit()
     return response
@@ -172,51 +178,15 @@ async def update_club_role(
     if not club_role:
         raise HTTPException(status_code=404, detail="Role not found")
 
-
     if not await role_crud.has_user_higher_club_level(db, issuer_id, club_id, level=club_role.level):
         raise HTTPException(status_code=403, detail="User has higher or equal level than role")
 
-    details = ""
-    if club_role_update.name and club_role.name != club_role_update.name:
-        details += f"Name: {club_role.name} -> {club_role_update.name}"
-        club_role.name = club_role_update.name
+    try:
+        details = await role_crud.update_club_role(db, club_role, club_role_update)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
-    if club_role_update.description and club_role.description != club_role_update.description:
-        details += f"Description: {club_role.description} -> {club_role_update.description}"
-        club_role.description = club_role_update.description
-
-    if club_role_update.level and club_role.level != club_role_update.level:
-        details += f"Level: {club_role.level} -> {club_role_update.level}"
-        club_role.level = club_role_update.level
-
-    if club_role_update.permissions and club_role.permissions != club_role_update.permissions:
-        if club_role.level == 10 and ClubPermissions.READ_PROGRAMS.value not in club_role_update.permissions:
-            raise HTTPException(status_code=403, detail="Cannot remove READ_PROGRAMS permission from least privileged role")
-
-        permission_details = ""
-        permissions_db = await role_crud.get_permissions(db, "club")
-        available_permissions = dict([(permission.name, permission) for permission in permissions_db])
-
-        old_permissions = set([permission.name for permission in club_role.permissions])
-
-        for permission in club_role_update.permissions:
-            if permission.value not in available_permissions.keys():
-                raise HTTPException(status_code=400, detail=f"Invalid permission: {permission.value }")
-
-            if permission.value not in old_permissions:
-                club_role.permissions.append(available_permissions[permission.value])
-                permission_details += f"+{permission.value}"
-            else:
-                old_permissions.remove(permission.value)
-
-        for permission in old_permissions:
-            club_role.permissions.remove(available_permissions[permission])
-            permission_details += f"-{permission}"
-
-        if permission_details:
-            details += f"; Permissions: {permission_details}"
-
-    audit_log.club_role_updated(issuer_id, club_id, role_id, details)
+    audit_log.club_role_updated(issuer_id, club_role.club_id, club_role.id, details)
 
     result = s_role.ClubRole.model_validate(club_role)
     await db.commit()
@@ -370,3 +340,152 @@ async def remove_employee(
     await role_crud.remove_employee(db, club_id, user_id)
     audit_log.club_employee_removed(issuer_id, club_id, user_id, 0)
     await db.commit()
+
+
+###########################################################################
+################################# Program #################################
+###########################################################################
+async def create_program(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+    new_program: s_club.ProgramCreate,
+) -> s_club.Program:
+    """Create a program
+
+    :param ep_context: The endpoint context containing database and logger
+    :param token_details: The token details of the authenticated user
+    :param club_id: The ID of the club
+    :param program: The details of the program to create
+    :return: The created program
+    """
+    db = ep_context.db
+    audit_log = ep_context.audit_logger
+    issuer_id = token_details.user_id
+
+    if new_program.pricing_model == m_club.PriceType.PACKAGE and any(
+        [session.price for session in new_program.sessions]
+    ):
+        raise HTTPException(status_code=400, detail="No session should have a price if the pricing model is 'package'.")
+
+    if new_program.pricing_model == m_club.PriceType.PER_SESSION and not all(
+        [session.price for session in new_program.sessions]
+    ):
+        raise HTTPException(
+            status_code=400, detail="Each session must have a price if the pricing model is 'per_session'."
+        )
+
+    if await club_crud.program_exists(db, club_id, new_program.name):
+        raise HTTPException(status_code=400, detail="Program name already exists")
+
+    try:
+        program = await club_crud.create_program(db, club_id, new_program)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    details = f"Sessions: {', '.join([str(session.id) for session in program.sessions])}"
+    audit_log.program_created(issuer_id, club_id, program.id, details)
+
+    s_program = s_club.Program.model_validate(program)
+
+    await db.commit()
+    return s_program
+
+async def get_program(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+    program_id: uuid.UUID,
+) -> m_club.Program:
+    """Get a program by ID depending on the user's permissions
+
+    :param ep_context: The endpoint context containing database and logger
+    :param token_details: The token details of the authenticated user
+    :param club_id: The ID of the club
+    :param program_id: The ID of the program to get
+    :return: The program with the given ID
+    """
+    db = ep_context.db
+    user_id = token_details.user_id
+
+    if await club_crud.could_user_read_private_program(db, user_id, club_id, program_id):
+        program = await club_crud.get_program(db, club_id, program_id, with_details=True)
+    else:
+        program = await club_crud.get_program(
+            db, club_id, program_id, with_details=True, status=m_club.ProgramStatus.ACTIVE
+        )
+
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    return program
+
+
+async def update_program(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+    program_id: uuid.UUID,
+    program_update: s_club.ProgramUpdate,
+) -> s_club.Program:
+    """Update a program
+
+    :param ep_context: The endpoint context containing database and logger
+    :param token_details: The token details of the authenticated user
+    :param club_id: The ID of the club
+    :param program_id: The ID of the program to update
+    :param program_update: The data to update the program with
+    :return: The updated program
+    """
+    db = ep_context.db
+    audit_log = ep_context.audit_logger
+    issuer_id = token_details.user_id
+
+    program = await club_crud.get_program(db, club_id, program_id, with_details=True)
+
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    try:
+        details = await club_crud.update_program(db, program, program_update)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    audit_log.program_updated(issuer_id, program.club_id, program.id, details)
+
+    s_program = s_club.Program.model_validate(program)
+
+    await db.commit()
+    return s_program
+
+
+async def delete_program(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+    program_id: uuid.UUID,
+) -> None:
+    """Delete a program
+
+    :param ep_context: The endpoint context containing database and logger
+    :param token_details: The token details of the authenticated user
+    :param club_id: The ID of the club
+    :param program_id: The ID of the program to delete
+    :return: None
+    """
+    db = ep_context.db
+    audit_log = ep_context.audit_logger
+    issuer_id = token_details.user_id
+
+    program = await club_crud.get_program(db, club_id, program_id)
+
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    # TODO: Check if program sessions are booked
+    # * We need a param to force delete the program and cancel all bookings -> init refund process
+    # * If not force delete, set the last session date of each session to the last booked date
+    # await club_crud.delete_program(db, program_id)
+    # audit_log.program_deleted(issuer_id, club_id, program_id)
+
+    # await db.commit()

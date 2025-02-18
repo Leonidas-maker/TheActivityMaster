@@ -171,6 +171,18 @@ async def delete_auth_tokens(db: AsyncSession, user_id: uuid.UUID, hashed_applic
         await db.flush()
     return res.rowcount
 
+async def delete_all_auth_tokens(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """Delete all authentication tokens for a user
+
+    :param db: The database session
+    :param user: The user to delete the tokens for
+    :return: The number of tokens deleted
+    """
+    res = await db.execute(delete(UserToken).filter(UserToken.user_id == user_id))
+    if res.rowcount:
+        await db.flush()
+    return res.rowcount
+
 
 ###########################################################################
 ################################### 2FA ###################################
@@ -275,7 +287,7 @@ async def clean_tokens(db: AsyncSession, console: Console) -> bool:
         res = await db.execute(delete(UserToken).where(UserToken.expires_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE)))
 
         # Add audit logs
-        audit_log.sys_info("Cleaned up expired tokens completed.", details="Deleted {res.rowcount} expired tokens")
+        audit_log.sys_info("Cleaned up expired tokens completed.", details=f"Deleted {res.rowcount} expired tokens")
         await db.commit()
 
         console.log(f"[blue][INFO][/blue]\t\tCleaned up {res.rowcount} expired tokens")
@@ -312,7 +324,7 @@ async def totp_key_rotation(db: AsyncSession, console: Console) -> bool:
             totp_m.save_new_key()
 
         # Add audit logs
-        audit_log.sys_info("Rotated TOTP keys completed.", details="Rotated {len(totp_dbs)} TOTP keys")
+        audit_log.sys_info("Rotated TOTP keys completed.", details=f"Rotated {len(totp_dbs)} TOTP keys")
         await db.commit()
 
         console.log(f"[blue][INFO][/blue]\t\tRotated {len(totp_dbs)} TOTP keys")

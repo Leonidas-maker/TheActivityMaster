@@ -7,6 +7,10 @@ import uuid
 from config.permissions import ClubPermissions
 from models import m_club, m_user
 
+from schemas import s_club, s_user, s_role
+
+from core.generic import EndpointContext
+
 from config.permissions import ClubPermissions, DEFAULT_CLUB_ROLES
 
 
@@ -305,6 +309,65 @@ async def add_club_role(
     return db_role
 
 
+async def update_club_role(
+    db: AsyncSession,
+    club_role: m_club.ClubRole,
+    club_role_update: s_role.ClubRoleUpdate,
+) -> str:
+    """Update a club role
+
+    :param db: The database session
+    :param club_role: The role to update
+    :param club_role_update: The update values
+    :return: The details of the update
+    """
+
+    details = ""
+    if club_role_update.name and club_role.name != club_role_update.name:
+        details += f"Name: {club_role.name} -> {club_role_update.name}"
+        club_role.name = club_role_update.name
+
+    if club_role_update.description and club_role.description != club_role_update.description:
+        details += f"Description: {club_role.description} -> {club_role_update.description}"
+        club_role.description = club_role_update.description
+
+    if club_role_update.level and club_role.level != club_role_update.level:
+        details += f"Level: {club_role.level} -> {club_role_update.level}"
+        club_role.level = club_role_update.level
+
+    if club_role_update.permissions and club_role.permissions != club_role_update.permissions:
+        if club_role.level == 10 and ClubPermissions.READ_PROGRAMS.value not in club_role_update.permissions:
+            raise ValueError("Cannot remove READ_PROGRAMS permission from least privileged role")
+
+        permission_details = ""
+        permissions_db = await get_permissions(db, "club")
+        available_permissions = dict([(permission.name, permission) for permission in permissions_db])
+
+        old_permissions = set([permission.name for permission in club_role.permissions])
+
+        for permission in club_role_update.permissions:
+            if permission.value not in available_permissions.keys():
+                raise ValueError(f"Invalid permission: {permission.value }")
+
+            if permission.value not in old_permissions:
+                club_role.permissions.append(available_permissions[permission.value])
+                permission_details += f"+{permission.value}"
+            else:
+                old_permissions.remove(permission.value)
+
+        for permission in old_permissions:
+            club_role.permissions.remove(available_permissions[permission])
+            permission_details += f"-{permission}"
+
+        if permission_details:
+            details += f"; Permissions: {permission_details}"
+
+    if not details:
+        raise ValueError("Provided data does not contain any changes")
+
+    await db.flush()
+    return details
+
 async def delete_club_role(db: AsyncSession, club_id: uuid.UUID, role_id: int):
     """Delete a role from a club
 
@@ -318,21 +381,6 @@ async def delete_club_role(db: AsyncSession, club_id: uuid.UUID, role_id: int):
     await db.execute(
         delete(m_club.ClubRole).where(m_club.ClubRole.id == role_id).where(m_club.ClubRole.club_id == club_id)
     )
-
-
-async def get_user_club_roles(db: AsyncSession, club_id: uuid.UUID, club_role_id: int) -> List[m_club.UserClubRole]:
-    """Get the roles for a user with each description.
-
-    :param db: AsyncSession: Database session
-    :param user_id: UUID: ID of the user to search for
-    :return: tuple: (generic_roles, club_roles)
-    """
-    res = await db.execute(
-        select(m_user.UserClubRole)
-        .join(m_club.ClubRole)
-        .filter(m_club.ClubRole.club_id == club_id, m_user.UserClubRole.club_role_id == club_role_id)
-    )
-    return list(res.unique().scalars().all())
 
 
 # ======================================================== #
@@ -400,26 +448,19 @@ async def remove_employee(db: AsyncSession, club_id: uuid.UUID, user_id: uuid.UU
 # ======================================================== #
 # ========================= User ========================= #
 # ======================================================== #
-async def is_user_employee_of_club(db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID) -> bool:
-    """
-    Check if a user already has a role in a specific club.
+async def get_user_club_roles(db: AsyncSession, club_id: uuid.UUID, club_role_id: int) -> List[m_club.UserClubRole]:
+    """Get the roles for a user with each description.
 
     :param db: AsyncSession: Database session
-    :param user_id: UUID: ID of the user to check
-    :param club_id: UUID: ID of the club to check for role
-    :return: bool: True if the user has a role in the club, otherwise False
+    :param user_id: UUID: ID of the user to search for
+    :return: tuple: (generic_roles, club_roles)
     """
     res = await db.execute(
-        select(
-            exists(
-                select(1)
-                .select_from(m_club.UserClubRole)
-                .join(m_club.UserClubRole.club_role)
-                .filter(m_club.UserClubRole.user_id == user_id, m_club.ClubRole.club_id == club_id)
-            )
-        )
+        select(m_user.UserClubRole)
+        .join(m_club.ClubRole)
+        .filter(m_club.ClubRole.club_id == club_id, m_user.UserClubRole.club_role_id == club_role_id)
     )
-    return bool(res.scalar_one_or_none())
+    return list(res.unique().scalars().all())
 
 
 async def get_user_club_role(
@@ -441,9 +482,35 @@ async def get_user_club_role(
     )
     return res.unique().scalar_one_or_none()
 
+async def get_user_role_level_for_permissions(
+    db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, permissions: set[ClubPermissions]
+) -> Optional[int]:
+    """
+    Check if a user has any permissions for a specific club but return the level of his role.
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to check
+    :param club_id: UUID: ID of the club to check permissions against
+    :param permissions: List[ClubPermissions]: List of permissions to check for
+    :return: Optional[int]: The level of the role if the user has any of the specified permissions in the club, otherwise None
+    """
+    res = await db.execute(
+        select(m_club.ClubRole.level)
+        .select_from(m_club.UserClubRole)
+        .join(m_club.UserClubRole.club_role)
+        .join(m_club.ClubRole.permissions)
+        .filter(
+            m_club.UserClubRole.user_id == user_id,
+            m_club.ClubRole.club_id == club_id,
+            m_club.Permission.name.in_([perm.value for perm in permissions]),
+        )
+    )
+
+    return res.scalar_one_or_none()
+
 
 async def has_user_any_club_permission(
-    db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, permission: List[ClubPermissions]
+    db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID, permissions: set[ClubPermissions]
 ) -> bool:
     """
     Check if a user has any permissions for a specific club.
@@ -451,7 +518,7 @@ async def has_user_any_club_permission(
     :param db: AsyncSession: Database session
     :param user_id: UUID: ID of the user to check
     :param club_id: UUID: ID of the club to check permissions against
-    :param permission: List[ClubPermissions]: List of permissions to check for
+    :param permissions: List[ClubPermissions]: List of permissions to check for
     :return: bool: True if the user has any of the specified permissions in the club, otherwise False
     """
     res = await db.execute(
@@ -464,13 +531,32 @@ async def has_user_any_club_permission(
                 .filter(
                     m_club.UserClubRole.user_id == user_id,
                     m_club.ClubRole.club_id == club_id,
-                    m_club.Permission.name.in_([perm.value for perm in permission]),
+                    m_club.Permission.name.in_([perm.value for perm in permissions]),
                 )
             )
         )
     )
 
     return bool(res.scalar_one_or_none())
+
+async def is_user_trainee(db: AsyncSession, user_id: uuid.UUID, program_id: uuid.UUID) -> bool:
+    """Check if a user is a trainee of a program
+
+    :param db: The database session
+    :param user_id: The ID of the user
+    :param program_id: The ID of the program
+    :return: True if the user is a trainee, False otherwise
+    """
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.UserTrainer)
+                .where(m_club.UserTrainer.user_id == user_id, m_club.UserTrainer.program_id == program_id)
+            )
+        )
+    )
+    return bool(res.scalar())
 
 
 async def has_user_higher_club_level(
@@ -522,6 +608,28 @@ async def has_user_higher_club_level(
 
     result = await db.execute(select(exists(query)))
     return bool(result.scalar_one_or_none())
+
+
+async def is_user_employee_of_club(db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID) -> bool:
+    """
+    Check if a user already has a role in a specific club.
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to check
+    :param club_id: UUID: ID of the club to check for role
+    :return: bool: True if the user has a role in the club, otherwise False
+    """
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.UserClubRole)
+                .join(m_club.UserClubRole.club_role)
+                .filter(m_club.UserClubRole.user_id == user_id, m_club.ClubRole.club_id == club_id)
+            )
+        )
+    )
+    return bool(res.scalar_one_or_none())
 
 
 ###########################################################################

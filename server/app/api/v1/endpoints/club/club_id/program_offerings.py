@@ -1,31 +1,156 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
+from sqlalchemy import or_, ColumnElement
 import uuid
+from typing import Union, List, Dict, Optional
+from decimal import Decimal
 
+
+from controllers import club as club_controller
+from schemas import s_club, s_generic
+from models import m_club
+
+from core.generic import EndpointContext
+import core.security as core_security
+
+from crud import club as club_crud
+
+from middleware.general import get_endpoint_context
+import middleware.auth as auth_middleware
+
+from utils.exceptions import handle_exception
+
+from config.permissions import ClubPermissions
 
 # Router for club sessions endpoints
 router = APIRouter()
 
+
 ###########################################################################
-############################ Program Offerings ############################
+################################# Programs ################################
 ###########################################################################
-@router.get("", tags=["Club - Program"])
-async def get_programs_v1(club_id: uuid.UUID):
-    pass
+# ======================================================== #
+# ======================== Public ======================== #
+# ======================================================== #
+@router.get("/search", response_model=List[s_club.Program], tags=["Club - Program"], response_model_exclude_none=True)
+async def search_programs_v1(
+    query: Optional[str] = Query(None, min_length=1, max_length=50, description="Free text search (Name, Description)"),
+    category_id: Optional[int] = Query(None, description="Category ID"),
+    min_price: Optional[Decimal] = Query(None, description="Minimum price"),
+    max_price: Optional[Decimal] = Query(None, description="Maximum price"),
+    session_type: Optional[m_club.SessionType] = Query(None, description="Filter by session type"),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    try:
+        filters: List[ColumnElement] = []
+
+        if query:
+            filters.append(
+                or_(
+                    m_club.Program.name.ilike(f"%{query}%"),
+                    m_club.Program.description.ilike(f"%{query}%"),
+                )
+            )
+        if category_id:
+            filters.append(m_club.Program.categories.any(m_club.ProgramCategory.id == category_id))
+        if min_price is not None:
+            filters.append(m_club.Program.price >= min_price)
+        if max_price is not None:
+            filters.append(m_club.Program.price <= max_price)
+        if session_type:
+            filters.append(m_club.Program.sessions.any(m_club.Session.session_type == session_type))
+        
+        if not filters:
+            raise HTTPException(status_code=400, detail="At least one filter is required")
+        
+        filters.append(m_club.Program.status == m_club.ProgramStatus.ACTIVE)
+
+        programs = await club_crud.search_programs(ep_context.db, filters, page, page_size)
+        return [s_club.Program.model_validate(program) for program in programs]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to search programs")
 
 
-@router.post("", tags=["Club - Program"])
-async def create_program_v1(club_id: uuid.UUID):
-    pass
+# ======================================================== #
+# ======================== Hybrid ======================== #
+# ======================================================== #
 
 
-@router.get("/{program_id}", tags=["Club - Program"])
-async def get_program_v1(club_id: uuid.UUID, program_id: uuid.UUID):
-    pass
+@router.get(
+    "", response_model=List[s_club.Program], tags=["Club - Program", "Access: Hybrid"], response_model_exclude_none=True
+)
+async def get_programs_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+):
+    try:
+        user_id = token_details.user_id if token_details else None
+        programs = await club_crud.get_authorized_programs(ep_context.db, club_id, page, page_size, user_id)
+        return [s_club.Program.model_validate(program) for program in programs]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get programs")
 
 
-@router.put("/{program_id}", tags=["Club - Program"])
-async def update_program_v1(club_id: uuid.UUID, program_id: uuid.UUID):
-    pass
+@router.get(
+    "/{program_id}",
+    response_model=s_club.ProgramDetails,
+    tags=["Club - Program", "Access: Hybrid"],
+    response_model_exclude_none=True,
+)
+async def get_program_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+):
+    """Get a program
+
+    **Note: If the user has the permission to read programs or is a trainee of the program,
+    provide the authentication details to view a program with any status.**
+    """
+    try:
+        club_program = await club_controller.get_program(ep_context, token_details, club_id, program_id)
+        return s_club.ProgramDetails.model_validate(club_program)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get program")
+
+
+# ======================================================== #
+# ======================== Private ======================= #
+# ======================================================== #
+@router.post("", response_model=s_club.Program, tags=["Club - Program"], response_model_exclude_none=True)
+async def create_program_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    new_program: s_club.ProgramCreate = Body(..., description="The program values for creation"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_PROGRAMS])
+    ),
+):
+    try:
+        return await club_controller.create_program(ep_context, token_details, club_id, new_program)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to create program")
+
+
+@router.put("/{program_id}", tags=["Club - Program"], response_model_exclude_none=True)
+async def update_program_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    program_update: s_club.ProgramUpdate = Body(..., description="The update values"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    try:
+        return await club_controller.update_program(ep_context, token_details, club_id, program_id, program_update)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to update program")
 
 
 @router.delete("/{program_id}", tags=["Club - Program"])
@@ -33,9 +158,9 @@ async def delete_program_v1(club_id: uuid.UUID, program_id: uuid.UUID):
     pass
 
 
-# ======================================================== #
-# ======================= Sessions ======================= #
-# ======================================================== #
+###########################################################################
+################################# Sessions ################################
+###########################################################################
 @router.get("/{program_id}/sessions", tags=["Club - Program - Session"])
 async def get_program_sessions_v1(club_id: uuid.UUID, program_id: uuid.UUID):
     pass

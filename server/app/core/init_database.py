@@ -2,13 +2,14 @@ import json
 import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists, or_, and_
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 import enum
 from typing import Dict
+import warnings
 
 from models.m_generic import Country, State, City
 from models.m_user import User, GenericRole
-from models.m_club import ClubRole, Permission, ClubRolePermission
+from models.m_club import Permission, ProgramCategory, ProgramCategoryTranslation
 from config.settings import SYSTEM_USER_ID
 from config.permissions import ClubPermissions
 
@@ -59,19 +60,23 @@ async def create_permissions(db: AsyncSession):
             "description": "Allows reading club confidential data (e.g. financials).",
         },
         {"name": ClubPermissions.READ_CLUB_DATA.value, "description": "Allows reading club data."},
-        {"name": ClubPermissions.MODIFY_CLUB_DATA.value, "description": "Allows writing or modifying club data."},
+        {"name": ClubPermissions.UPDATE_CLUB_DATA.value, "description": "Allows modifying club data."},
         {"name": ClubPermissions.DELETE_CLUB_DATA.value, "description": "Allows deleting club data."},
+        {"name": ClubPermissions.CREATE_ROLES.value, "description": "Allows creating club roles."},
         {"name": ClubPermissions.READ_ROLES.value, "description": "Allows reading club roles."},
-        {"name": ClubPermissions.MODIFY_ROLES.value, "description": "Allows modifying club roles."},
+        {"name": ClubPermissions.UPDATE_ROLES.value, "description": "Allows modifying club roles."},
         {"name": ClubPermissions.DELETE_ROLES.value, "description": "Allows deleting club roles."},
+        {"name": ClubPermissions.CREATE_EMPLOYEES.value, "description": "Allows creating club employees."},
         {"name": ClubPermissions.READ_EMPLOYEES.value, "description": "Allows reading club employees."},
-        {"name": ClubPermissions.MODIFY_EMPLOYEES.value, "description": "Allows modifying club employees."},
+        {"name": ClubPermissions.UPDATE_EMPLOYEES.value, "description": "Allows modifying club employees."},
         {"name": ClubPermissions.DELETE_EMPLOYEES.value, "description": "Allows deleting club employees."},
+        {"name": ClubPermissions.CREATE_PROGRAMS.value, "description": "Allows creating club programs."},
         {"name": ClubPermissions.READ_PROGRAMS.value, "description": "Allows reading club programs."},
-        {"name": ClubPermissions.MODIFY_PROGRAMS.value, "description": "Allows modifying club programs."},
+        {"name": ClubPermissions.UPDATE_PROGRAMS.value, "description": "Allows modifying club programs."},
         {"name": ClubPermissions.DELETE_PROGRAMS.value, "description": "Allows deleting club programs."},
+        {"name": ClubPermissions.CREATE_MEMBERSHIPS.value, "description": "Allows creating club memberships."},
         {"name": ClubPermissions.READ_MEMBERSHIPS.value, "description": "Allows reading club memberships."},
-        {"name": ClubPermissions.MODIFY_MEMBERSHIPS.value, "description": "Allows modifying club memberships."},
+        {"name": ClubPermissions.UPDATE_MEMBERSHIPS.value, "description": "Allows modifying club memberships."},
         {"name": ClubPermissions.DELETE_MEMBERSHIPS.value, "description": "Allows deleting club memberships."},
         {"name": ClubPermissions.READ_BOOKINGS.value, "description": "Allows reading club bookings."},
     ]
@@ -89,6 +94,7 @@ async def create_permissions(db: AsyncSession):
 
     if new_permissions:
         db.add_all(new_permissions)
+
 
 async def create_system_user(db: AsyncSession):
     res = await db.execute(select(User).where(User.id == SYSTEM_USER_ID))
@@ -111,8 +117,8 @@ async def create_system_user(db: AsyncSession):
 
 async def create_admin_user(db: AsyncSession):
     res = await db.execute(
-        select(exists(select(1).select_from(User).join(User.generic_roles).where(GenericRole.name == "Admin"))
-    ))
+        select(exists(select(1).select_from(User).join(User.generic_roles).where(GenericRole.name == "Admin")))
+    )
 
     if not res.scalars().first():
         user = User(
@@ -212,4 +218,57 @@ async def init_country_states_city(
 
     if new_db_data:
         db.add_all(new_db_data)
+        await db.commit()
+
+
+async def init_program_categories(db: AsyncSession):
+    file_path = os.path.join(os.path.dirname(__file__), "../data/program_categories.json")
+    with open(file_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    db_res = await db.execute(select(ProgramCategory).options(joinedload(ProgramCategory.translations)))
+
+    existing_categories = {category.id: category for category in db_res.unique().scalars().all()}
+
+    new_categories = []
+    something_changed = False
+    for identifier, category_translation in data.items():
+        identifier_int = int(identifier)
+        if not existing_categories.get(identifier_int):
+            category = ProgramCategory(id=identifier_int)
+            new_categories.append(category)
+
+            for language, translation in category_translation.items():
+                if not translation.get("name") or not translation.get("description"):
+                    warnings.warn(f"Translation for {identifier_int} in {language} is missing name or description")
+                    continue
+
+                category.translations.append(
+                    ProgramCategoryTranslation(
+                        language=language, name=translation["name"], description=translation["description"]
+                    )
+                )
+        else:
+            category = existing_categories[identifier_int]
+            for language, translation in category_translation.items():
+                existing_translation = next(
+                    (t for t in category.translations if t.language == language), None
+                )
+                if not existing_translation:
+                    category.translations.append(
+                        ProgramCategoryTranslation(
+                            language=language, name=translation["name"], description=translation["description"]
+                        )
+                    )
+                    something_changed = True
+                elif existing_translation.name != translation["name"] or existing_translation.description != translation["description"]:
+                    existing_translation.name = translation["name"]
+                    existing_translation.description = translation["description"]
+                    something_changed = True
+    
+    if new_categories:
+        db.add_all(new_categories)
+        something_changed = True
+    
+    if something_changed:
         await db.commit()

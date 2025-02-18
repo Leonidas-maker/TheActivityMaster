@@ -1,7 +1,15 @@
+from models.m_generic import *
+from models.m_club import *
+from models.m_audit import *
+from models.m_payment import *
+from models.m_verification import *
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import warnings
 from sqlalchemy.inspection import inspect
 from sqlalchemy import (
+    event,
+    DDL,
     String,
     Integer,
     ForeignKey,
@@ -10,25 +18,24 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     PrimaryKeyConstraint,
+    CheckConstraint,
     Enum,
     Text,
     DECIMAL,
     Time,
     Date,
 )
+from decimal import Decimal
 import uuid
-from datetime import datetime, time
 import enum
-from typing import List
+from typing import List, Optional
+import datetime
+
 
 from config.database import Base
 from config.settings import DEFAULT_TIMEZONE
 
-from models.m_generic import *
-from models.m_club import *
-from models.m_audit import *
-from models.m_payment import *
-from models.m_verification import *
+from core.context import current_language_var
 
 
 ########################################################################
@@ -36,9 +43,22 @@ from models.m_verification import *
 ########################################################################
 
 
+class PriceType(enum.Enum):
+    PACKAGE = "package"
+    PER_SESSION = "per_session"
+
+
 class SessionType(enum.Enum):
     COURSE = "course"  # Wiederkehrender Kurs
     EVENT = "event"  # Einmaliges Event
+
+
+class ProgramStatus(enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DRAFT = "draft"
+    DELETED = "deleted"
+    FORCE_DELETED = "force_deleted"
 
 
 class Weekday(enum.Enum):
@@ -78,25 +98,25 @@ class Club(Base):
     is_closed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
 
-    address: Mapped["Address"] = relationship("Address")
+    address: Mapped["Address"] = relationship("Address")  # type: ignore
     memberships: Mapped[List["Membership"]] = relationship("Membership", back_populates="club", uselist=True)
     programs: Mapped[List["Program"]] = relationship("Program", back_populates="club", uselist=True)
     club_verifications: Mapped[List["ClubVerification"]] = relationship("ClubVerification", back_populates="club")
     club_roles: Mapped[List["ClubRole"]] = relationship("ClubRole", back_populates="club", uselist=True)
 
     @property
-    def owners(self) -> List["User"]:
+    def owners(self) -> List["User"]:  # type: ignore
         """Get the owners of the club"""
         state = inspect(self)
-        
+
         if "club_roles" in state.unloaded:
             warnings.warn("club_roles not loaded")
             return []
-        
+
         owners = []
         for role in self.club_roles:
             if role.name == "Owner":
@@ -107,16 +127,50 @@ class Club(Base):
 ###########################################################################
 ############################ Program Offerings ############################
 ###########################################################################
+class ProgramCategoryTranslation(Base):
+    __tablename__ = "program_category_translations"
+
+    category_id: Mapped[int] = mapped_column(Integer, ForeignKey("program_categories.id"), primary_key=True)
+    language: Mapped[str] = mapped_column(String(2), primary_key=True)  # ISO 639-1
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+
+    category: Mapped["ProgramCategory"] = relationship("ProgramCategory", back_populates="translations")
+
+
 class ProgramCategory(Base):
     __tablename__ = "program_categories"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    translations: Mapped[List["ProgramCategoryTranslation"]] = relationship(
+        "ProgramCategoryTranslation", back_populates="category", cascade="all, delete-orphan", lazy="joined"
+    )
 
     programs: Mapped[List["Program"]] = relationship(
         "Program", secondary="program_category_association", back_populates="categories"
     )
+
+    def get_translation(self, lang: str) -> "ProgramCategoryTranslation":
+        for translation in self.translations:
+            if translation.language == lang:
+                return translation
+        for translation in self.translations:
+            if translation.language == "en":
+                return translation
+        raise ValueError(f"No default translation found for category {self.id}")
+
+    @property
+    def name(self) -> str:
+        lang = current_language_var.get()
+        translation = self.get_translation(lang)
+        return translation.name
+
+    @property
+    def description(self) -> str:
+        lang = current_language_var.get()
+        translation = self.get_translation(lang)
+        return translation.description
 
 
 class ProgramCategoryAssociation(Base):
@@ -134,17 +188,27 @@ class Program(Base):
     __tablename__ = "programs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
-    description: Mapped[str] = mapped_column(String(1000), nullable=False)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    description: Mapped[str] = deferred(mapped_column(String(500), nullable=False))
+
+    price: Mapped[Decimal | None] = mapped_column(DECIMAL(10, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
+    pricing_model: Mapped[PriceType] = mapped_column(Enum(PriceType), nullable=False, default=PriceType.PACKAGE)
+
+    capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    status: Mapped[ProgramStatus] = mapped_column(Enum(ProgramStatus), nullable=False, default=ProgramStatus.DRAFT)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="program")
@@ -153,7 +217,19 @@ class Program(Base):
     categories: Mapped[List["ProgramCategory"]] = relationship(
         "ProgramCategory", secondary="program_category_association", back_populates="programs"
     )
-    trainers: Mapped[List["User"]] = relationship("User", secondary="user_trainers")
+    trainers: Mapped[List["User"]] = relationship("User", secondary="user_trainers")  # type: ignore
+
+    __table_args__ = (
+        UniqueConstraint("club_id", "name", name="unique_program"),
+        CheckConstraint("price >= 0", name="chk_price_non_negative"),
+        CheckConstraint("capacity >= 0", name="chk_capacity_non_negative"),
+        # Pricingmodell-Logic: Package-Pricing requires price and capacity, per_session requires none
+        CheckConstraint(
+            "((pricing_model = 'package' AND price IS NOT NULL AND capacity IS NOT NULL) OR "
+            "(pricing_model = 'per_session' AND price IS NULL AND capacity IS NULL))",
+            name="chk_pricing_model_consistency",
+        ),
+    )
 
 
 class Session(Base):
@@ -164,33 +240,34 @@ class Session(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
     session_type: Mapped[SessionType] = mapped_column(Enum(SessionType), nullable=False)
-    capacity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
+    capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Individual price for the session
+    price: Mapped[Decimal | None] = mapped_column(DECIMAL(10, 2), nullable=True)
 
     # True if the session requires a membership
     membership_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Fields for one-time events:
-    start_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    end_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    start_datetime: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_datetime: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Fields for recurring courses:
     day_of_week: Mapped[Weekday | None] = mapped_column(Enum(Weekday), nullable=True)
-    start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
-    end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    start_time: Mapped[datetime.time | None] = mapped_column(Time, nullable=True)
+    end_time: Mapped[datetime.time | None] = mapped_column(Time, nullable=True)
     # Defines the start and end date of the course
-    start_date: Mapped[datetime | None] = mapped_column(Date(), nullable=True)
-    end_date: Mapped[datetime | None] = mapped_column(Date(), nullable=True)
+    start_date: Mapped[datetime.date | None] = mapped_column(Date(), nullable=True)
+    end_date: Mapped[datetime.date | None] = mapped_column(Date(), nullable=True)
 
     # Optional: Address of the session (if different from the club address)
     address_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)
 
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     program: Mapped["Program"] = relationship("Program", back_populates="sessions")
@@ -198,6 +275,27 @@ class Session(Base):
 
     address: Mapped["Address"] = relationship("Address")
     bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="session")
+
+    __table_args__ = (
+        CheckConstraint("price >= 0", name="chk_price_non_negative"),
+        CheckConstraint("capacity >= 0", name="chk_capacity_non_negative"),
+        CheckConstraint("start_datetime < end_datetime", name="chk_start_end_datetime"),
+        CheckConstraint("start_date < end_date", name="chk_start_end_date"),
+        CheckConstraint("start_time < end_time", name="chk_start_end_time"),
+        # Logic based on session_type:
+        # EVENT: start_datetime and end_datetime must be set, and all course-specific fields must be NULL.
+        # COURSE: start_datetime and end_datetime must be NULL, and course-specific fields (except end_date) must be set.
+        CheckConstraint(
+            "("
+            "  (session_type = 'event' AND start_datetime IS NOT NULL AND end_datetime IS NOT NULL "
+            "   AND day_of_week IS NULL AND start_time IS NULL AND end_time IS NULL AND start_date IS NULL AND end_date IS NULL) "
+            " OR "
+            "  (session_type = 'course' AND start_datetime IS NULL AND end_datetime IS NULL "
+            "   AND day_of_week IS NOT NULL AND start_time IS NOT NULL AND end_time IS NOT NULL AND start_date IS NOT NULL)"
+            ")",
+            name="chk_session_type_fields",
+        ),
+    )
 
 
 class SessionOccurrence(Base):
@@ -208,10 +306,10 @@ class SessionOccurrence(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
     # The scheduled date of the occurrence (e.g., the planned appointment)
-    occurrence_date: Mapped[datetime] = mapped_column(Date(), nullable=False)
+    occurrence_date: Mapped[datetime.date] = mapped_column(Date(), nullable=False)
     # Optional: Specific start/end times if these deviate from the regular schedule (e.g., for rescheduling)
-    start_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    end_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    start_datetime: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_datetime: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Status of the occurrence (scheduled, cancelled, rescheduled)
     status: Mapped[OccurrenceStatus] = mapped_column(
         Enum(OccurrenceStatus), nullable=False, default=OccurrenceStatus.SCHEDULED
@@ -219,11 +317,11 @@ class SessionOccurrence(Base):
     # Optional: Notes for the occurrence (e.g., reason for rescheduling or cancellation)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     session: Mapped["Session"] = relationship("Session", back_populates="occurrences")
@@ -241,17 +339,17 @@ class Booking(Base):
     booking_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("booking_types.id"), nullable=False)
     status: Mapped[BookingStatus] = mapped_column(Enum(BookingStatus), nullable=False)
     transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
-    user: Mapped["User"] = relationship("User", back_populates="bookings")
+    user: Mapped["User"] = relationship("User", back_populates="bookings")  # type: ignore
     session: Mapped["Session"] = relationship("Session", back_populates="bookings")
     booking_type: Mapped["BookingType"] = relationship("BookingType", back_populates="bookings")
 
@@ -275,17 +373,17 @@ class Membership(Base):
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
-    price: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
+    price: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
     duration: Mapped[int] = mapped_column(Integer, nullable=False)  # Duration in Days
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     club: Mapped["Club"] = relationship("Club", back_populates="memberships")
@@ -301,7 +399,7 @@ class MembershipAccess(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
     program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
-    additional_fee: Mapped[DECIMAL] = mapped_column(DECIMAL(10, 2), nullable=False)
+    additional_fee: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
 
     membership: Mapped["Membership"] = relationship("Membership", back_populates="programs_access")
@@ -316,12 +414,12 @@ class MembershipSubscription(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    start_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    start_time: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")
+    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")  # type: ignore
     membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")
     transactions: Mapped[List["MembershipTransaction"]] = relationship(
         "MembershipTransaction", back_populates="membership_subscription"
@@ -338,8 +436,8 @@ class MembershipTransaction(Base):
         UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False
     )
     transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
 
     membership_subscription: Mapped["MembershipSubscription"] = relationship(
@@ -380,14 +478,14 @@ class ClubRole(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = deferred(mapped_column(String(255), nullable=False))
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     permissions: Mapped[List["Permission"]] = relationship(
@@ -408,11 +506,11 @@ class UserClubRole(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
     club_role_id: Mapped[int] = mapped_column(Integer, ForeignKey("club_roles.id"), primary_key=True)
-    assigned_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    assigned_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
 
-    user: Mapped["User"] = relationship("User", back_populates="club_roles")
+    user: Mapped["User"] = relationship("User", back_populates="club_roles")  # type: ignore
     club_role: Mapped["ClubRole"] = relationship("ClubRole", back_populates="user_club_roles", lazy="joined")
 
     __table_args__ = (UniqueConstraint("user_id", "club_role_id", name="unique_user_club_role"),)
@@ -423,8 +521,58 @@ class UserTrainer(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
     program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), primary_key=True)
-    assigned_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    assigned_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
 
     __table_args__ = (UniqueConstraint("user_id", "program_id", name="unique_user_trainer"),)
+
+
+###########################################################################
+################################# Triggers ################################
+###########################################################################
+trigger_session_pricing_before_insert = DDL(
+    """
+CREATE TRIGGER check_session_pricing_before_insert
+BEFORE INSERT ON sessions
+FOR EACH ROW
+BEGIN
+    DECLARE p_model VARCHAR(20);
+    SELECT pricing_model INTO p_model FROM programs WHERE id = NEW.program_id;
+    IF p_model = 'package' THEN
+        IF NEW.price IS NOT NULL OR NEW.capacity IS NOT NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, session price and capacity must be NULL';
+        END IF;
+    ELSEIF p_model = 'per_session' THEN
+        IF NEW.price IS NULL OR NEW.capacity IS NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PER_SESSION pricing, session price and capacity must be set';
+        END IF;
+    END IF;
+END;
+"""
+)
+
+trigger_session_pricing_before_update = DDL(
+    """
+CREATE TRIGGER check_session_pricing_before_update
+BEFORE UPDATE ON sessions
+FOR EACH ROW
+BEGIN
+    DECLARE p_model VARCHAR(20);
+    SELECT pricing_model INTO p_model FROM programs WHERE id = NEW.program_id;
+    IF p_model = 'package' THEN
+        IF NEW.price IS NOT NULL OR NEW.capacity IS NOT NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, session price and capacity must be NULL';
+        END IF;
+    ELSEIF p_model = 'per_session' THEN
+        IF NEW.price IS NULL OR NEW.capacity IS NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PER_SESSION pricing, session price and capacity must be set';
+        END IF;
+    END IF;
+END;
+"""
+)
+
+# Die Trigger an die sessions-Tabelle anhängen (after_create-Event)
+event.listen(Session.__table__, "after_create", trigger_session_pricing_before_insert)
+event.listen(Session.__table__, "after_create", trigger_session_pricing_before_update)

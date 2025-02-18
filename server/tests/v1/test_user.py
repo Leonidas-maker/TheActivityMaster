@@ -151,6 +151,32 @@ def test_change_profile(capsys):
         # Logout
         logout(client, tokens)
 
+@pytest.mark.dependency(depends=["test_registered_user"])
+def test_change_user_newsletter(capsys):
+    with TestClient(app) as client:
+        # Login
+        tokens = login_email(client, capsys)
+
+        # Change newsletter
+        response = client.put(
+            "/api/v1/user/me/newsletter",
+            headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+            params={"newsletter_subscripe": True},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        # Get user info
+        user_response = client.get(
+            "/api/v1/user/me",
+            headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
+        )
+        assert user_response.status_code == status.HTTP_200_OK
+        user_data = user_response.json()
+        assert user_data["is_newsletter_subscribed"]
+
+        # Logout
+        logout(client, tokens)
+
 
 @pytest.mark.dependency(name="test_totp_flow", depends=["test_registered_user"])
 def test_totp_flow(capsys):

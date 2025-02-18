@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body, Header
 import uuid
 from typing import Union, List, Dict
 
@@ -9,6 +9,7 @@ from schemas import s_club, s_generic, s_user, s_role
 
 from core.generic import EndpointContext
 import core.security as core_security
+from core.context import current_language_var
 
 from crud import club as club_crud, role as role_crud
 
@@ -16,6 +17,7 @@ from middleware.general import get_endpoint_context
 import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
+
 
 from config.permissions import ClubPermissions
 
@@ -60,6 +62,21 @@ async def get_club_permissions_v1(ep_context: EndpointContext = Depends(get_endp
         await handle_exception(e, ep_context, "Failed to get club permissions")
 
 
+@router.get(
+    "/program-categories", response_model=List[s_club.ProgramCategory], tags=["Club - Program", "Access: Public"]
+)
+async def get_program_categories_v1(
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    current_language: str = Header(default="en", alias="Accept-Language"),
+):
+    try:
+        current_language_var.set(current_language)
+        program_categories = await club_crud.get_program_categories(ep_context.db)
+        return [s_club.ProgramCategory.model_validate(category) for category in program_categories]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get program categories")
+
+
 ###########################################################################
 ################################### User ##################################
 ###########################################################################
@@ -86,7 +103,7 @@ async def get_my_attended_sessions_v1():
 ###########################################################################
 ################################### Club ##################################
 ###########################################################################
-@router.get("", response_model=List[s_club.Club], tags=["Club", "Public"])
+@router.get("", response_model=List[s_club.Club], tags=["Club", "Access: Public"])
 async def get_clubs_v1(
     page: int = Query(1, ge=1, description="The page number"),
     page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
@@ -112,7 +129,7 @@ async def create_club_v1(
         await handle_exception(e, ep_context, "Failed to create club")
 
 
-@router.get("/{club_id}", response_model=Union[s_club.ClubDetails, s_club.ClubDetails], tags=["Club", "Public"])
+@router.get("/{club_id}", response_model=Union[s_club.ClubDetails, s_club.ClubDetails], tags=["Club", "Access: Public"])
 async def get_club_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
@@ -131,7 +148,7 @@ async def update_club_v1(
     club_update: s_club.ClubUpdate = Body(..., description="The updated club data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.MODIFY_CLUB_DATA])
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_CLUB_DATA])
     ),
 ):
     try:

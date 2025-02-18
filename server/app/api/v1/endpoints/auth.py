@@ -85,6 +85,20 @@ async def logout_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to logout")
 
+@router.delete("/logout-all", tags=["Authentication - Token"])
+async def logout_all_v1(
+    request: Request,
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    """Logout a user from all devices"""
+    try:
+        client_ip = request.client.host if request.client else ""
+        await auth_controller.logout_all_sessions(ep_context, token_details, client_ip)
+        return {"message": "Successfully logged out from all devices"}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to logout from all devices")
+
 
 @router.post("/forgot-password", tags=["Authentication - Forgot-Password"])
 async def forgot_password_v1(
@@ -134,3 +148,4 @@ async def reset_password_v1(
         await auth_controller.reset_password(ep_context, token_details, reset_form.password)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to reset password")
+

@@ -34,6 +34,7 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
         first_name=user.first_name,
         last_name=user.last_name,
         password=user.password,
+        is_newsletter_subscribed=user.newsletter_subscribed,
     )
 
     if user.address:

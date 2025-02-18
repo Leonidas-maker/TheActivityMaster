@@ -327,6 +327,20 @@ class AuditLogger:
             status=True,
             details=f"Logout for application_id_hash: {application_id_hash}",
         )
+    
+    def user_logout_all_sessions(self, user_id: uuid.UUID, ip_address: str, application_id_hash: str):
+        """Log a user logout all sessions action.
+
+        :param user_id: The user ID logging out
+        :param ip_address: The IP address from which the logout request was made
+        """
+        self.log_to_authentication(
+            user_id,
+            method=AuthMethods.LOGOUT,
+            ip_address=ip_address,
+            status=True,
+            details=f"Logout all sessions for application_id_hash: {application_id_hash}",
+        )
 
     # ======================================================== #
     # ========================== 2FA ========================= #
@@ -802,6 +816,36 @@ class AuditLogger:
             details=f"Updated club {club_id}: {details}",
         )
 
+    # ======================================================== #
+    # ======================== Program ======================= #
+    # ======================================================== #
+    def program_created(self, user_id: uuid.UUID, club_id: uuid.UUID, program_id: uuid.UUID, details: str):
+        """Log a program creation action.
+
+        :param user_id: The user ID creating the program
+        :param program_id: The ID of the created program
+        :param session_ids: The IDs of the sessions associated with the program
+        """
+        self.log_to_audit(
+            user_id,
+            action="Program Created",
+            category=AuditLogCategories.CLUB,
+            details=f"Created program {program_id} in club {club_id}: {details}",
+        )
+
+    def program_updated(self, user_id: uuid.UUID, club_id: uuid.UUID, program_id: uuid.UUID, details: str):
+        """Log a program update action.
+
+        :param user_id: The user ID updating the program
+        :param program_id: The ID of the updated program
+        :param session_ids: The IDs of the sessions associated with the program
+        """
+        self.log_to_audit(
+            user_id,
+            action="Program Updated",
+            category=AuditLogCategories.CLUB,
+            details=f"Updated program {program_id} in club {club_id}: {details}",
+        )
 
 ###########################################################################
 ################################## Verify #################################
