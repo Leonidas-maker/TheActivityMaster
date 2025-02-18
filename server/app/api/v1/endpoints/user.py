@@ -179,14 +179,14 @@ async def update_user_username_v1(
 
 @router.put("/me/newsletter", tags=["User"])
 async def update_user_newsletter_v1(
-    newsletter_subscripe: bool = Query(..., description="True to subscribe, False to unsubscribe"),
+    newsletter_subscribe: bool = Query(..., description="True to subscribe, False to unsubscribe"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Update the user's notification settings"""
     try:
         user = await user_crud.get_user_by_id(ep_context.db, uuid.UUID(token_details.payload["sub"]))
-        user.is_newsletter_subscribed = newsletter_subscripe
+        user.is_newsletter_subscribed = newsletter_subscribe
         await ep_context.db.commit()
 
         return {"message": "Notifications updated"}

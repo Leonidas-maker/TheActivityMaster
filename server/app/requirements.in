@@ -27,3 +27,4 @@ bcrypt
 apscheduler
 redis
 pytest-dependency
+pytest-xdist

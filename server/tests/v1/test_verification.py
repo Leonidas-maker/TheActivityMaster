@@ -77,7 +77,7 @@ def test_verification_identity_view(capsys):
         logout(client, tokens)
 
 
-@pytest.mark.dependency(depends=["test_verification_identity"])
+@pytest.mark.dependency(depends=["test_verification_identity_view"])
 def test_verification_identity_reject(capsys):
     with TestClient(app) as client:
         tokens_client = login_email(client, capsys)
@@ -122,7 +122,7 @@ def test_verification_identity_reject(capsys):
         logout(client, tokens_client)
 
 
-@pytest.mark.dependency(depends=["test_verification_identity"])
+@pytest.mark.dependency(depends=["test_verification_identity_view"])
 def test_verification_identity_approve(capsys):
     with TestClient(app) as client:
         tokens_user = login_email(client, capsys)
