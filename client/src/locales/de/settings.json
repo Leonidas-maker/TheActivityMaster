@@ -93,5 +93,7 @@
     "error_change_address_same": "Adresse ist gleich",
     "error_change_address_same_subheading": "Bitte geben Sie eine andere Adresse ein",
     "error_change_address_failed": "Adressänderung fehlgeschlagen",
-    "error_change_address_failed_subheading": "Probiere es später erneut oder überprüfe die Eingabe"
+    "error_change_address_failed_subheading": "Probiere es später erneut oder überprüfe die Eingabe",
+    "logout_message": "Von allen Geräten abmelden",
+    "logout_all_btn": "Alle Geräte abmelden"
 }

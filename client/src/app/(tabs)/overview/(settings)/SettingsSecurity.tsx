@@ -1,17 +1,37 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import { getUserData } from "@/src/services/user/userService";
 
 const SettingsSecurity = () => {
     const { t } = useTranslation("settings");
     const router = useRouter();
+    const [mfaMethods, setMfaMethods] = useState<string[]>([]);
+
+    useEffect(() => {
+        // Fetch user data and set the available 2FA methods
+        const getUserMethods = async () => {
+            const userData = await getUserData();
+            setMfaMethods(userData.methods_2fa);
+        };
+        getUserMethods();
+    }, []);
+
+    // Check if the 2FA methods include "email" or "totp"
+    const hasEmail = mfaMethods.includes("email");
+    const hasTotp = mfaMethods.includes("totp");
 
     const moduleTitle = t("securityPageNavigator_title");
 
     const handleMultiFactorPress = () => {
-        router.navigate("/(tabs)/overview/(settings)/SettingsMultiFactor");
+        if (hasEmail) {
+            router.navigate("/(tabs)/overview/(settings)/SettingsActivateMFA");
+        };
+        if (hasTotp) {
+            router.navigate("/(tabs)/overview/(settings)/SettingsActivateMFA");
+        };
     };
 
     const handleAllLogoutPress = () => {

@@ -1,13 +1,30 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { ScrollView } from "react-native";
 import { useTranslation } from 'react-i18next';
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { asyncLoadData } from "@/src/services/asyncStorageService";
 
 const Settings: React.FC = () => {
   const { t } = useTranslation("settings");
-
   const router = useRouter();
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Asynchronous function to check the login status.
+      async function checkLoginStatus() {
+        try {
+          const loginStatus = await asyncLoadData("isLoggedIn");
+          setIsLoggedIn(!!loginStatus);
+        } catch (error) {
+          setIsLoggedIn(false);
+        }
+      }
+      checkLoginStatus();
+    }, [])
+  );
 
   // ====================================================== //
   // ================== SettingsNavigator ================= //
@@ -60,12 +77,14 @@ const Settings: React.FC = () => {
         texts={moduleTexts}
         iconNames={moduleIconNames}
       />
-      <PageNavigator
-        title={userModuleTitle}
-        onPressFunctions={onPressUserFunctions}
-        texts={userTexts}
-        iconNames={userIconNames}
-      />
+      {isLoggedIn && (
+        <PageNavigator
+          title={userModuleTitle}
+          onPressFunctions={onPressUserFunctions}
+          texts={userTexts}
+          iconNames={userIconNames}
+        />
+      )}
     </ScrollView>
   );
 };

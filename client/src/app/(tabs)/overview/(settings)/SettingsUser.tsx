@@ -3,40 +3,11 @@ import { View, Pressable, Alert, useColorScheme } from "react-native";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
-import DefaultText from "@/src/components/textFields/DefaultText";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "expo-router";
 import { asyncLoadData } from "@/src/services/asyncStorageService";
 
 const SettingsUser: React.FC = () => {
-    /* // State to store the response as a string
-    const [username, setUsername] = useState("");
-    const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
-    const [email, setEmail] = useState("");
-    const [country, setCountry] = useState("");
-    const [city, setCity] = useState("");
-    const [street, setStreet] = useState("");
-    const [zipCode, setZipCode] = useState("");
-    const [state, setState] = useState(""); */
-
-    /* useEffect(() => {
-        // Fetch user data and update the state
-        getUserData().then((data) => {
-            setUsername(data.username);
-            setFirstName(data.first_name);
-            setLastName(data.last_name);
-            setEmail(data.email);
-            if (data.address) {
-                setCountry(data.address.country);
-                setCity(data.address.city);
-                setStreet(data.address.street);
-                setZipCode(data.address.postal_code);
-                setState(data.address.state);
-            }
-        });
-    }, []); */
-
     const { t } = useTranslation("settings");
     const router = useRouter();
     const navigation = useNavigation();

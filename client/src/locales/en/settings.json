@@ -93,5 +93,7 @@
     "error_change_address_same": "Address is the same",
     "error_change_address_same_subheading": "Please enter a different address",
     "error_change_address_failed": "Address change failed",
-    "error_change_address_failed_subheading": "Check your address or try again later"
+    "error_change_address_failed_subheading": "Check your address or try again later",
+    "logout_message": "Logout from all devices",
+    "logout_all_btn": "Logout all devices"
 }

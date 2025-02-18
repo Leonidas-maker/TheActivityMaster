@@ -1,5 +1,4 @@
 import { axiosInstance } from "../api";
-import { secureLoadData } from "../secureStorageService";
 
 export const getUserData = async (): Promise<any> => {
   try {

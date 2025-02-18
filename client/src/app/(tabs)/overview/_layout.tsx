@@ -131,6 +131,18 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
+        name="(settings)/SettingsActivateMFA"
+        options={{
+          headerTitle: t("settings_activate_mfa_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsDeactivateMFA"
+        options={{
+          headerTitle: t("settings_deactivate_mfa_header"),
+        }}
+      />
+      <Stack.Screen
         name="(billing)/BillingHistory"
         options={{
           headerTitle: t("billing_history_header"),

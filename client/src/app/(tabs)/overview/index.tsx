@@ -12,8 +12,9 @@ import DefaultButton from "@/src/components/buttons/DefaultButton";
 import PageNavigator from '@/src/components/pageNavigator/PageNavigator';
 import ProfileView from "@/src/components/userComponents/ProfileView";
 import SecondaryButton from "@/src/components/buttons/SecondaryButton";
-import { axiosInstance } from "@/src/services/api";
 import { asyncRemoveData, asyncLoadData } from "@/src/services/asyncStorageService";
+import { logout } from "@/src/services/auth/tokenService";
+import { secureRemoveData } from "@/src/services/secureStorageService";
 
 // ====================================================== //
 // ====================== Component ===================== //
@@ -26,8 +27,10 @@ const OverviewHome: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleLogoutPress = async () => {
-    axiosInstance.delete("/auth/logout").then(() => {
+    await logout().then(() => {
       asyncRemoveData("isLoggedIn");
+      secureRemoveData("access_token");
+      secureRemoveData("refresh_token");
       router.navigate("/(tabs)");
     });
   };
