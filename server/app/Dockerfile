@@ -22,7 +22,6 @@ RUN adduser \
     --no-create-home \
     --uid "${UID}" \
     appuser
-RUN chown -R appuser:appuser /app/config
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
@@ -31,6 +30,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 USER appuser
 
 COPY . .
+
+USER root
+RUN chown -R appuser:appuser /app/config
+USER appuser
 
 EXPOSE 8001
 
