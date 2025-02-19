@@ -23,17 +23,19 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
+
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install --no-cache-dir -r requirements.txt
 
+RUN mkdir -p /app/config/keyfiles
+RUN chown -R appuser:appuser /app/config/keyfiles
+RUN mkdir -p /app/config/verifications
+RUN chown -R appuser:appuser /app/config/verifications
+
 USER appuser
 
 COPY . .
-
-USER root
-RUN chown -R appuser:appuser /app/config
-USER appuser
 
 EXPOSE 8001
 
