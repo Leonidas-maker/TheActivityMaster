@@ -5,9 +5,7 @@ import {
   TextInputKeyPressEventData,
   TextInputChangeEventData,
   NativeSyntheticEvent,
-  ImageSourcePropType,
 } from "react-native";
-import { SharedValue } from "react-native-reanimated";
 
 interface TextProps {
   text: string;
@@ -166,6 +164,11 @@ interface WeekSelectProps {
   mode: string;
 }
 
+interface TextButtonProps {
+  text?: string;
+  onPress?: () => void;
+}
+
 export {
   TextProps,
   RadioOptionProps,
@@ -176,4 +179,5 @@ export {
   OptionSwitchProps,
   DropdownProps,
   WeekSelectProps,
+  TextButtonProps,
 };

@@ -1,8 +1,7 @@
 import Heading from "@/src/components/textFields/Heading";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
-import QRCode from "react-native-qrcode-svg";
-import { useRouter, router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useTranslation } from "react-i18next";
 import { totpRegisterInit } from "@/src/services/user/totpService";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -10,9 +9,11 @@ import SecondaryButton from "@/src/components/buttons/SecondaryButton";
 import * as Clipboard from 'expo-clipboard';
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
+import DefaultButton from "@/src/components/buttons/DefaultButton";
+import QRCode from "react-native-qrcode-svg";
 
 const SettingsActivateMFA = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation("settings");
     const router = useRouter();
 
     const [uri, setUri] = useState("");
@@ -33,7 +34,6 @@ const SettingsActivateMFA = () => {
         Toast.show({
             type: "success",
             text1: t("settings_activate_mfa_secret_copied"),
-            visibilityTime: 3000,
         });
     };
 
@@ -58,10 +58,13 @@ const SettingsActivateMFA = () => {
                     backgroundColor="white"
                     color="black"
                     quietZone={10}
+                    logo={require("@/assets/images/icon.png")}
+                    logoSize={50}
                 />
             </View>
             <DefaultText text={t("settings_activate_mfa_cant_scan")} />
             <SecondaryButton text={t("settings_activate_mfa_manual")} onPress={handleCopySecretPress} />
+            <DefaultButton text={t("settings_activate_mfa_next")} onPress={() => router.navigate("/(tabs)/overview/(settings)/SettingsMultiFactor")} />
             <DefaultToast />
         </View>
     );

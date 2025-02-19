@@ -86,6 +86,13 @@ export default function AuthLayout() {
                         headerTitle: t("loginVerfiy_header"),
                     }}
                 />
+                <Stack.Screen
+                    name="ForgotPassword"
+                    options={{
+                        headerTitle: t("settings_forgot_password_header"),
+                        gestureEnabled: true,
+                    }}
+                />
             </Stack>
         </SafeAreaProvider>
     );

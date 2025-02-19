@@ -58,6 +58,11 @@ services:
       interval: 1m
       timeout: 5s
       retries: 3
+    tty: true
+    stdin_open: true
+    environment:
+      - COLUMNS=120
+      - LINES=40
 
 
 volumes:

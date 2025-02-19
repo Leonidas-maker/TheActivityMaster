@@ -22,5 +22,7 @@
     "billing_subscription_header": "Subscriptions",
     "billing_history_header": "Billing History",
     "settings_change_email_info_header": "Verify Email",
-    "settings_name_header": "Name"
+    "settings_name_header": "Name",
+    "settings_forgot_password_header": "Forgot Password",
+    "settings_avtivate_mfa_header": "Activate Two-Factor-Authentication"
 }

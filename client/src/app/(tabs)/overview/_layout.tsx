@@ -121,6 +121,7 @@ export default function OverviewLayout() {
       <Stack.Screen
         name="(settings)/SettingsMultiFactor"
         options={{
+          presentation: "modal",
           headerTitle: t("settings_multi_factor_header"),
         }}
       />

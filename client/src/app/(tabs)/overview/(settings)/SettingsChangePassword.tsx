@@ -9,6 +9,7 @@ import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import TextButton from "@/src/components/buttons/TextButton";
 
 const SettingsChangePassword = () => {
     // Initialize state for the text fields
@@ -122,7 +123,9 @@ const SettingsChangePassword = () => {
                         }}
                         hasError={confirmNewPasswordError}
                     />
-                    <DefaultButton text={t("change_password_button")} onPress={handlePasswordChangePress} />
+                    <View className="w-full justify-center items-center py-4">
+                        <DefaultButton text={t("change_password_button")} onPress={handlePasswordChangePress} />
+                    </View>
                     <DefaultToast />
                 </View>
             </TouchableWithoutFeedback>

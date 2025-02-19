@@ -95,5 +95,10 @@
     "error_change_address_failed": "Address change failed",
     "error_change_address_failed_subheading": "Check your address or try again later",
     "logout_message": "Logout from all devices",
-    "logout_all_btn": "Logout all devices"
+    "logout_all_btn": "Logout all devices",
+    "settings_activate_mfa_heading": "Scan the QR code with your authenticator app",
+    "settings_activate_mfa_cant_scan": "Can't scan the QR code?",
+    "settings_activate_mfa_manual": "Copy the key to clipboard",
+    "settings_activate_mfa_next": "Enter the code from the authenticator app",
+    "settings_activate_mfa_secret_copied": "Key successfully copied!"
 }

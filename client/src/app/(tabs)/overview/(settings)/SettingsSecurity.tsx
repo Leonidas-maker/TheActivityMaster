@@ -30,7 +30,7 @@ const SettingsSecurity = () => {
             router.navigate("/(tabs)/overview/(settings)/SettingsActivateMFA");
         };
         if (hasTotp) {
-            router.navigate("/(tabs)/overview/(settings)/SettingsActivateMFA");
+            router.navigate("/(tabs)/overview/(settings)/SettingsDeactivateMFA");
         };
     };
 

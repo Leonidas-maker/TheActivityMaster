@@ -7,8 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  StyleSheet,
-  Text,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -24,7 +22,7 @@ import Heading from "@/src/components/textFields/Heading";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Toast from "react-native-toast-message";
 import { login } from "@/src/services/auth/loginService";
-import { secondsInDay } from "date-fns/constants";
+import TextButton from "@/src/components/buttons/TextButton";
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -201,8 +199,13 @@ const Login: React.FC = () => {
               secureTextEntry
               hasError={passwordError}
             />
-
-            <DefaultButton text={t("login_button")} onPress={loginPress} />
+            <TextButton
+              text={t("forgotPassword_button")}
+              onPress={() => router.navigate("/auth/ForgotPassword")}
+            />
+            <View className="w-full justify-center items-center pt-4">
+              <DefaultButton text={t("login_button")} onPress={loginPress} />
+            </View>
             <OptionSwitch
               title={loggedInTitle}
               onValueChanges={[toggleSaveLogin]}

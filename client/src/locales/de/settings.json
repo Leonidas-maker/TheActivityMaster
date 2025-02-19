@@ -95,5 +95,11 @@
     "error_change_address_failed": "Adressänderung fehlgeschlagen",
     "error_change_address_failed_subheading": "Probiere es später erneut oder überprüfe die Eingabe",
     "logout_message": "Von allen Geräten abmelden",
-    "logout_all_btn": "Alle Geräte abmelden"
+    "logout_all_btn": "Alle Geräte abmelden",
+    "settings_activate_mfa_heading": "Scannen Sie den QR-Code mit Ihrer Authenticator-App",
+    "settings_activate_mfa_cant_scan": "Kann den QR-Code nicht scannen?",
+    "settings_activate_mfa_manual": "Kopiere den Key in die Zwischenablage",
+    "settings_activate_mfa_next": "Gib den Code aus der Authenticator-App ein",
+    "settings_activate_mfa_success": "Multifaktor-Authentifizierung erfolgreich aktiviert",
+    "settings_activate_mfa_secret_copied": "Key erfolgreich kopiert!"
 }
