@@ -391,6 +391,7 @@ async def create_program(
     await db.commit()
     return s_program
 
+
 async def get_program(
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
@@ -417,7 +418,6 @@ async def get_program(
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
-
     return program
 
 
@@ -489,3 +489,48 @@ async def delete_program(
     # audit_log.program_deleted(issuer_id, club_id, program_id)
 
     # await db.commit()
+
+
+###########################################################################
+################################# Session #################################
+###########################################################################
+async def create_session(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+    program_id: uuid.UUID,
+    new_session: s_club.SessionCreate,
+) -> s_club.Session:
+    """Create a session
+
+    :param ep_context: The endpoint context containing database and logger
+    :param token_details: The token details of the authenticated user
+    :param club_id: The ID of the club
+    :param program_id: The ID of the program
+    :param session: The details of the session to create
+    :return: The created session
+    """
+    db = ep_context.db
+    audit_log = ep_context.audit_logger
+    issuer_id = token_details.user_id
+
+    program = await club_crud.get_program(db, club_id, program_id, with_details=True)
+
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")  
+
+    if await club_crud.session_exists(db, program_id, new_session):
+        raise HTTPException(status_code=400, detail="Session name already exists")
+
+    try:
+        session = await club_crud.create_session(db, program_id, new_session)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    details = f"Program: {program_id}"
+    audit_log.session_created(issuer_id, club_id, session.id, details)
+
+    s_session = s_club.Session.model_validate(session)
+
+    await db.commit()
+    return s_session

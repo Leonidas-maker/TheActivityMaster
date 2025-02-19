@@ -16,14 +16,25 @@ from core.generic import EndpointContext
 from config.permissions import ClubPermissions
 
 
-async def club_exists(db: AsyncSession, club_name: str) -> bool:
+async def club_exists(db: AsyncSession, club_name: Optional[str] = None, club_id: Optional[uuid.UUID] = None) -> bool:
     """Check if a club with the given name exists
 
     :param db: The database session
     :param club_name: The name of the club to check
+    :param club_id: The ID of the club to check
     :return: True if a club with the given name exists, False otherwise
     """
-    res = await db.execute(select(exists(select(1).select_from(m_club.Club).where(m_club.Club.name == club_name))))
+    if not club_name and not club_id:
+        raise ValueError("Club name or ID is required")
+
+    conditions = []
+    if club_name:
+        conditions.append(m_club.Club.name == club_name)
+
+    if club_id:
+        conditions.append(m_club.Club.id == club_id)
+
+    res = await db.execute(select(exists(select(1).select_from(m_club.Club).filter(*conditions))))
     return bool(res.scalar())
 
 
@@ -64,8 +75,8 @@ async def get_clubs(db: AsyncSession, page: int, page_size: int, city: str) -> L
     :param db: The database session.
     :param page: The page number.
     :param page_size: The number of clubs per page.
-    :param city: The city name to filter by. Wenn leer, werden alle Clubs zurückgegeben.
-    :return: Eine Liste von Club-Objekten.
+    :param city: The city name to filter by. If None, all clubs are returned.
+    :return: A list of clubs.
     """
     query_options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
 
@@ -124,6 +135,45 @@ async def get_club_with_owners(db: AsyncSession, club_id: uuid.UUID) -> m_club.C
     )
     club = res.unique().scalar_one_or_none()
     return club
+
+
+async def search_clubs(db: AsyncSession, query: str, page: int = 1, page_size: int = 10) -> List[m_club.Club]:
+    """Search for clubs by name, description, address, postal code, city, state, or country.
+
+    :param db: The database session
+    :param query: The search query
+    :param page: The page number, defaults to 1
+    :param page_size: The number of clubs per page, defaults to 10
+    :return: A list of clubs matching the search query
+    """
+
+    search_pattern = f"%{query}%"
+    options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
+    stmt = (
+        select(m_club.Club)
+        .options(*options)
+        .join(m_generic.Address, m_club.Club.address_id == m_generic.Address.id)
+        .join(m_generic.PostalCode, m_generic.Address.postal_code_id == m_generic.PostalCode.id)
+        .join(m_generic.City, m_generic.PostalCode.city_id == m_generic.City.id)
+        .join(m_generic.State, m_generic.City.state_id == m_generic.State.id)
+        .join(m_generic.Country, m_generic.State.country_id == m_generic.Country.id)
+        .where(
+            or_(
+                m_club.Club.name.ilike(search_pattern),
+                m_club.Club.description.ilike(search_pattern),
+                m_generic.Address.street.ilike(search_pattern),
+                m_generic.PostalCode.code.ilike(search_pattern),
+                m_generic.City.name.ilike(search_pattern),
+                m_generic.State.name.ilike(search_pattern),
+                m_generic.Country.name.ilike(search_pattern),
+            )
+        )
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+        .order_by(m_club.Club.name)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def update_club(db: AsyncSession, club: m_club.Club, club_update: s_club.ClubUpdate) -> str:
@@ -248,51 +298,43 @@ async def could_user_read_private_program(db, user_id: uuid.UUID, club_id: uuid.
 
 
 ###########################################################################
-################################## Search #################################
-###########################################################################
-async def search_clubs(db: AsyncSession, query: str, page: int = 1, page_size: int = 10) -> List[m_club.Club]:
-    """Search for clubs by name, description, address, postal code, city, state, or country.
-
-    :param db: The database session
-    :param query: The search query
-    :param page: The page number, defaults to 1
-    :param page_size: The number of clubs per page, defaults to 10
-    :return: A list of clubs matching the search query
-    """
-
-    search_pattern = f"%{query}%"
-    options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
-    stmt = (
-        select(m_club.Club)
-        .options(*options)
-        .join(m_generic.Address, m_club.Club.address_id == m_generic.Address.id)
-        .join(m_generic.PostalCode, m_generic.Address.postal_code_id == m_generic.PostalCode.id)
-        .join(m_generic.City, m_generic.PostalCode.city_id == m_generic.City.id)
-        .join(m_generic.State, m_generic.City.state_id == m_generic.State.id)
-        .join(m_generic.Country, m_generic.State.country_id == m_generic.Country.id)
-        .where(
-            or_(
-                m_club.Club.name.ilike(search_pattern),
-                m_club.Club.description.ilike(search_pattern),
-                m_generic.Address.street.ilike(search_pattern),
-                m_generic.PostalCode.code.ilike(search_pattern),
-                m_generic.City.name.ilike(search_pattern),
-                m_generic.State.name.ilike(search_pattern),
-                m_generic.Country.name.ilike(search_pattern),
-            )
-        )
-        .limit(page_size)
-        .offset((page - 1) * page_size)
-        .order_by(m_club.Club.name)
-    )
-    result = await db.execute(stmt)
-    return list(result.scalars().all())
-
-
-###########################################################################
 ################################# Session #################################
 ###########################################################################
-async def create_session(db: AsyncSession, session: s_club.SessionCreate) -> m_club.Session:
+async def session_exists(db: AsyncSession, program_id: uuid.UUID, session: s_club.SessionCreate) -> bool:
+    """Check if a session already exists
+
+    :param db: The database session
+    :param sessions: The session to check
+    :return: True if the session already exists, False otherwise
+    """
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.Session)
+                .filter(
+                    m_club.Session.program_id == program_id,
+                    or_(
+                        and_(
+                            m_club.Session.start_datetime == session.start_datetime,
+                            m_club.Session.end_datetime == session.end_datetime,
+                        ),
+                        and_(
+                            m_club.Session.start_date == session.start_date,
+                            m_club.Session.end_date == session.end_date,
+                            m_club.Session.day_of_week == session.day_of_week,
+                            m_club.Session.start_time == session.start_time,
+                            m_club.Session.end_time == session.end_time,
+                        ),
+                    ),
+                )
+            )
+        )
+    )
+    return bool(res.scalar())
+
+
+async def create_session(db: AsyncSession, program_id: uuid.UUID, session: s_club.SessionCreate) -> m_club.Session:
     """Create a session
 
     :param db: The database session
@@ -307,7 +349,7 @@ async def create_session(db: AsyncSession, session: s_club.SessionCreate) -> m_c
         address = await generic_crud.get_create_address(db, session.address)
 
     db_session = m_club.Session(
-        program_id=session.program_id,
+        program_id=program_id,
         session_type=session.session_type,
         capacity=session.capacity,
         price=session.price,
@@ -516,7 +558,10 @@ async def get_program(
     res = await db.execute(select(m_club.Program).options(*query_options).filter(and_(*conditions)))
     return res.unique().scalar_one_or_none()
 
-async def search_programs(db: AsyncSession, filters: List[ColumnElement], page: int, page_size: int) -> List[m_club.Program]:
+
+async def search_programs(
+    db: AsyncSession, filters: List[ColumnElement], page: int, page_size: int
+) -> List[m_club.Program]:
     """Search for programs
 
     :param db: The database session
@@ -525,9 +570,12 @@ async def search_programs(db: AsyncSession, filters: List[ColumnElement], page: 
     :param page_size: The number of programs per page
     :return: A list of programs that match the filters
     """
+    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
+
     query = select(m_club.Program).filter(*filters)
-    res = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
+    res = await db.execute(query.offset((page - 1) * page_size).limit(page_size).options(*query_options))
     return list(res.unique().scalars().all())
+
 
 async def update_program(
     db: AsyncSession,

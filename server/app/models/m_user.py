@@ -144,17 +144,15 @@ class UserRole(Base):
 class User2FAMethods(enum.Enum):
     EMAIL = "email"
     TOTP = "totp"
-
-
 class User2FA(Base):
     """
     User 2FA table
 
-    ## Wichtige Felder, die doppelt vergeben werden:
-    :param public_key: str: Der Public Key für die 2FA-Methode
-    :param key_handle: str: Secret key für TOTP | Key handle für U2F
-    :param counter: int: Letzter verwendeter Counter für TOTP oder U2F
-    :param device_name: str: Name des Geräts
+    ## Key fields that may be assigned twice:
+    :param public_key: str: The public key for the 2FA method
+    :param key_handle: str: Secret key for TOTP | Key handle for U2F
+    :param counter: int: Last used counter for TOTP or U2F
+    :param device_name: str: Name of the device
     """
 
     __tablename__ = "user_2fa"
@@ -163,13 +161,13 @@ class User2FA(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     method: Mapped[User2FAMethods] = mapped_column(Enum(User2FAMethods), nullable=False)
 
-    public_key: Mapped[str] = mapped_column(String(512), nullable=True)  # Public key wie bei U2F
-    key_handle: Mapped[str] = mapped_column(String(255), nullable=True)  # Secret key für TOTP | Key handle für U2F
-    counter: Mapped[int] = mapped_column(Integer, nullable=True)  # Letzter verwendeter Counter für TOTP oder U2F
+    public_key: Mapped[str] = mapped_column(String(512), nullable=True)  # Public key as used in U2F
+    key_handle: Mapped[str] = mapped_column(String(255), nullable=True)  # Secret key for TOTP | Key handle for U2F
+    counter: Mapped[int] = mapped_column(Integer, nullable=True)  # Last used counter for TOTP or U2F
     fails: Mapped[int] = mapped_column(
         Integer, nullable=False, default=-1
-    )  # Anzahl fehlgeschlagener Versuche; -1 wenn die Methode nicht validiert ist
-    device_name: Mapped[str] = mapped_column(String(100), nullable=True)  # Name des Geräts
+    )  # Number of failed attempts; -1 if the method is not validated
+    device_name: Mapped[str] = mapped_column(String(100), nullable=True)  # Name of the device
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
@@ -178,7 +176,7 @@ class User2FA(Base):
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
     )
 
     user: Mapped["User"] = relationship("User", back_populates="_2fa")

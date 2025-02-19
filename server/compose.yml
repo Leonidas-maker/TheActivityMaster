@@ -44,9 +44,9 @@ services:
     depends_on:
       - mariadb
       - redis
-    volumes:
-      - ./app:/app
-    working_dir: /app
+    # volumes:
+    #   - ./app:/app
+    # working_dir: /app
     ports:
       - "8001:8001"
     command: [ "uvicorn", "main:app", "--host=0.0.0.0", "--port=8001" ]

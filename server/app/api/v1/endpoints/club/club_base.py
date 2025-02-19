@@ -1,11 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body, Header
+from sqlalchemy import or_, ColumnElement
 import uuid
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
+from decimal import Decimal
 
 from api.v1.endpoints.club.club_id import base as club_id_router
 
 from controllers import club as club_controller
 from schemas import s_club, s_generic, s_user, s_role
+from models import m_club
 
 from core.generic import EndpointContext
 import core.security as core_security
@@ -17,7 +20,6 @@ from middleware.general import get_endpoint_context
 import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
-
 
 from config.permissions import ClubPermissions
 
@@ -45,9 +47,47 @@ async def search_clubs_v1(
         await handle_exception(e, ep_context, "Failed to search clubs")
 
 
-@router.get("/programs/search", tags=["Club - Program"])
-async def search_programs_v1(category: str, query: str):
-    pass
+@router.get(
+    "/programs/search", response_model=List[s_club.Program], tags=["Club - Program"], response_model_exclude_none=True
+)
+async def search_programs_v1(
+    query: Optional[str] = Query(None, min_length=1, max_length=50, description="Free text search (Name, Description)"),
+    category_id: Optional[int] = Query(None, description="Category ID"),
+    min_price: Optional[Decimal] = Query(None, description="Minimum price"),
+    max_price: Optional[Decimal] = Query(None, description="Maximum price"),
+    session_type: Optional[m_club.SessionType] = Query(None, description="Filter by session type"),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+):
+    try:
+        filters: List[ColumnElement] = []
+
+        if query:
+            filters.append(
+                or_(
+                    m_club.Program.name.ilike(f"%{query}%"),
+                    m_club.Program.description.ilike(f"%{query}%"),
+                )
+            )
+        if category_id:
+            filters.append(m_club.Program.categories.any(m_club.ProgramCategory.id == category_id))
+        if min_price is not None:
+            filters.append(m_club.Program.price >= min_price)
+        if max_price is not None:
+            filters.append(m_club.Program.price <= max_price)
+        if session_type:
+            filters.append(m_club.Program.sessions.any(m_club.Session.session_type == session_type))
+
+        if not filters:
+            raise HTTPException(status_code=400, detail="At least one filter is required")
+
+        filters.append(m_club.Program.status == m_club.ProgramStatus.ACTIVE)
+
+        programs = await club_crud.search_programs(ep_context.db, filters, page, page_size)
+        return [s_club.Program.model_validate(program) for program in programs]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to search programs")
 
 
 # ======================================================== #

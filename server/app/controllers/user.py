@@ -131,8 +131,6 @@ async def get_user_roles(ep_context: EndpointContext, token_details: core_securi
 ###########################################################################
 ############################ Security Settings ############################
 ###########################################################################
-
-
 async def totp_register_init(ep_context: EndpointContext, token_details: core_security.TokenDetails) -> Tuple[str, str]:
     """
     Register a TOTP device
@@ -145,7 +143,19 @@ async def totp_register_init(ep_context: EndpointContext, token_details: core_se
     db = ep_context.db
     audit_logger = ep_context.audit_logger
 
-    user = await user_crud.get_user_by_id(db, token_details.user_id)
+    user = await user_crud.get_user_by_id(db, token_details.user_id, query_options=[joinedload(m_user.User._2fa)])
+    
+    totp_2fa = None
+    for _2fa in user._2fa:
+        if _2fa.method == m_user.User2FAMethods.TOTP:
+            totp_2fa = _2fa
+            break
+
+    if totp_2fa:
+        if totp_2fa.fails != -1:
+            raise HTTPException(status_code=400, detail="TOTP already registered")
+        else:
+            await db.delete(totp_2fa)
 
     with core_security.totp_manager_dependency.get() as totp_m:
         secret, encrypted_secret = totp_m.generate_totp_secret()

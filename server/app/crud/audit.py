@@ -327,7 +327,7 @@ class AuditLogger:
             status=True,
             details=f"Logout for application_id_hash: {application_id_hash}",
         )
-    
+
     def user_logout_all_sessions(self, user_id: uuid.UUID, ip_address: str, application_id_hash: str):
         """Log a user logout all sessions action.
 
@@ -433,7 +433,7 @@ class AuditLogger:
             category=AuditLogCategories.USER,
             details=f"Application ID Hash: {application_id_hash}",
         )
-    
+
     def user_email_change(self, user_id: uuid.UUID, application_id_hash: str, old_email_hash: str):
         """Log a user email change action.
 
@@ -445,7 +445,7 @@ class AuditLogger:
             category=AuditLogCategories.USER,
             details=f"Application ID Hash: {application_id_hash}, Old Email Hash: {old_email_hash}",
         )
-    
+
     def user_username_change(self, user_id: uuid.UUID, application_id_hash: str):
         """Log a user username change action.
 
@@ -625,11 +625,12 @@ class AuditLogger:
             details=f"Role {role_id} deleted from club {club_id}",
         )
 
-
     # ======================================================== #
     # ======================= Employee ======================= #
     # ======================================================== #
-    def club_employee_added(self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, club_role_id: int, reason: str = ""):
+    def club_employee_added(
+        self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, club_role_id: int, reason: str = ""
+    ):
         """Log a club employee addition action.
 
         :param issuer: The user ID assigning the role
@@ -646,8 +647,10 @@ class AuditLogger:
             category=AuditLogCategories.CLUB,
             details=details,
         )
-       
-    def club_employee_removed(self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, club_role_id: int, reason: str = ""):
+
+    def club_employee_removed(
+        self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, club_role_id: int, reason: str = ""
+    ):
         """Log a club employee removal action.
 
         :param issuer: The user ID removing the role
@@ -664,8 +667,16 @@ class AuditLogger:
             category=AuditLogCategories.CLUB,
             details=details,
         )
-    
-    def club_employee_updated(self, issuer: uuid.UUID, club_id: uuid.UUID, user_id: uuid.UUID, from_club_role_id: int, to_club_role_id: int, reason: str = ""):
+
+    def club_employee_updated(
+        self,
+        issuer: uuid.UUID,
+        club_id: uuid.UUID,
+        user_id: uuid.UUID,
+        from_club_role_id: int,
+        to_club_role_id: int,
+        reason: str = "",
+    ):
         """Log a club employee role update action.
 
         :param issuer: The user ID updating the role
@@ -683,7 +694,6 @@ class AuditLogger:
             category=AuditLogCategories.CLUB,
             details=details,
         )
-
 
     # ======================================================== #
     # ===================== Verification ===================== #
@@ -760,7 +770,7 @@ class AuditLogger:
             category=AuditLogCategories.USER,
             details=f"Identity verification rejected for user {to_user_id}, reason: {reason}",
         )
-    
+
     def id_verification_soft_deleted(self, user_id: uuid.UUID, verification_id: uuid.UUID):
         """Log the soft deletion of an identity verification.
 
@@ -786,7 +796,7 @@ class AuditLogger:
             category=AuditLogCategories.SYSTEM,
             details=f"Deleted {count} expired identity verifications older than {since_days} days",
         )
-    
+
     # ======================================================== #
     # ========================= Club ========================= #
     # ======================================================== #
@@ -847,6 +857,23 @@ class AuditLogger:
             details=f"Updated program {program_id} in club {club_id}: {details}",
         )
 
+    # ======================================================== #
+    # ======================== Session ======================= #
+    # ======================================================== #
+    def session_created(self, user_id: uuid.UUID, club_id: uuid.UUID, session_id: uuid.UUID, details: str):
+        """Log a session creation action.
+
+        :param user_id: The user ID creating the session
+        :param session_id: The ID of the created session
+        """
+        self.log_to_audit(
+            user_id,
+            action="Session Created",
+            category=AuditLogCategories.CLUB,
+            details=f"Created session {session_id} in club {club_id}: {details}",
+        )
+
+
 ###########################################################################
 ################################## Verify #################################
 ###########################################################################
@@ -857,11 +884,19 @@ async def forgot_password_allowed(db: AsyncSession, user_id: uuid.UUID) -> bool:
     :param user: The user to check
     :return: True if the user is allowed to reset their password, False otherwise
     """
-    res = await db.execute(select(AuthenticationLog).where(and_(AuthenticationLog.user_id == user_id, AuthenticationLog.method == AuthMethods.FORGOT_PASSWORD)).order_by(AuthenticationLog.timestamp.desc()).limit(1))
+    res = await db.execute(
+        select(AuthenticationLog)
+        .where(and_(AuthenticationLog.user_id == user_id, AuthenticationLog.method == AuthMethods.FORGOT_PASSWORD))
+        .order_by(AuthenticationLog.timestamp.desc())
+        .limit(1)
+    )
     last_log = res.scalars().first()
-    if last_log and last_log.timestamp.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(DEFAULT_TIMEZONE) - datetime.timedelta(minutes=5):
+    if last_log and last_log.timestamp.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(
+        DEFAULT_TIMEZONE
+    ) - datetime.timedelta(minutes=5):
         return False
     return True
+
 
 ###########################################################################
 ############################## Recurring Task #############################

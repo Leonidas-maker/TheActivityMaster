@@ -23,7 +23,7 @@ from core.security import (
 )
 
 from crud.audit import anonymize_ip_addresses
-from crud.auth import clean_tokens, totp_key_rotation
+from crud.auth import clean_tokens, totp_key_rotation, clean_2fa_table
 from crud.verification import delete_expired_identity_verifications
 
 from utils.jwt_keyfile_manager import JWTKeyManager
@@ -77,6 +77,9 @@ async def lifespan(app: FastAPI):
 
     # Rotate the TOTP keys every 14 days
     scheduler.add_task("totp_key_rotation", totp_key_rotation, cron="0 0 */14 * *", on_startup=True, with_console=True)
+
+    # Clean up the 2fa table
+    scheduler.add_task("clean_2fa", clean_2fa_table, cron="*/15 * * * *", on_startup=True, with_console=True, blocked_by=["totp_key_rotation"])
 
     # Delete expired identity verifications every 7 days
     scheduler.add_task(

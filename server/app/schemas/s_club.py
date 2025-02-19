@@ -149,8 +149,7 @@ class SessionBase(BaseModel):
 
 
 class SessionCreate(SessionBase):
-    program_id: uuid.UUID = Field(..., description="The ID of the program to which the session belongs.")
-
+    pass
 
 class Session(SessionBase):
     id: uuid.UUID
@@ -214,8 +213,9 @@ class ProgramCreate(ProgramBase):
 
 
 class Program(ProgramBase):
-    id: uuid.UUID
-    categories: List[ProgramCategory]
+    club_id: uuid.UUID = Field(..., description="The ID of the club to which the program belongs.")
+    id: uuid.UUID = Field(..., description="The ID of the program.")
+    categories: List[ProgramCategory] = Field([], max_length=5, description="The categories of the program.")
     status: ProgramStatus = Field(..., description="The status of the program.")
 
 

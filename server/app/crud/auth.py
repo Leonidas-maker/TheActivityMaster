@@ -4,7 +4,7 @@ import datetime
 import uuid
 from typing import Tuple, Union, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, or_
 from rich.console import Console
 import traceback
 
@@ -19,7 +19,6 @@ from data.auth import TokenDetails
 ###########################################################################
 ################################### MAIN ##################################
 ###########################################################################
-
 
 
 ###########################################################################
@@ -171,6 +170,7 @@ async def delete_auth_tokens(db: AsyncSession, user_id: uuid.UUID, hashed_applic
         await db.flush()
     return res.rowcount
 
+
 async def delete_all_auth_tokens(db: AsyncSession, user_id: uuid.UUID) -> int:
     """Delete all authentication tokens for a user
 
@@ -227,11 +227,12 @@ async def create_totp(db: AsyncSession, user: User) -> str:
     """
     with core_security.totp_manager_dependency.get() as totp_m:
         secret, encrypted_secret = totp_m.generate_totp_secret()
-    
+
     totp_2fa = User2FA(user_id=user.id, method=User2FAMethods.TOTP, key_handle=encrypted_secret)
     db.add(totp_2fa)
     await db.flush()
     return secret
+
 
 async def verify_totp(db: AsyncSession, user: User, code: str) -> bool:
     """Verify a TOTP code
@@ -251,6 +252,7 @@ async def verify_totp(db: AsyncSession, user: User, code: str) -> bool:
 
         return totp_m.verify_totp(totp_2fa.key_handle, code)
 
+
 async def get_2fa_totp(db: AsyncSession, user_id: uuid.UUID) -> User2FA:
     """Get the TOTP 2FA method for a user
 
@@ -259,14 +261,11 @@ async def get_2fa_totp(db: AsyncSession, user_id: uuid.UUID) -> User2FA:
     :return: The TOTP 2FA method
     :raises ValueError: If the TOTP method is not found
     """
-    res = await db.execute(
-        select(User2FA).filter(User2FA.user_id == user_id, User2FA.method == User2FAMethods.TOTP)
-    )
+    res = await db.execute(select(User2FA).filter(User2FA.user_id == user_id, User2FA.method == User2FAMethods.TOTP))
     totp_db = res.scalar_one_or_none()
     if not totp_db:
         raise ValueError("TOTP method not found")
     return totp_db
-    
 
 
 ###########################################################################
@@ -284,7 +283,9 @@ async def clean_tokens(db: AsyncSession, console: Console) -> bool:
     audit_log.sys_info("Cleaning up expired tokens")
     try:
         # Delete expired tokens
-        res = await db.execute(delete(UserToken).where(UserToken.expires_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE)))
+        res = await db.execute(
+            delete(UserToken).where(UserToken.expires_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE))
+        )
 
         # Add audit logs
         audit_log.sys_info("Cleaned up expired tokens completed.", details=f"Deleted {res.rowcount} expired tokens")
@@ -300,6 +301,40 @@ async def clean_tokens(db: AsyncSession, console: Console) -> bool:
         console.print_exception()
         return False
 
+
+async def clean_2fa_table(db: AsyncSession, console: Console) -> bool:
+    """Clean up 2FA methods eg. delete expired email codes, fails == -1 etc.
+
+    :param db: The database session
+    :param console: The console to print messages to
+    :return: The number of 2FA methods deleted
+    """
+    # Add audit logs
+    audit_log = audit_crud.AuditLogger(db)
+    audit_log.sys_info("Cleaning up 2FA methods")
+    try:
+        # Delete expired email codes
+        res = await db.execute(
+            delete(User2FA).filter(
+                or_(User2FA.method == User2FAMethods.EMAIL, User2FA.fails == -1),
+                User2FA.created_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE) + datetime.timedelta(minutes=15),
+            )
+        )
+        # Add audit logs
+        audit_log.sys_info("Cleaned up 2FA methods completed.", details=f"Deleted {res.rowcount} 2FA methods")
+        await db.commit()
+
+        console.log(f"[blue][INFO][/blue]\t\tCleaned up {res.rowcount} 2FA methods")
+        return True
+    except Exception as e:
+        await db.rollback()
+        audit_log.sys_error("Error cleaning up 2FA methods", traceback=traceback.format_exc())
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tError cleaning up 2FA methods")
+        console.print_exception()
+        return False
+
+
 async def totp_key_rotation(db: AsyncSession, console: Console) -> bool:
     """Rotate TOTP keys
 
@@ -309,7 +344,7 @@ async def totp_key_rotation(db: AsyncSession, console: Console) -> bool:
     # Add audit logs
     audit_log = audit_crud.AuditLogger(db)
     audit_log.sys_info("Rotating TOTP keys")
-    
+
     try:
         # Rotate TOTP keys
         with core_security.totp_manager_dependency.get() as totp_m:
@@ -320,7 +355,7 @@ async def totp_key_rotation(db: AsyncSession, console: Console) -> bool:
             for totp_db in totp_dbs:
                 reencrypted_secret = totp_m.rotate_key(new_key, totp_db.key_handle)
                 totp_db.key_handle = reencrypted_secret
-            
+
             totp_m.save_new_key()
 
         # Add audit logs
@@ -336,4 +371,3 @@ async def totp_key_rotation(db: AsyncSession, console: Console) -> bool:
         console.log("[red][ERROR][/red]\t\tError rotating TOTP keys")
         console.print_exception()
         return False
-

@@ -290,7 +290,7 @@ class TaskSchedulerRedis:
         """
         for task_id in self.startup_tasks:
             job = self.scheduler.get_job(task_id)
-            if job:
+            if job and not any(blocked_task in self.startup_tasks for blocked_task in self.task_blocked_by[task_id]):
                 job.modify(next_run_time=datetime.datetime.now(datetime.timezone.utc))
 
     def start(self, run_startup_tasks: bool = True):
