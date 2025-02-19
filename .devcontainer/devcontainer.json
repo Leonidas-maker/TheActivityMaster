@@ -9,7 +9,7 @@
     "python.pythonPath": "/usr/local/bin/python"
   },
   "extensions": ["ms-python.python", "ms-azuretools.vscode-docker"],
-  "postCreateCommand": "pip install -r /workspace/server/app/requirements.txt",
+  "postCreateCommand": "pip install -r /workspace/server/app/requirements.txt && git config --global --add safe.directory /workspace/server",
   "forwardPorts": [8000],
   "containerEnv": {
     "DB_HOST": "host.docker.internal",

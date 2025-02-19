@@ -1,189 +1,113 @@
 import pytest
-from fastapi.testclient import TestClient
 import os
+import time
 
 from .conftest import *
 
-from config.settings import DEFAULT_TIMEZONE, VERIFICATION_ID_PATH
-from main import app
+from config.settings import DEFAULT_TIMEZONE, VERIFICATION_ID_PATH  # type: ignore
 
 import datetime
+
 
 ###########################################################################
 ################################# Default #################################
 ###########################################################################
 @pytest.mark.dependency()
-def test_registered_user(capsys):
-    """Fixture that registers a user and returns the user data"""
-    with TestClient(app) as client:
-        register_user(client, capsys)
+def test_registered_user(test_user, admin_user, capsys):
+    test_user.set_capsys(capsys)
+    admin_user.set_capsys(capsys)
+    test_user.register_user()
+
+    test_user.login_email()
+    admin_user.login_email()
 
 
 ###########################################################################
 ################################## Tests ##################################
 ###########################################################################
 @pytest.mark.dependency(depends=["test_registered_user"])
-def test_verification_identity(capsys):
-    with TestClient(app) as client:
-        tokens = login_email(client, capsys)
-        submit_identity_verification(client, tokens, True)
-        logout(client, tokens)
+def test_verification_identity(test_user):
+    test_user.submit_identity_verification()
 
 
 @pytest.mark.dependency(depends=["test_verification_identity"])
-def test_verification_identity_status(capsys):
-    with TestClient(app) as client:
-        tokens = login_email(client, capsys)
-
-        response = client.get(
-            "/api/v1/verification/identity/self",
-            headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
-        )
-        assert response.status_code == status.HTTP_200_OK
-
-        logout(client, tokens)
+def test_verification_identity_status(test_user):
+    test_user.get(
+        "/api/v1/verification/identity/self",
+    )
 
 
 @pytest.mark.dependency(depends=["test_verification_identity"])
-def test_verification_identity_view(capsys):
-    with TestClient(app) as client:
-        tokens = login_admin_email(client, capsys)
+def test_verification_identity_view(test_user, admin_user):
 
-        response = client.get(
-            "/api/v1/verification/identity/pending",
-            headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
+    response = admin_user.get(
+        "/api/v1/verification/identity/pending",
+    )
+    
+    verification_id = None
+    for verification in response.json():
+        if verification["user_id"] == test_user.user_id:
+            verification_id = verification["id"]
+            break
+    assert verification_id, "Verification not found"
+
+    response = admin_user.get(
+        f"/api/v1/verification/identity/get/{verification_id}",
+    )
+    assert response.json()["status"] == "pending"
+    assert response.json()["id"] == verification_id
+
+    for i in range(3):
+        response = admin_user.get(
+            f"/api/v1/verification/identity/get/{verification_id}/image",
+            params={"index": i},
         )
-        assert response.status_code == status.HTTP_200_OK
-        verification_id = response.json()[0]["id"]
-
-        response = client.get(
-            f"/api/v1/verification/identity/get/{verification_id}",
-            headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["status"] == "pending"
-        assert response.json()["id"] == verification_id
-
-        for i in range(3):
-            response = client.get(
-                f"/api/v1/verification/identity/get/{verification_id}/image",
-                params={"index": i},
-                headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
-            )
-            assert response.status_code == status.HTTP_200_OK
-            assert response.headers["Content-Type"] == "image/png"
-
-        logout(client, tokens)
+        assert response.headers["Content-Type"] == "image/png"
 
 
 @pytest.mark.dependency(depends=["test_verification_identity_view"])
-def test_verification_identity_reject(capsys):
-    with TestClient(app) as client:
-        tokens_client = login_email(client, capsys)
-        submit_identity_verification(client, tokens_client, False)
+def test_verification_identity_reject(admin_user, test_user):
+    test_user.submit_identity_verification(False)
 
-        tokens_admin = login_admin_email(client, capsys)
+    admin_user.verify_identity(test_user.user_id, approve=False)
 
-        response = client.get(
-            "/api/v1/verification/identity/pending",
-            headers={
-                "application-id": pytest.application_id,
-                "Authorization": f"Bearer {tokens_admin['access_token']}",
-            },
-        )
-        assert response.status_code == status.HTTP_200_OK
-        verification_id = response.json()[0]["id"]
-        user_id = response.json()[0]["user_id"]
+    assert os.path.exists(f"{VERIFICATION_ID_PATH}/{test_user.user_id}") is False
 
-        response = client.post(
-            f"/api/v1/verification/identity/reject",
-            headers={
-                "application-id": pytest.application_id,
-                "Authorization": f"Bearer {tokens_admin['access_token']}",
-            },
-            json={"identity_verification_id": verification_id, "reason": "YourMomStinks"},
-        )
-        assert response.status_code == status.HTTP_200_OK
-        assert os.path.exists(f"{VERIFICATION_ID_PATH}/{user_id}") is False
+    time.sleep(1.5)
 
-        logout(client, tokens_admin)
-
-        response = client.get(
-            "/api/v1/verification/identity/self",
-            headers={
-                "application-id": pytest.application_id,
-                "Authorization": f"Bearer {tokens_client['access_token']}",
-            },
-        )
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["status"] == "rejected"
-
-        logout(client, tokens_client)
+    response = test_user.get(
+        "/api/v1/verification/identity/self",
+    )
+    assert response.json()["status"] == "rejected"
 
 
-@pytest.mark.dependency(depends=["test_verification_identity_view"])
-def test_verification_identity_approve(capsys):
-    with TestClient(app) as client:
-        tokens_user = login_email(client, capsys)
-        submit_identity_verification(client, tokens_user, False)
+@pytest.mark.dependency(depends=["test_verification_identity_reject"])
+def test_verification_identity_approve(admin_user, test_user):
+    test_user.submit_identity_verification(False)
 
-        tokens_admin = login_admin_email(client, capsys)
+    admin_user.verify_identity(test_user.user_id)
 
-        response = client.get(
-            "/api/v1/verification/identity/pending",
-            headers={
-                "application-id": pytest.application_id,
-                "Authorization": f"Bearer {tokens_admin['access_token']}",
-            },
-        )
-        assert response.status_code == status.HTTP_200_OK
-        verification_id = response.json()[0]["id"]
-        user_id = response.json()[0]["user_id"]
+    assert os.path.exists(f"{VERIFICATION_ID_PATH}/{test_user.user_id}") is False
 
-        response = client.post(
-            f"/api/v1/verification/identity/approve",
-            params={"verification_id": verification_id},
-            headers={
-                "application-id": pytest.application_id,
-                "Authorization": f"Bearer {tokens_admin['access_token']}",
-            },
-        )
-        assert response.status_code == status.HTTP_200_OK
-        assert os.path.exists(f"{VERIFICATION_ID_PATH}/{user_id}") is False
+    time.sleep(1.5)
 
-        logout(client, tokens_admin)
-
-        response = client.get(
-            "/api/v1/verification/identity/self",
-            headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens_user['access_token']}"},
-        )
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["status"] == "approved"
-
-        logout(client, tokens_user)
+    response = test_user.get(
+        "/api/v1/verification/identity/self",
+    )
+    assert response.json()["status"] == "approved"
 
 
 @pytest.mark.dependency(depends=["test_verification_identity_approve"])
-def test_verification_identity_delete(capsys):
-    with TestClient(app) as client:
-        tokens = login_email(client, capsys)
+def test_verification_identity_delete(test_user):
+    test_user.delete(
+        "/api/v1/verification/identity/self",
+    )
 
-        response = client.delete(
-            "/api/v1/verification/identity/self",
-            headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
-        )
-        assert response.status_code == status.HTTP_200_OK
+    response = test_user.get(
+        "/api/v1/verification/identity/self",
+    )
+    assert response.json()["status"] == "rejected"
 
-        response = client.get(
-            "/api/v1/verification/identity/self",
-            headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
-        )
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["status"] == "rejected"
-
-        assert datetime.datetime.strptime(response.json().get("expires_at"), "%Y-%m-%dT%H:%M:%S").replace(
-            tzinfo=DEFAULT_TIMEZONE
-        ) < datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=30)
-
-        logout(client, tokens)
+    assert datetime.datetime.strptime(response.json().get("expires_at"), "%Y-%m-%dT%H:%M:%S").replace(
+        tzinfo=DEFAULT_TIMEZONE
+    ) < datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=30)

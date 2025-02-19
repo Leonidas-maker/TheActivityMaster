@@ -32,12 +32,13 @@ before_script:
   - source venv/bin/activate
   - pip install pytest pytest-dependency
   - pip install -r server/app/requirements.txt
+  - pytest -k test_init_database
 
 test:
   stage: test
   script:
     - cd server
-    - pytest --junitxml=pytest-report.xml
+    - pytest -n auto --dist=loadfile --junitxml=pytest-report.xml
   artifacts:
     reports:
       junit: server/pytest-report.xml

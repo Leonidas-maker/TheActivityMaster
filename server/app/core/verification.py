@@ -5,7 +5,7 @@ import os
 
 from config import settings
 
-def write_identification_verification(user_id: uuid.UUID, image_files: List[UploadFile]) -> str:
+def write_identification_verification(user_id: uuid.UUID, image_files: List[UploadFile], overwrite: bool = False) -> str:
     """
     Write the identification verification of a user
 
@@ -19,7 +19,10 @@ def write_identification_verification(user_id: uuid.UUID, image_files: List[Uplo
 
 
     if os.path.exists(image_path):
-        raise FileExistsError("User already has an identification verification")
+        if overwrite:
+            clear_identification_verification(user_id, False)
+        else:
+            raise FileExistsError("User already has an identification verification")
     
     os.makedirs(image_path, exist_ok=True)
 

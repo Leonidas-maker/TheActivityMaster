@@ -49,7 +49,7 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     return user_db
 
 
-async def get_user_by_ident(db: AsyncSession, ident: str) -> m_user.User:
+async def get_user_by_ident(db: AsyncSession, ident: str, locked: bool = False) -> m_user.User:
     """
     Get a user by their email address
 
@@ -58,7 +58,11 @@ async def get_user_by_ident(db: AsyncSession, ident: str) -> m_user.User:
     :return: User: The user
     """
     query_options = [joinedload(m_user.User.generic_roles)]
-    res = await db.execute(select(m_user.User).options(*query_options).filter(or_(m_user.User.email == ident, m_user.User.username == ident)))
+
+    stmt = select(m_user.User).options(*query_options).filter(or_(m_user.User.email == ident, m_user.User.username == ident))
+    if locked:
+        stmt = stmt.with_for_update()
+    res = await db.execute(stmt)
     return res.unique().scalar_one_or_none()
 
 

@@ -1,4 +1,3 @@
-# crud/verification.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, exists
 from sqlalchemy.sql.expression import and_, or_
@@ -8,7 +7,7 @@ from typing import List, Tuple
 import traceback
 from rich.console import Console
 
-from models import m_verification 
+from models import m_verification
 from schemas.s_verification import IdentityVerificationRequest
 
 from config.settings import DEFAULT_TIMEZONE
@@ -26,7 +25,7 @@ async def create_identity_verification(
         last_name=verification_data.last_name,
         date_of_birth=verification_data.date_of_birth,
         image_url=image_url,
-        status= m_verification.VerificationStatus.PENDING,
+        status=m_verification.VerificationStatus.PENDING,
         expires_at=datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=30),
     )
     db.add(new_verification)
@@ -37,7 +36,9 @@ async def create_identity_verification(
 async def purge_sensitive_fields(
     db: AsyncSession, verification_id: uuid.UUID, approved: bool = False
 ) -> m_verification.IdentityVerification:
-    result = await db.execute(select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id))
+    result = await db.execute(
+        select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id)
+    )
     verification = result.scalars().first()
 
     if verification:
@@ -45,7 +46,9 @@ async def purge_sensitive_fields(
         verification.last_name = ""
         verification.date_of_birth = ""
         verification.image_url = ""
-        verification.status =  m_verification.VerificationStatus.APPROVED if approved else  m_verification.VerificationStatus.REJECTED
+        verification.status = (
+            m_verification.VerificationStatus.APPROVED if approved else m_verification.VerificationStatus.REJECTED
+        )
         if approved:
             expire_date = datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=730)
         await db.flush()
@@ -66,30 +69,36 @@ async def get_identity_verification_by_user(
     if only_active:
         result = await db.execute(
             select(m_verification.IdentityVerification)
-            .where(
+            .filter(
                 and_(
                     m_verification.IdentityVerification.user_id == user_id,
                     or_(
                         m_verification.IdentityVerification.status == m_verification.VerificationStatus.PENDING,
-                        m_verification.IdentityVerification.status == m_verification.VerificationStatus.APPROVED,
+                        and_(
+                            m_verification.IdentityVerification.status == m_verification.VerificationStatus.APPROVED,
+                            m_verification.IdentityVerification.expires_at
+                            > datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=time_limit),
+                        ),
                     ),
-                    m_verification.IdentityVerification.expires_at
-                    > datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=time_limit),
                 )
             )
-            .order_by(m_verification.IdentityVerification.created_at.desc())
+            .order_by(m_verification.IdentityVerification.expires_at.desc())
         )
     else:
         result = await db.execute(
             select(m_verification.IdentityVerification)
-            .where(m_verification.IdentityVerification.user_id == user_id)
-            .order_by(m_verification.IdentityVerification.created_at.desc())
+            .filter(m_verification.IdentityVerification.user_id == user_id)
+            .order_by(m_verification.IdentityVerification.expires_at.desc())
         )
     return result.scalars().first()
 
 
-async def get_identity_verification_by_id(db: AsyncSession, verification_id: uuid.UUID) -> m_verification.IdentityVerification:
-    result = await db.execute(select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id))
+async def get_identity_verification_by_id(
+    db: AsyncSession, verification_id: uuid.UUID
+) -> m_verification.IdentityVerification:
+    result = await db.execute(
+        select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id)
+    )
     return result.scalars().first()
 
 
@@ -109,14 +118,18 @@ async def get_pending_identity_verifications(db: AsyncSession) -> List[Tuple[uui
     return [(row[0], row[1]) for row in result.all()]
 
 
-async def get_identity_verification_details(db: AsyncSession, verification_id: uuid.UUID) -> m_verification.IdentityVerification:
+async def get_identity_verification_details(
+    db: AsyncSession, verification_id: uuid.UUID
+) -> m_verification.IdentityVerification:
     """Get the details of an identity verification.
 
     :param db: The database session
     :param verification_id: The verification ID
     :return: The identity verification
     """
-    result = await db.execute(select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id))
+    result = await db.execute(
+        select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id)
+    )
     return result.scalars().first()
 
 
@@ -146,12 +159,17 @@ async def is_user_identity_verified(db: AsyncSession, user_id: uuid.UUID) -> boo
 
 
 async def delete_identity_verification(db: AsyncSession, verification_id: uuid.UUID, soft_delete: bool = True):
-    result = await db.execute(select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id))
+    result = await db.execute(
+        select(m_verification.IdentityVerification).where(m_verification.IdentityVerification.id == verification_id)
+    )
     verification = result.scalars().first()
     if verification:
         if soft_delete:
             verification.expires_at = datetime.datetime.now(DEFAULT_TIMEZONE)
-            if verification.status == m_verification.VerificationStatus.PENDING or verification.status == m_verification.VerificationStatus.APPROVED:
+            if (
+                verification.status == m_verification.VerificationStatus.PENDING
+                or verification.status == m_verification.VerificationStatus.APPROVED
+            ):
                 verification.status = m_verification.VerificationStatus.REJECTED
         else:
             await db.delete(verification)

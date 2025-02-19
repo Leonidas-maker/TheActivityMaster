@@ -1,54 +1,34 @@
-# type: ignore
 import pytest
 from datetime import datetime
-from fastapi import status
-import uuid
 import re
-import pyotp
 from urllib.parse import urlencode
-import time
-from pathlib import Path
+from fastapi.testclient import TestClient
 
-from pytest_dependency import DependencyManager
+from .testclasses import TestUser, AdminUser
 
-
-###########################################################################
-################################# Helpers #################################
-###########################################################################
-def register_user(client, capsys):
-    # Recreate the user data to avoid conflicts
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
-    pytest.test_user_data["username"] = f"testuser{timestamp}"
-    pytest.test_user_data["email"] = f"test.user+{timestamp}@example.com"
-
-    response = client.post("/api/v1/user/register", json={**pytest.test_user_data, "address": None})
-    if response.status_code == 400 and "already exists" in response.json()["detail"]:
-        return
-
-    assert response.status_code == 200
-    pytest.user_id = response.json()["message"]
-
-    querry = get_verify_token(capsys)
-
-    response = client.post(
-        f"/api/v1/verification/verify_email?{querry}",
-    )
-    assert response.status_code == 200
+from main import app
 
 
-def get_email_code(capsys):
-    captured = capsys.readouterr()
-
-    match = re.search(r"Email code:\s*(\d+)", captured.out)
-    assert match, "Bestätigungscode nicht gefunden!"
-
-    code = match.group(1)
-    return code
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
 
 
-###########################################################################
-############################### Verification ##############################
-###########################################################################
+@pytest.fixture(scope="module")
+def test_user(client):
+    user = TestUser(client)
+    yield user
+    user.logout()
+
+
+@pytest.fixture(scope="module")
+def admin_user(client):
+    user = AdminUser(client)
+    yield user
+    user.logout()
+
+
 def get_verify_token(capsys):
     # Capture standard output
     captured = capsys.readouterr()
@@ -66,189 +46,8 @@ def get_verify_token(capsys):
     return urlencode({"user_id": user_id, "expires": expires, "signature": signature})
 
 
-def submit_identity_verification(client, tokens, check_status=True):
-    image_files_path = Path(__file__).parent / "test_files" / "img" / "identity"
-
-    images = []
-    file_handlers = []
-    for file in image_files_path.iterdir():
-        f = open(file, "rb")
-        file_handlers.append(f)
-        images.append(("image_files", (file.name, f, "image/png")))
-
-    response = client.post(
-        "/api/v1/verification/identity/submit_identity_verification",
-        headers={"application-id": pytest.application_id, "Authorization": f"Bearer {tokens['access_token']}"},
-        data={
-            "id_card_mrz": "dadhbwahdbahb",
-            "first_name": "Test",
-            "last_name": "User",
-            "date_of_birth": "01.01.2025",
-        },
-        files=images,  # Pass files using the files parameter
-    )
-
-    if check_status:
-        assert response.status_code == status.HTTP_200_OK
-
-    # Close all file handles after the request
-    for f in file_handlers:
-        f.close()
-
-
-def verify_identity(client, capsys):
-    tokens = login_admin_email(client, capsys)
-
-    response = client.get(
-        "/api/v1/verification/identity/pending",
-        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-    )
-    assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) > 0
-
-    identity_verification_id = ""
-    for identity_verification in response.json():
-        if identity_verification["user_id"] == pytest.user_id:
-            identity_verification_id = identity_verification["id"]
-            break
-
-    assert identity_verification_id, "Identity verification ID not found for user."
-
-    response = client.post(
-        f"/api/v1/verification/identity/approve",
-        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-        params={"verification_id": identity_verification_id},
-    )
-    assert response.status_code == status.HTTP_200_OK
-
-
-def check_identity_verification_status(client, tokens):
-    response = client.get(
-        "/api/v1/verification/identity/self",
-        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-    )
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["status"] == "approved"
-
-
-###########################################################################
-############################ Standart Auth Flow ###########################
-###########################################################################
-def login_email(client, capsys) -> dict:
-    login_response = client.post(
-        "/api/v1/auth/login",
-        headers={"application-id": pytest.application_id},
-        json={"ident": pytest.test_user_data["email"], "password": pytest.test_user_data["password"]},
-    )
-    assert login_response.status_code == status.HTTP_200_OK
-    security_token = login_response.json()["security_token"]
-
-    code = get_email_code(capsys)
-
-    # Verify 2FA- Email
-    verify_response = client.post(
-        "/api/v1/auth/verify-code-2fa",
-        headers={"Authorization": f"Bearer {security_token}", "application-id": pytest.application_id},
-        json={"code": code, "is_totp": False},
-    )
-    assert verify_response.status_code == status.HTTP_200_OK
-    tokens = verify_response.json()
-    assert "access_token" in tokens
-    assert "refresh_token" in tokens
-    return tokens
-
-
-def login_admin_email(client, capsys) -> dict:
-    login_response = client.post(
-        "/api/v1/auth/login",
-        headers={"application-id": pytest.application_id},
-        json={"ident": "admin@localhost.de", "password": "ADMIN_ADMIN"},
-    )
-    assert login_response.status_code == status.HTTP_200_OK
-    security_token = login_response.json()["security_token"]
-
-    code = get_email_code(capsys)
-
-    # Verify 2FA- Email
-    verify_response = client.post(
-        "/api/v1/auth/verify-code-2fa",
-        headers={"Authorization": f"Bearer {security_token}", "application-id": pytest.application_id},
-        json={"code": code, "is_totp": False},
-    )
-    assert verify_response.status_code == status.HTTP_200_OK
-    tokens = verify_response.json()
-    assert "access_token" in tokens
-    assert "refresh_token" in tokens
-    return tokens
-
-def get_admin_user_details(client, capsys):
-    tokens = login_admin_email(client, capsys)
-    response = client.get(
-        "/api/v1/user/me",
-        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-    )
-    assert response.status_code == status.HTTP_200_OK
-    logout(client, tokens)
-    return response.json()
-
-
-def login_totp(client) -> dict:
-    login_response = client.post(
-        "/api/v1/auth/login",
-        headers={"application-id": pytest.application_id},
-        json={"ident": pytest.test_user_data["username"], "password": pytest.test_user_data["password"]},
-    )
-    assert login_response.status_code == status.HTTP_200_OK
-    security_token = login_response.json()["security_token"]
-
-    totp = pyotp.TOTP(pytest.totp_secret)
-    code = totp.now()
-    print("\nCode already used, generating new code...", end="")
-    while code == pytest.last_totp_code:
-        code = totp.now()
-        time.sleep(5)
-        print(".", end="")
-    print()
-
-    pytest.last_totp_code = code
-
-    # Verify 2FA- TOTP
-    verify_response = client.post(
-        "/api/v1/auth/verify-code-2fa",
-        headers={"Authorization": f"Bearer {security_token}", "application-id": pytest.application_id},
-        json={"code": code, "is_totp": True},
-    )
-    assert verify_response.status_code == status.HTTP_200_OK
-    tokens = verify_response.json()
-    assert "access_token" in tokens
-    assert "refresh_token" in tokens
-    return tokens
-
-
-def logout(client, tokens):
-    logout_response = client.delete(
-        "/api/v1/auth/logout",
-        headers={"Authorization": f"Bearer {tokens['access_token']}", "application-id": pytest.application_id},
-    )
-    assert logout_response.status_code == status.HTTP_200_OK
-
-
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
 
-# ======================================================== #
-# ========================= User ========================= #
-# ======================================================== #
-pytest.test_user_data = {
-    "username": f"testuser{timestamp}",
-    "email": f"test.user+{timestamp}@example.com",
-    "password": "securepassword123",
-    "first_name": "Test",
-    "last_name": "User",
-}
-pytest.user_id = None
-pytest.totp_secret = None
-pytest.application_id = uuid.uuid4().hex
-pytest.last_totp_code = None
 
 # ======================================================== #
 # ========================= Club ========================= #
@@ -266,9 +65,4 @@ pytest.club_data = {
 }
 pytest.club_id = None
 
-pytest.club_role_data = {
-    "level": 5,
-    "name": "Test Role",
-    "description": "Test Description",
-    "permissions": []
-}
+pytest.club_role_data = {"level": 5, "name": "Test Role", "description": "Test Description", "permissions": []}

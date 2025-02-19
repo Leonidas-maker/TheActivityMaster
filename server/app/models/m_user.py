@@ -14,6 +14,8 @@ from sqlalchemy import (
     Enum,
     Text,
     Index,
+    CheckConstraint,
+    Computed,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 import uuid
@@ -100,7 +102,8 @@ class User(Base):
             raise ValueError("identity_verifications not loaded")
 
         return any(
-            iv.status == VerificationStatus.APPROVED and iv.expires_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.now(DEFAULT_TIMEZONE)
+            iv.status == VerificationStatus.APPROVED
+            and iv.expires_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.now(DEFAULT_TIMEZONE)
             for iv in self.identity_verifications
         )
 
@@ -144,6 +147,8 @@ class UserRole(Base):
 class User2FAMethods(enum.Enum):
     EMAIL = "email"
     TOTP = "totp"
+
+
 class User2FA(Base):
     """
     User 2FA table
@@ -158,7 +163,7 @@ class User2FA(Base):
     __tablename__ = "user_2fa"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     method: Mapped[User2FAMethods] = mapped_column(Enum(User2FAMethods), nullable=False)
 
     public_key: Mapped[str] = mapped_column(String(512), nullable=True)  # Public key as used in U2F
@@ -176,10 +181,19 @@ class User2FA(Base):
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE)
+        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
     )
 
     user: Mapped["User"] = relationship("User", back_populates="_2fa")
+
+    method_unique: Mapped[str] = mapped_column(
+        String(32), Computed("CASE WHEN method IN ('email', 'totp') THEN method ELSE NULL END", persisted=False)
+    )
+
+    __table_args__ = (
+        CheckConstraint("fails >= -1", name="check_fails"),
+        Index("ix_user_2fa_user_method_unique", "user_id", "method_unique", unique=True),
+    )
 
 
 class UserPasskey(Base):

@@ -181,7 +181,7 @@ async def login(
     if not application_id:
         raise HTTPException(status_code=401, detail="Invalid application ID")
 
-    user = await user_crud.get_user_by_ident(db, login_form.ident)
+    user = await user_crud.get_user_by_ident(db, login_form.ident, locked=True)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -197,22 +197,21 @@ async def login(
             # TODO: Send the email verification email here if the last email was sent more than 30 minutes ago
             raise HTTPException(status_code=401, detail="Email address not verified")
 
-    audit_logger.user_login(user.id, ip_address)
-
-    security_token = await create_security_token(ep_context, user.id, application_id, ["2fa"], ip_address)
 
     # Get the 2FA methods
-    res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method, m_user.User2FA.fails).filter(m_user.User2FA.user_id == user.id))
-    methods_2fa = {method: id for id, method, fails in res.all() if fails != -1}
+    res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method, m_user.User2FA.fails, m_user.User2FA.updated_at).filter(m_user.User2FA.user_id == user.id))
+    methods_2fa = {method: (id, updated_at) for id, method, fails, updated_at in res.all() if fails != -1}
 
     # Handle case where EMAIL is the only 2FA method
     if not methods_2fa or (len(methods_2fa) == 1 and m_user.User2FAMethods.EMAIL in methods_2fa):
         if m_user.User2FAMethods.EMAIL in methods_2fa:
             # Delete the existing EMAIL 2FA method
-            email_2fa_id = methods_2fa[m_user.User2FAMethods.EMAIL]
+            email_2fa_id, updated_at = methods_2fa[m_user.User2FAMethods.EMAIL]
+            if updated_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(DEFAULT_TIMEZONE) - datetime.timedelta(seconds=30):
+                raise HTTPException(status_code=429, detail="2FA code already sent. Please wait a few seconds before trying again.")
             await auth_crud.delete_single_2fa(db, user.id, email_2fa_id)
         else:
-            methods_2fa[m_user.User2FAMethods.EMAIL] = None
+            methods_2fa[m_user.User2FAMethods.EMAIL] = (None, None)
 
         # Create a new email code and potentially add a new 2FA entry
         email_code = await auth_crud.create_email_code(db, user)
@@ -220,6 +219,8 @@ async def login(
         if ENVIRONMENT == "dev":
             print(f"Email code: {email_code}")
 
+    security_token = await create_security_token(ep_context, user.id, application_id, ["2fa"], ip_address)
+    audit_logger.user_login(user.id, ip_address)
     await db.commit()
 
     return security_token, list(methods_2fa.keys())

@@ -15,12 +15,6 @@ from core import security as core_security
 from crud import audit as audit_crud
 from data.auth import TokenDetails
 
-
-###########################################################################
-################################### MAIN ##################################
-###########################################################################
-
-
 ###########################################################################
 ################################ JWT TOKENS ###############################
 ###########################################################################
@@ -150,8 +144,6 @@ async def delete_token(db: AsyncSession, jti: uuid.UUID) -> int:
     :return: The number of tokens deleted
     """
     res = await db.execute(delete(UserToken).filter(UserToken.id == jti))
-    if res.rowcount:
-        await db.flush()
     return res.rowcount
 
 
@@ -166,8 +158,6 @@ async def delete_auth_tokens(db: AsyncSession, user_id: uuid.UUID, hashed_applic
     res = await db.execute(
         delete(UserToken).filter(UserToken.user_id == user_id, UserToken.application_id_hash == hashed_application_id)
     )
-    if res.rowcount:
-        await db.flush()
     return res.rowcount
 
 
@@ -179,8 +169,6 @@ async def delete_all_auth_tokens(db: AsyncSession, user_id: uuid.UUID) -> int:
     :return: The number of tokens deleted
     """
     res = await db.execute(delete(UserToken).filter(UserToken.user_id == user_id))
-    if res.rowcount:
-        await db.flush()
     return res.rowcount
 
 
@@ -213,8 +201,6 @@ async def delete_single_2fa(db: AsyncSession, user_id: uuid.UUID, id_2fa: uuid.U
     :return: The number of 2FA methods deleted
     """
     res = await db.execute(delete(User2FA).filter(User2FA.user_id == user_id, User2FA.id == id_2fa))
-    if res.rowcount:
-        await db.flush()
     return res.rowcount
 
 
@@ -232,25 +218,6 @@ async def create_totp(db: AsyncSession, user: User) -> str:
     db.add(totp_2fa)
     await db.flush()
     return secret
-
-
-async def verify_totp(db: AsyncSession, user: User, code: str) -> bool:
-    """Verify a TOTP code
-
-    :param db: The database session
-    :param user: The user to verify the TOTP code for
-    :param code: The TOTP code to verify
-    :return: True if the code is valid, False otherwise
-    """
-    with core_security.totp_manager_dependency.get() as totp_m:
-        res = await db.execute(
-            select(User2FA).filter(User2FA.user_id == user.id, User2FA.method == User2FAMethods.TOTP)
-        )
-        totp_2fa = res.scalar_one_or_none()
-        if not totp_2fa:
-            return False
-
-        return totp_m.verify_totp(totp_2fa.key_handle, code)
 
 
 async def get_2fa_totp(db: AsyncSession, user_id: uuid.UUID) -> User2FA:

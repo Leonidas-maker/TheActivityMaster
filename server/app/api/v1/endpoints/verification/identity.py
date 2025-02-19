@@ -20,6 +20,7 @@ from config import settings
 
 router = APIRouter()
 
+
 @router.post(
     "/submit_identity_verification", response_model=s_generic.MessageResponse, tags=["Verification - Identity"]
 )
@@ -117,7 +118,7 @@ async def get_identity_verification_details_v1(
     try:
         return await verification_controller.get_identity_verification_details(
             ep_context, token_details, verification_id
-        ) 
+        )
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get identity verification details")
 
@@ -143,9 +144,7 @@ async def get_identity_verification_image_v1(
         await handle_exception(e, ep_context, "Failed to get identity verification image")
 
 
-@router.get(
-    "/self", response_model=s_verification.IdentityVerificationStatusResponse, tags=["Verification - Identity"]
-)
+@router.get("/self", response_model=s_verification.IdentityVerificationStatusResponse, tags=["Verification - Identity"])
 async def get_self_identity_verification_status_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),

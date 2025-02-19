@@ -192,6 +192,12 @@ async def totp_register(
     # Get the TOTP secret
     totp_db = await auth_crud.get_2fa_totp(db, user_id)
 
+    if not totp_db:
+        raise HTTPException(status_code=400, detail="TOTP not registered")
+    
+    if totp_db.fails != -1:
+        raise HTTPException(status_code=400, detail="TOTP already registered")
+
     # Verify the TOTP code
     with core_security.totp_manager_dependency.get() as totp_m:
         if not totp_m.verify_totp(totp_db.key_handle, _2fa_code):
