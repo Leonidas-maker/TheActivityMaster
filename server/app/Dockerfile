@@ -5,7 +5,7 @@ FROM python:${PYTHON_VERSION}-slim AS base
 # Umgebungsvariablen
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV TERM=xterm
+ENV TERM=xterm-256color
 ENV DB_HOST=mariadb
 ENV REDIS_HOST=redis
 

@@ -44,9 +44,10 @@ services:
     depends_on:
       - mariadb
       - redis
-    # volumes:
-    #   - ./app:/app
-    # working_dir: /app
+    volumes:
+      - backend_data/keyfiles:/app/config/keyfiles
+      - backend_data/verifications:/app/config/verifications
+    working_dir: /app
     ports:
       - "8001:8001"
     command: [ "uvicorn", "main:app", "--host=0.0.0.0", "--port=8001" ]
@@ -61,3 +62,5 @@ services:
 
 volumes:
   mariadb_data:
+
+  backend_data:
