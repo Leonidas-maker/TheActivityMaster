@@ -93,6 +93,13 @@ export default function AuthLayout() {
                         gestureEnabled: true,
                     }}
                 />
+                <Stack.Screen
+                    name="(info)/VerifyMailConfirm"
+                    options={{
+                        headerShown: false,
+                        presentation: "modal",
+                    }}
+                />
             </Stack>
         </SafeAreaProvider>
     );

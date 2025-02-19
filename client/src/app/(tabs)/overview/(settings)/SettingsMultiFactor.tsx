@@ -18,14 +18,27 @@ const SettingsMultiFactor = () => {
     const [error, setError] = React.useState(true);
 
     const handleEnablePress = async () => {
+        if (error) {
+            Toast.show({
+                type: 'error',
+                text1: t("mfa_enabled_error_empty"),
+                text2: t("mfa_enabled_error_subheading_empty"),
+            });
+            return;
+        }
+
         try {
             await totpRegister(code);
-            //router.push('/some_route');
+            while (router.canGoBack()) {
+                router.back();
+            }
+            router.navigate("/(tabs)/overview")
         } catch (error) {
             console.error("Error enabling TOTP:", error);
             Toast.show({
                 type: 'error',
                 text1: t("mfa_enabled_error"),
+                text2: t("mfa_enabled_error_subheading"),
             });
         }
     };
