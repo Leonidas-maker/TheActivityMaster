@@ -21,7 +21,8 @@ export const register = async (
   city: string,
   state: string,
   country: string,
-  password: string
+  password: string,
+  newsletter_subscribed: boolean,
 ): Promise<any> => {
   try {
     // Prepare the request body with the correct structure
@@ -38,6 +39,7 @@ export const register = async (
         country,
       },
       password,
+      newsletter_subscribed,
     };
 
     // Call the /user/register endpoint with the provided credentials
@@ -162,6 +164,18 @@ export const deleteUser = async (password: string): Promise<any> => {
     return response.data;
   } catch (error) {
     console.error("Error during deleteUser call:", error);
+    throw error;
+  }
+};
+
+export const updateNewsletterSubscription = async (
+  newsletter_subscription: boolean
+): Promise<any> => {
+  try {
+    const response = await axiosInstance.put("/user/me/newsletter?newsletter_subscribe=" + newsletter_subscription);
+    return response.data;
+  } catch (error) {
+    console.error("Error during updateNewsletterSubscription call:", error);
     throw error;
   }
 };

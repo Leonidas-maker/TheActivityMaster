@@ -280,7 +280,8 @@ const SignUp: React.FC = () => {
                 city,
                 state,
                 country,
-                password
+                password,
+                receiveNews
             );
 
             router.replace("/auth/(info)/VerifyMail");

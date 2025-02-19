@@ -101,5 +101,25 @@
     "settings_activate_mfa_manual": "Kopiere den Key in die Zwischenablage",
     "settings_activate_mfa_next": "Gib den Code aus der Authenticator-App ein",
     "settings_activate_mfa_success": "Multifaktor-Authentifizierung erfolgreich aktiviert",
-    "settings_activate_mfa_secret_copied": "Key erfolgreich kopiert!"
+    "settings_activate_mfa_secret_copied": "Key erfolgreich kopiert!",
+    "multi_factor_authentication_enable_title": "Gib den Code aus der Authenticator-App ein",
+    "mfa_enable_button": "Aktiviere Multifaktor-Authentifizierung",
+    "mfa_enabled_error": "Fehler beim Aktivieren der Multifaktor-Authentifizierung",
+    "mfa_enabled_error_subheading": "Überprüfe den eingegebenen Code oder versuche es später erneut",
+    "mfa_enabled_error_empty": "Eingabefehler",
+    "mfa_enabled_error_subheading_empty": "Bitte füllen Sie alle Felder aus",
+    "settings_deactivate_mfa_heading": "Deaktivieren der Multifaktor-Authentifizierung",
+    "settings_deactivate_mfa_description": "Geben Sie den Code aus der Authenticator-App und Ihr Passwort ein",
+    "mfa_deactivate_password_textfield": "Passwort",
+    "settings_deactivate_mfa_next": "Multifaktor-Authentifizierung deaktivieren",
+    "mfa_deactivate_error": "Fehler beim Deaktivieren der Multifaktor-Authentifizierung",
+    "mfa_deactivate_error_subheading": "Überprüfe die Daten oder versuche es später erneut",
+    "mfa_deactivate_error_empty": "Eingabefehler",
+    "mfa_deactivate_error_subheading_empty": "Bitte füllen Sie alle Felder aus",
+    "settings_receive_news_error": "Fehler beim Ändern der Nachrichteneinstellungen",
+    "settings_receive_news_error_subheading": "Bitte versuche es später erneut",
+    "settings_receive_notification_header": "Nachrichten Einstellungen ändern",
+    "receive_news": "E-Mail-Benachrichtigungen",
+    "receive_news_text": "Newsletter, Aktionen und mehr"
+    
 }
