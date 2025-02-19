@@ -45,8 +45,8 @@ services:
       - mariadb
       - redis
     volumes:
-      - backend_data/keyfiles:/app/config/keyfiles
-      - backend_data/verifications:/app/config/verifications
+      - backend_keyfiles:/app/config/keyfiles
+      - backend_verifications:/app/config/verifications
     working_dir: /app
     ports:
       - "8001:8001"
@@ -62,5 +62,5 @@ services:
 
 volumes:
   mariadb_data:
-
-  backend_data:
+  backend_keyfiles:
+  backend_verifications:
