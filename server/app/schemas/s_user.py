@@ -11,10 +11,10 @@ from .s_generic import Address
 # ======================================================== #
 class UserBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    username: str = Field(..., max_length=50)
-    email: EmailStr = Field(..., max_length=255)
-    first_name: str = Field(..., max_length=100)
-    last_name: str = Field(..., max_length=100)
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr = Field(...,  min_length=3, max_length=255)
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
     address: Optional[Address] = None
 
 

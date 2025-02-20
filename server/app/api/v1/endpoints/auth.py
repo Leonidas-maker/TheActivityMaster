@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Header
+from fastapi import APIRouter, Depends, Request, Header, Query, Body
 from fastapi.security import OAuth2PasswordBearer
 
 
@@ -9,7 +9,7 @@ from core.generic import EndpointContext
 
 from utils.exceptions import handle_exception
 
-import schemas.s_auth as s_auth
+from schemas import s_auth, s_generic
 
 import middleware.auth as auth_middleware
 from middleware.general import get_endpoint_context
@@ -22,8 +22,8 @@ router = APIRouter()
 
 @router.post("/login", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Login"])
 async def login_v1(
-    login_form: s_auth.LoginRequest,
     request: Request,
+    login_form: s_auth.LoginRequest = Body(..., description="The login form"),
     application_id: str = Header(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -39,8 +39,8 @@ async def login_v1(
 
 @router.post("/verify-code-2fa", response_model=s_auth.TokenResponse, tags=["Authentication - Login"])
 async def verify_code_2fa_v1(
-    metadata: s_auth.LoginCode2fa,
     request: Request,
+    metadata: s_auth.LoginCode2fa = Body(..., description="The 2FA code and method"),
     token_details: core_security.TokenDetails = Depends(auth_middleware.SecurityTokenChecker("2fa")),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -71,7 +71,7 @@ async def refresh_token_v1(
         await handle_exception(e, ep_context, "Failed to refresh token")
 
 
-@router.delete("/logout", tags=["Authentication - Token"])
+@router.delete("/logout", response_model=s_generic.MessageResponse, tags=["Authentication - Token"])
 async def logout_v1(
     request: Request,
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
@@ -85,7 +85,8 @@ async def logout_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to logout")
 
-@router.delete("/logout-all", tags=["Authentication - Token"])
+
+@router.delete("/logout-all", response_model=s_generic.MessageResponse, tags=["Authentication - Token"])
 async def logout_all_v1(
     request: Request,
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
@@ -100,10 +101,10 @@ async def logout_all_v1(
         await handle_exception(e, ep_context, "Failed to logout from all devices")
 
 
-@router.post("/forgot-password", tags=["Authentication - Forgot-Password"])
+@router.post("/forgot-password", response_model=s_generic.MessageResponse, tags=["Authentication - Forgot-Password"])
 async def forgot_password_v1(
-    ident: str,
     request: Request,
+    ident: str = Query(..., min_length=3, description="The username or email of the user"),
     application_id: str = Header(..., alias="Application-Id"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -115,15 +116,16 @@ async def forgot_password_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to send forgot password email")
 
-@router.post("/reset-password", tags=["Authentication - Forgot-Password"])
+
+@router.post("/reset-password", response_model=s_generic.MessageResponse, tags=["Authentication - Forgot-Password"])
 async def reset_password_v1(
-    reset_form: s_auth.ResetPassword,
+    reset_form: s_auth.ResetPassword = Body(..., description="The reset password form"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.SecurityTokenChecker("reset_password")),
 ):
     """Reset a user's password"""
     try:
         await auth_controller.reset_password(ep_context, token_details, reset_form.password)
+        return {"message": "Successfully reset password"}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to reset password")
-
