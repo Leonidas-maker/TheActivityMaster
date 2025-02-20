@@ -4,15 +4,15 @@ import { useTranslation } from "react-i18next";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import { useRouter } from "expo-router";
 
-const ForgotPassword = () => {
+const ResetPassword = () => {
     const { t } = useTranslation();
     const router = useRouter();
 
     return (
         <View className="flex h-screen items-center bg-light_primary dark:bg-dark_primary">
-            <DefaultText text="This is the forgot password settings page" />
+            <DefaultText text="This is the reset password settings page" />
         </View>
     );
 };
 
-export default ForgotPassword;
+export default ResetPassword;

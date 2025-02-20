@@ -25,5 +25,6 @@
     "settings_name_header": "Name",
     "settings_forgot_password_header": "Passwort vergessen",
     "settings_activate_mfa_header": "Zwei-Faktor-Authentifizierung aktivieren",
-    "settings_deactivate_mfa_header": "Zwei-Faktor-Authentifizierung deaktivieren"
+    "settings_deactivate_mfa_header": "Zwei-Faktor-Authentifizierung deaktivieren",
+    "verify_email_header": "E-Mail verifizieren"
 }
