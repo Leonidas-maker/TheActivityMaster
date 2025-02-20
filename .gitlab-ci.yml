@@ -15,6 +15,12 @@ variables:
   DB_HOST: "mariadb"
   REDIS_HOST: "redis"
   DOCKER_DRIVER: overlay2
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .cache/pip/
 
 services:
   - name: mariadb:latest
@@ -30,8 +36,8 @@ before_script:
   - apt-get update && apt-get install -y python3-pip python3-venv
   - python3 -m venv venv
   - source venv/bin/activate
-  - pip install pytest pytest-dependency
-  - pip install -r server/app/requirements.txt
+  - pip install --cache-dir $PIP_CACHE_DIR pytest pytest-dependency
+  - pip install --cache-dir $PIP_CACHE_DIR -r server/app/requirements.txt
   - pytest -k test_init_database
 
 test:
@@ -57,7 +63,8 @@ docker_build:
       command: ["--tls=false"]
   variables:
     DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: "1"
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build -t "$CI_REGISTRY_IMAGE/backend-dev:latest" server/app/
+    - docker build --cache-from "$CI_REGISTRY_IMAGE/backend-dev:latest" -t "$CI_REGISTRY_IMAGE/backend-dev:latest" server/app/
     - docker push "$CI_REGISTRY_IMAGE/backend-dev:latest"
