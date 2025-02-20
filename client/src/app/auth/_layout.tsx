@@ -96,7 +96,15 @@ export default function AuthLayout() {
                 <Stack.Screen
                     name="(info)/VerifyMailConfirm"
                     options={{
-                        headerShown: false,
+                        headerTitle: t("verify_email_header"),
+                        presentation: "modal",
+                        headerLeft: () => null,
+                    }}
+                />
+                <Stack.Screen
+                    name="ResetPassword"
+                    options={{
+                        headerTitle: t("settings_reset_password_header"),
                         presentation: "modal",
                     }}
                 />
