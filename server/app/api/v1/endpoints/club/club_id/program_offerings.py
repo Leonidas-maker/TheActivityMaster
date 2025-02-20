@@ -118,13 +118,37 @@ async def delete_program_v1(club_id: uuid.UUID, program_id: uuid.UUID):
 ################################# Sessions ################################
 ###########################################################################
 @router.get("/{program_id}/sessions", tags=["Club - Program - Session"])
-async def get_program_sessions_v1(club_id: uuid.UUID, program_id: uuid.UUID):
-    pass
+async def get_program_sessions_v1(
+    club_id: uuid.UUID,
+    program_id: uuid.UUID,
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        pass
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get program sessions")
 
 
-@router.post("/{program_id}/sessions", tags=["Club - Program - Session"])
-async def create_session_v1(club_id: uuid.UUID, program_id: uuid.UUID):
-    pass
+@router.post(
+    "/{program_id}/sessions",
+    response_model=s_club.Session,
+    tags=["Club - Program - Session"],
+    response_model_exclude_none=True,
+)
+async def create_session_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    new_session: s_club.SessionCreate = Body(..., description="The session values for creation"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    try:
+        return await club_controller.create_session(ep_context, token_details, club_id, program_id, new_session)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to create session")
 
 
 @router.get("/{program_id}/sessions/{session_id}", tags=["Club - Program - Session"])

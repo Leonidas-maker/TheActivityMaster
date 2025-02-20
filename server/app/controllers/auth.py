@@ -5,7 +5,7 @@ from sqlalchemy import select, delete
 import jwt
 import datetime
 from typing import List, Union
-import traceback
+from urllib.parse import urlencode
 
 from config.settings import DEBUG, DEFAULT_TIMEZONE, ENVIRONMENT
 from config.security import TOKEN_ISSUER
@@ -379,7 +379,7 @@ async def logout_all_sessions(ep_context: EndpointContext, token_details: core_s
     await db.commit()
 
 
-async def forgot_password(ep_context: EndpointContext, ident: str, ip_address: str) -> None:
+async def forgot_password(ep_context: EndpointContext, ident: str, application_id:str, ip_address: str) -> None:
     """Send a password reset email to the user
 
     :param ep_context: The endpoint context
@@ -400,40 +400,15 @@ async def forgot_password(ep_context: EndpointContext, ident: str, ip_address: s
     if not await audit_crud.forgot_password_allowed(db, user.id):
         raise HTTPException(status_code=429, detail="Too many password reset requests. Please try again later.")
 
-    with core_security.email_verify_manager_dependency.get() as emv:
-        url_params = emv.generate_verification_params(user.id, 300)
-        # TODO send email
-        if ENVIRONMENT == "dev":
-            print(url_params)
+    security_token = await create_security_token(
+        ep_context, user.id, application_id, ["reset_password"], ip_address
+    )
+    # TODO send email
+    # theactivitymaster://auth/ResetPassword?security_token=security_token
+    if ENVIRONMENT == "dev":
+        print(urlencode({"security_token": security_token}))
     audit_logger.user_forgot_password(user.id, ip_address)
     await db.commit()
-
-
-async def reset_password_init(
-    ep_context: EndpointContext, user_id: str, expires: str, signature: str, application_id: str, ip_address: str
-) -> str:
-    """Reset the user's password
-
-    :param ep_context: The endpoint context
-    :param token_details: The token details
-    :param new_password: The new password
-    """
-    db = ep_context.db
-    audit_logger = ep_context.audit_logger
-
-    # Verify the signature
-    with core_security.email_verify_manager_dependency.get() as emv:
-        if not emv.verify(user_id, expires, signature):
-            audit_logger.user_reset_password_failed(uuid.UUID(user_id), application_id, "Invalid signature")
-            raise HTTPException(status_code=401, detail="Invalid signature")
-
-    audit_logger.user_reset_password_initiated(uuid.UUID(user_id))
-
-    security_token = await create_security_token(
-        ep_context, uuid.UUID(user_id), application_id, ["reset_password"], ip_address
-    )
-    await db.commit()
-    return security_token
 
 
 async def reset_password(

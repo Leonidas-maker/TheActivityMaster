@@ -221,19 +221,6 @@ class AuditLogger:
             status=True,
         )
 
-    def user_reset_password_initiated(self, user_id: uuid.UUID):
-        """Log a forgot password initiation action.
-
-        :param user_id: The user ID initiating forgot password
-        :param application_id_hash: The hashed application identifier
-        """
-        self.log_to_audit(
-            user_id,
-            action="Forgot Password Initiated",
-            category=AuditLogCategories.USER,
-            details="See authentication logs for more details",
-        )
-
     def user_reset_password_failed(self, user_id: uuid.UUID, application_id_hash: str, reason: str):
         """Log a forgot password failure action.
 

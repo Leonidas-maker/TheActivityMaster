@@ -45,6 +45,22 @@ def get_verify_token(capsys):
 
     return urlencode({"user_id": user_id, "expires": expires, "signature": signature})
 
+def get_security_token(capsys):
+    # Capture standard output
+    captured = capsys.readouterr()
+
+    # Define the regex pattern to extract security_token
+    pattern = r"security_token=([\w\.-]+)"
+
+    # Search for the pattern in captured output
+    match = re.search(pattern, captured.out)
+    assert match, "Authentication token not found!"
+
+    # Extracted components
+    security_token = match.groups()[0]
+
+    return security_token
+
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
 

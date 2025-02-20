@@ -23,21 +23,13 @@ def test_reset_password(client, test_user, capsys):
     test_user.set_capsys(capsys)
 
     # Get email reset token
-    response = test_user.post(
-        f"/api/v1/auth/forgot-password?ident={test_user.username}",
-    )
-    assert response.status_code == status.HTTP_200_OK, response.json()
-
-    querry = get_verify_token(test_user.capsys)
-
-    # Reset password
     response = client.post(
-        f"/api/v1/auth/reset-password/init?{querry}",
+        f"/api/v1/auth/forgot-password?ident={test_user.username}",
         headers={"application-id": test_user.application_id},
     )
     assert response.status_code == status.HTTP_200_OK, response.json()
-    assert response.json().get("security_token") is not None
-    security_token = response.json()["security_token"]
+
+    security_token = get_security_token(test_user.capsys)
 
     # Change password
     response = client.post(

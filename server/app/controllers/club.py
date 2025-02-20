@@ -517,10 +517,10 @@ async def create_session(
     program = await club_crud.get_program(db, club_id, program_id, with_details=True)
 
     if not program:
-        raise HTTPException(status_code=404, detail="Program not found")  
+        raise HTTPException(status_code=404, detail="Program not found")
 
     if await club_crud.session_exists(db, program_id, new_session):
-        raise HTTPException(status_code=400, detail="Session name already exists")
+        raise HTTPException(status_code=400, detail="Session start and end times are equal to an existing session")
 
     try:
         session = await club_crud.create_session(db, program_id, new_session)

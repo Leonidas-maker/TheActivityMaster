@@ -13,6 +13,8 @@ import crud.generic as generic_crud, crud.role as role_crud
 
 from core.generic import EndpointContext
 
+from config.settings import DEFAULT_TIMEZONE
+
 from config.permissions import ClubPermissions
 
 
@@ -307,26 +309,31 @@ async def session_exists(db: AsyncSession, program_id: uuid.UUID, session: s_clu
     :param sessions: The session to check
     :return: True if the session already exists, False otherwise
     """
+    conditions = [m_club.Session.program_id == program_id]
+    if session.session_type == m_club.SessionType.EVENT:
+        conditions.extend(
+            [
+                m_club.Session.start_datetime == session.start_datetime,
+                m_club.Session.end_datetime == session.end_datetime,
+            ]
+        )
+    else:
+        conditions.extend(
+            [
+                m_club.Session.start_date == session.start_date,
+                m_club.Session.end_date == session.end_date,
+                m_club.Session.day_of_week == session.day_of_week,
+                m_club.Session.start_time == session.start_time,
+                m_club.Session.end_time == session.end_time,
+            ]
+        )
     res = await db.execute(
         select(
             exists(
                 select(1)
                 .select_from(m_club.Session)
-                .filter(
-                    m_club.Session.program_id == program_id,
-                    or_(
-                        and_(
-                            m_club.Session.start_datetime == session.start_datetime,
-                            m_club.Session.end_datetime == session.end_datetime,
-                        ),
-                        and_(
-                            m_club.Session.start_date == session.start_date,
-                            m_club.Session.end_date == session.end_date,
-                            m_club.Session.day_of_week == session.day_of_week,
-                            m_club.Session.start_time == session.start_time,
-                            m_club.Session.end_time == session.end_time,
-                        ),
-                    ),
+                .where(
+                    and_(*conditions),
                 )
             )
         )
@@ -395,15 +402,15 @@ async def create_sessions_for_program(
     return db_sessions
 
 
-async def get_sessions(db: AsyncSession, program_id: uuid.UUID) -> List[m_club.Session]:
+async def get_sessions(db: AsyncSession, program_id: uuid.UUID, session_ids: List[uuid.UUID]) -> List[m_club.Session]:
     """Get all sessions of a program
 
     :param db: The database session
     :param program_id: The ID of the program
     :return: A list of sessions
     """
-    res = await db.execute(select(m_club.Session).filter(m_club.Session.program_id == program_id))
-    return list(res.scalars().all())
+    res = await db.execute(select(m_club.Session).filter(m_club.Session.program_id == program_id, m_club.Session.id == session_ids))
+    return list(res.unique().scalars().all())
 
 
 ###########################################################################

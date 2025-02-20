@@ -144,7 +144,18 @@ class SessionBase(BaseModel):
                 raise ValueError(
                     "For event sessions, day of week, start time, end time, and start date should not be provided."
                 )
-
+        return self
+    
+    @model_validator(mode="after")
+    def remove_seconds(self)-> "SessionBase":
+        if self.start_datetime:
+            self.start_datetime = self.start_datetime.replace(microsecond=0)
+        if self.end_datetime:
+            self.end_datetime = self.end_datetime.replace(microsecond=0)
+        if self.start_time:
+            self.start_time = self.start_time.replace(microsecond=0)
+        if self.end_time:
+            self.end_time = self.end_time.replace(microsecond=0)
         return self
 
 

@@ -1,5 +1,4 @@
 from typing import List
-import warnings
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship, deferred
 from sqlalchemy import (
@@ -17,7 +16,6 @@ from sqlalchemy import (
     CheckConstraint,
     Computed,
 )
-from sqlalchemy.ext.associationproxy import association_proxy
 import uuid
 from datetime import datetime
 import enum

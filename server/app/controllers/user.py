@@ -62,6 +62,7 @@ async def register_user(ep_context: EndpointContext, user: s_user.UserCreate) ->
     with core_security.email_verify_manager_dependency.get() as evm:
         url_params = evm.generate_verification_params(user_id)
         # TODO: Send email
+        # theactivitymaster://auth/VerifyMailConfirm
         if ENVIRONMENT == "dev":
             print(url_params)
 

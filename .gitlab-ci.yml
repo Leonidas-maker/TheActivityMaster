@@ -38,7 +38,7 @@ test:
   stage: test
   script:
     - cd server
-    - pytest -n auto --dist=loadfile --junitxml=pytest-report.xml
+    - pytest -n auto --dist=loadfile -v --junitxml=pytest-report.xml
   artifacts:
     reports:
       junit: server/pytest-report.xml
