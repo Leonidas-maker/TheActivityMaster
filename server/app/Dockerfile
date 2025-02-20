@@ -1,8 +1,6 @@
-# Verwende das Python-Basisimage
 ARG PYTHON_VERSION=3.12.8
 FROM python:${PYTHON_VERSION}-slim AS base
 
-# Umgebungsvariablen
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV TERM=xterm-256color
@@ -23,15 +21,12 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-
+COPY requirements.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install --no-cache-dir -r requirements.txt
 
-RUN mkdir -p /app/config/keyfiles
-RUN chown -R appuser:appuser /app/config/keyfiles
-RUN mkdir -p /app/config/verifications
-RUN chown -R appuser:appuser /app/config/verifications
+RUN mkdir -p /app/config/keyfiles && chown -R appuser:appuser /app/config/keyfiles
+RUN mkdir -p /app/config/verifications && chown -R appuser:appuser /app/config/verifications
 
 USER appuser
 
@@ -39,4 +34,4 @@ COPY . .
 
 EXPOSE 8001
 
-CMD uvicorn 'main:app' --host=0.0.0.0 --port=8001
+CMD ["uvicorn", "main:app", "--host=0.0.0.0", "--port=8001"]
