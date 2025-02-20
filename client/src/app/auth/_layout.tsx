@@ -108,6 +108,14 @@ export default function AuthLayout() {
                         presentation: "modal",
                     }}
                 />
+                <Stack.Screen
+                    name="(info)/VerifyPasswordReset"
+                    options={{
+                        headerTitle: t("settings_reset_password_verify_header"),
+                        presentation: "modal",
+                        headerLeft: () => null,
+                    }}
+                />
             </Stack>
         </SafeAreaProvider>
     );
