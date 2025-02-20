@@ -67,6 +67,7 @@ async def lifespan(app: FastAPI):
     redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
     scheduler = TaskSchedulerRedis(redis_host=redis_host)
 
+
     # Clean up the audit logs
     scheduler.add_task(
         "anonymize_ip_addresses", anonymize_ip_addresses, cron="0 0 * * *", on_startup=True, with_console=True
