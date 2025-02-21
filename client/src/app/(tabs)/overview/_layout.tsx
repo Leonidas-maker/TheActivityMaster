@@ -123,6 +123,7 @@ export default function OverviewLayout() {
         options={{
           presentation: "modal",
           headerTitle: t("settings_multi_factor_header"),
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen
