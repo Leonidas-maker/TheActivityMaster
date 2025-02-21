@@ -10,7 +10,13 @@ import { secureSaveData } from "@/src/services/secureStorageService";
 import Heading from "@/src/components/textFields/Heading";
 import TwoFactorInput from "@/src/components/textInputs/TwoFactorInput";
 import { useRouter } from "expo-router";
-import { asyncSaveData } from "@/src/services/asyncStorageService";
+import { asyncRemoveData, asyncSaveData } from "@/src/services/asyncStorageService";
+import { getUserRoles } from "@/src/services/user/userService";
+
+interface GenericRole {
+    name: string;
+    description: string;
+}
 
 const SignInVerify: React.FC = () => {
     const { t } = useTranslation("auth");
@@ -51,6 +57,8 @@ const SignInVerify: React.FC = () => {
             await asyncSaveData("wasLoggedIn", "true");
             await asyncSaveData("isLoggedIn", "true");
 
+            await checkRole();
+
             router.navigate("/(tabs)");
         } catch (error: any) {
             console.error("2FA error:", error);
@@ -59,6 +67,23 @@ const SignInVerify: React.FC = () => {
                 text1: t("toastErrorSignInVerify_errorText"),
                 text2: t("toastErrorSignInVerify_errorSubtext"),
             });
+        }
+    };
+
+    const checkRole = async () => {
+        try {
+            const response = await getUserRoles();
+
+            // Check if the user has the Admin role
+            if ((response.generic_roles as GenericRole[]).some(
+                (role: GenericRole) => role.name === "Admin")) {
+                await asyncSaveData("isAdmin", "true");
+            } else {
+                await asyncRemoveData("isAdmin");
+            }
+
+        } catch (error) {
+            console.log("Error during fetchUserRoles call:", error);
         }
     };
 

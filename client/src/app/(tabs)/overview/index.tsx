@@ -25,12 +25,14 @@ const OverviewHome: React.FC = () => {
   const { t } = useTranslation("overview");
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const handleLogoutPress = async () => {
     await logout().then(() => {
       asyncRemoveData("isLoggedIn");
       secureRemoveData("access_token");
       secureRemoveData("refresh_token");
+      asyncRemoveData("isAdmin");
       router.navigate("/(tabs)");
     });
   };
@@ -50,6 +52,15 @@ const OverviewHome: React.FC = () => {
           setIsLoggedIn(false);
         }
       }
+      async function checkAdminStatus() {
+        try {
+          const adminStatus = await asyncLoadData("isAdmin");
+          setIsAdmin(!!adminStatus);
+        } catch (error) {
+          setIsAdmin(false);
+        }
+      }
+      checkAdminStatus();
       checkLoginStatus();
     }, [])
   );
@@ -108,6 +119,21 @@ const OverviewHome: React.FC = () => {
   const devIconNames = ["login", "note-add"];
 
   // ====================================================== //
+  // =================== AdminNavigator =================== //
+  // ====================================================== //
+  const handleIdentityOverviewPress = () => {
+    router.navigate("/(tabs)/overview/(admin)/AdminIdentityOverview");
+  };
+
+  const adminTitle = t("pageNavigator_title4");
+
+  const onPressAdminFunctions = [handleIdentityOverviewPress];
+
+  const adminTexts = [t("admin_identity_overview_btn")];
+
+  const adminIconNames = ["people"];
+
+  // ====================================================== //
   // ================== Return component ================== //
   // ====================================================== //
   // Returns the navigators and the current app version
@@ -125,6 +151,12 @@ const OverviewHome: React.FC = () => {
         onPressFunctions={onPressBillingFunctions}
         texts={billingTexts}
         iconNames={billingIconNames}
+      />)}
+      {isAdmin && (<PageNavigator
+        title={adminTitle}
+        onPressFunctions={onPressAdminFunctions}
+        texts={adminTexts}
+        iconNames={adminIconNames}
       />)}
       {/* <PageNavigator
         title={devTitle}

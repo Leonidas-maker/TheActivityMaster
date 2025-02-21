@@ -17,6 +17,8 @@ import enAuth from './en/auth.json';
 import deAuth from './de/auth.json';
 import enBilling from './en/billing.json';
 import deBilling from './de/billing.json';
+import enAdmin from './en/admin.json';
+import deAdmin from './de/admin.json';
 
 const resources = {
   en: {
@@ -27,6 +29,7 @@ const resources = {
     router: enRouter,
     auth: enAuth,
     billing: enBilling,
+    admin: enAdmin,
   },
   de: {
     discover: deDiscover,
@@ -36,6 +39,7 @@ const resources = {
     router: deRouter,
     auth: deAuth,
     billing: deBilling,
+    admin: deAdmin,
   },
 };
 
@@ -71,7 +75,7 @@ const saveLanguage = async (language: string): Promise<void> => {
       resources,
       lng: initialLanguage,
       fallbackLng: 'en',
-      ns: ['discover', 'settings', 'calendar', 'overview', 'router', 'auth', 'billing'],
+      ns: ['discover', 'settings', 'calendar', 'overview', 'router', 'auth', 'billing', 'admin'],
       interpolation: {
         escapeValue: false, 
       },

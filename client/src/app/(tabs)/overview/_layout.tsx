@@ -156,6 +156,18 @@ export default function OverviewLayout() {
           headerTitle: t("billing_subscription_header"),
         }}
       />
+      <Stack.Screen
+        name="(admin)/AdminIdentityOverview"
+        options={{
+          headerTitle: t("admin_identity_overview_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(admin)/AdminIdentityApprove"
+        options={{
+          headerTitle: t("admin_identity_approve_header"),
+        }}
+      />
     </Stack>
   );
 }
