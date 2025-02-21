@@ -230,8 +230,6 @@ async def get_2fa_totp(db: AsyncSession, user_id: uuid.UUID) -> User2FA:
     """
     res = await db.execute(select(User2FA).filter(User2FA.user_id == user_id, User2FA.method == User2FAMethods.TOTP))
     totp_db = res.scalar_one_or_none()
-    if not totp_db:
-        raise ValueError("TOTP method not found")
     return totp_db
 
 
@@ -284,7 +282,7 @@ async def clean_2fa_table(db: AsyncSession, console: Console) -> bool:
         res = await db.execute(
             delete(User2FA).filter(
                 or_(User2FA.method == User2FAMethods.EMAIL, User2FA.fails == -1),
-                User2FA.created_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE) + datetime.timedelta(minutes=15),
+                User2FA.created_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE) - datetime.timedelta(minutes=15),
             )
         )
         # Add audit logs

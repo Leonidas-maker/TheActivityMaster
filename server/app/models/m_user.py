@@ -40,9 +40,9 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
-    address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)
+    address_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)
 
-    backup_codes_2fa: Mapped[str] = deferred(mapped_column(String(1000), nullable=True))  # Backup codes for 2FA
+    backup_codes_2fa: Mapped[str | None] = deferred(mapped_column(String(1000), nullable=True))  # Backup codes for 2FA
     is_newsletter_subscribed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_passkey_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

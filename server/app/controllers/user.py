@@ -12,7 +12,6 @@ from schemas import s_user, s_role
 
 import core.security as core_security
 
-from crud.audit import AuditLogger
 from crud import (
     user as user_crud,
     auth as auth_crud,
@@ -240,7 +239,7 @@ async def totp_remove(
     user_id = token_details.user_id
 
     # Verify the password
-    user = await user_crud.get_user_by_id(db, user_id)
+    user = await user_crud.get_user_by_id(db, user_id, query_options=[joinedload(m_user.User._2fa)])
 
     if not core_security.verify_password(remove_totp.password, user.password):
         audit_logger.totp_removal_failed(user_id, token_details.payload["aud"], "Invalid password")
@@ -248,7 +247,16 @@ async def totp_remove(
         raise HTTPException(status_code=400, detail="Invalid password")
 
     # Get the TOTP secret
-    totp_db = await auth_crud.get_2fa_totp(db, user_id)
+    totp_db = None
+    other_2fa_exists = False
+    for _2fa in user._2fa:
+        if _2fa.method == m_user.User2FAMethods.TOTP:
+            totp_db = _2fa
+        elif _2fa.method != m_user.User2FAMethods.TOTP and  _2fa.method != m_user.User2FAMethods.EMAIL:
+            other_2fa_exists = True
+    
+    if not totp_db:
+        raise HTTPException(status_code=400, detail="TOTP not registered")
 
     # Verify the TOTP code
     with core_security.totp_manager_dependency.get() as totp_m:
@@ -256,9 +264,12 @@ async def totp_remove(
             audit_logger.totp_removal_failed(user_id, token_details.payload["aud"], "Invalid TOTP code")
             await db.commit()
             raise HTTPException(status_code=400, detail="Invalid TOTP code")
-
+        
     # Remove the TOTP secret
     await db.delete(totp_db)
+
+    if not other_2fa_exists:
+        user.backup_codes_2fa = None
 
     # Add audit logs
     audit_logger.totp_removal(user_id, token_details.payload["aud"])

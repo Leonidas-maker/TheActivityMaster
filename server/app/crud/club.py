@@ -9,7 +9,8 @@ from schemas import s_club
 
 from models import m_club, m_user, m_generic
 
-import crud.generic as generic_crud, crud.role as role_crud
+import crud.generic as generic_crud
+import crud.role as role_crud
 
 from core.generic import EndpointContext
 
@@ -49,7 +50,8 @@ async def create_club(db: AsyncSession, user_id: uuid.UUID, club: s_club.ClubCre
     """
     address = await generic_crud.get_create_address(db, club.address)
 
-    db_club = m_club.Club(name=club.name, description=club.description, address=address)
+    db_club = m_club.Club(
+        name=club.name, description=club.description, address=address)
 
     db.add(db_club)
     await db.flush()
@@ -64,7 +66,8 @@ async def create_club(db: AsyncSession, user_id: uuid.UUID, club: s_club.ClubCre
     if not owner_role:
         raise ValueError("Club owner role not found")
 
-    db_user_club_role = m_club.UserClubRole(user_id=user_id, club_role=owner_role)
+    db_user_club_role = m_club.UserClubRole(
+        user_id=user_id, club_role=owner_role)
     db.add(db_user_club_role)
 
     await db.flush()
@@ -80,7 +83,8 @@ async def get_clubs(db: AsyncSession, page: int, page_size: int, city: str) -> L
     :param city: The city name to filter by. If None, all clubs are returned.
     :return: A list of clubs.
     """
-    query_options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
+    query_options = [joinedload(m_club.Club.address),
+                     undefer(m_club.Club.description)]
 
     stmt = select(m_club.Club).options(*query_options)
 
@@ -108,7 +112,8 @@ async def get_club(db: AsyncSession, club_id: uuid.UUID, with_details: bool = Fa
     """
     query_options = []
     if with_details:
-        query_options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
+        query_options = [joinedload(m_club.Club.address), undefer(
+            m_club.Club.description)]
 
     res = await db.execute(select(m_club.Club).filter(m_club.Club.id == club_id).options(*query_options))
     return res.unique().scalar_one_or_none()
@@ -150,7 +155,8 @@ async def search_clubs(db: AsyncSession, query: str, page: int = 1, page_size: i
     """
 
     search_pattern = f"%{query}%"
-    options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
+    options = [joinedload(m_club.Club.address),
+               undefer(m_club.Club.description)]
     stmt = (
         select(m_club.Club)
         .options(*options)
@@ -234,7 +240,8 @@ async def get_club_employees(db: AsyncSession, club_id: uuid.UUID) -> List[m_clu
     :return: A list of UserClubRole associated with the club
     """
     query_options = [
-        joinedload(m_club.ClubRole.user_club_roles).joinedload(m_club.UserClubRole.user),
+        joinedload(m_club.ClubRole.user_club_roles).joinedload(
+            m_club.UserClubRole.user),
     ]
 
     res = await db.execute(
@@ -255,7 +262,8 @@ async def get_club_employee_by_id(db: AsyncSession, club_id: uuid.UUID, user_id:
     :param user_id: The ID of the user
     :return: The user club role
     """
-    query_options = [joinedload(m_club.UserClubRole.user), joinedload(m_club.UserClubRole.club_role)]
+    query_options = [joinedload(m_club.UserClubRole.user), joinedload(
+        m_club.UserClubRole.club_role)]
 
     res = await db.execute(
         select(m_club.UserClubRole)
@@ -341,6 +349,32 @@ async def session_exists(db: AsyncSession, program_id: uuid.UUID, session: s_clu
     return bool(res.scalar())
 
 
+async def get_session(db: AsyncSession, program_id: uuid.UUID, session_id: uuid.UUID) -> m_club.Session:
+    """Get a session by ID
+
+    :param db: The database session
+    :param program_id: The ID of the program
+    :param session_id: The ID of the session
+    :return: The session with the given ID
+    """
+    res = await db.execute(select(m_club.Session).filter(m_club.Session.program_id == program_id, m_club.Session.id == session_id))
+    return res.unique().scalar_one_or_none()
+
+
+async def get_sessions(db: AsyncSession, program_id: uuid.UUID, session_ids: Optional[List[uuid.UUID]] = None) -> List[m_club.Session]:
+    """Get all sessions of a program
+
+    :param db: The database session
+    :param program_id: The ID of the program
+    :return: A list of sessions
+    """
+    conditions = [m_club.Session.program_id == program_id]
+    if session_ids:
+        conditions.append(m_club.Session.id.in_(session_ids))
+    res = await db.execute(select(m_club.Session).filter(and_(*conditions)))
+    return list(res.unique().scalars().all())
+
+
 async def create_session(db: AsyncSession, program_id: uuid.UUID, session: s_club.SessionCreate) -> m_club.Session:
     """Create a session
 
@@ -394,23 +428,14 @@ async def create_sessions_for_program(
         raise ValueError("Program or program_id is required")
 
     if program:
-        db_sessions = [m_club.Session(program=program, **session.model_dump()) for session in sessions]
+        db_sessions = [m_club.Session(
+            program=program, **session.model_dump()) for session in sessions]
     else:
-        db_sessions = [m_club.Session(program_id=program_id, **session.model_dump()) for session in sessions]
+        db_sessions = [m_club.Session(
+            program_id=program_id, **session.model_dump()) for session in sessions]
     db.add_all(db_sessions)
     await db.flush()
     return db_sessions
-
-
-async def get_sessions(db: AsyncSession, program_id: uuid.UUID, session_ids: List[uuid.UUID]) -> List[m_club.Session]:
-    """Get all sessions of a program
-
-    :param db: The database session
-    :param program_id: The ID of the program
-    :return: A list of sessions
-    """
-    res = await db.execute(select(m_club.Session).filter(m_club.Session.program_id == program_id, m_club.Session.id == session_ids))
-    return list(res.unique().scalars().all())
 
 
 ###########################################################################
@@ -553,8 +578,10 @@ async def get_program(
     :param program_id: The ID of the program
     :return: The program with the given ID
     """
-    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
-    conditions = [m_club.Program.id == program_id, m_club.Program.club_id == club_id]
+    query_options = [joinedload(m_club.Program.categories), undefer(
+        m_club.Program.description)]
+    conditions = [m_club.Program.id == program_id,
+                  m_club.Program.club_id == club_id]
 
     if with_details:
         query_options.append(joinedload(m_club.Program.sessions))
@@ -577,7 +604,8 @@ async def search_programs(
     :param page_size: The number of programs per page
     :return: A list of programs that match the filters
     """
-    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
+    query_options = [joinedload(m_club.Program.categories), undefer(
+        m_club.Program.description)]
 
     query = select(m_club.Program).filter(*filters)
     res = await db.execute(query.offset((page - 1) * page_size).limit(page_size).options(*query_options))
@@ -636,37 +664,43 @@ async def update_program(
 
     if program_update.session_data:
         if program.pricing_model == m_club.PriceType.PACKAGE:
-            raise ValueError("Session prices are not allowed for PACKAGE pricing model")
+            raise ValueError(
+                "Session prices are not allowed for PACKAGE pricing model")
 
         if price_model_changed and len(program.sessions) != len(program_update.session_data):
-            raise ValueError("Length of session prices does not match the number of sessions.")
+            raise ValueError(
+                "Length of session prices does not match the number of sessions.")
 
         program.price = None
         sessions_details = []
 
         # Update session prices
         for session in program.sessions:
-            new_price, new_capacity = program_update.session_data.get(session.id, (None, None))
+            new_price, new_capacity = program_update.session_data.get(
+                session.id, (None, None))
 
             session_details = []
 
             # Check if the session has a price
             if session.price != new_price:
-                session_details.append(f"Price: {session.price} -> {new_price}")
+                session_details.append(
+                    f"Price: {session.price} -> {new_price}")
                 session.price = new_price
             elif price_model_changed:
                 raise ValueError(f"Missing price for session {session.id}")
 
             # Check if the session has a capacity
             if session.capacity != new_capacity:
-                session_details.append(f"Capacity: {session.capacity} -> {new_capacity}")
+                session_details.append(
+                    f"Capacity: {session.capacity} -> {new_capacity}")
                 session.capacity = new_capacity
 
             elif price_model_changed:
                 raise ValueError(f"Missing capacity for session {session.id}")
 
             if session_details:
-                sessions_details.append(f"{session.id} ~ {', '.join(session_details)}")
+                sessions_details.append(
+                    f"{session.id} ~ {', '.join(session_details)}")
 
         if sessions_details:
             details += f"Session Prices: {';'.join(sessions_details)}"
@@ -700,7 +734,8 @@ async def get_program_categories(db: AsyncSession, ids: Optional[List[int]] = No
     :param ids: A list of category ids to filter by
     :return: A list of program categories
     """
-    stmt = select(m_club.ProgramCategory).options(joinedload(m_club.ProgramCategory.translations))
+    stmt = select(m_club.ProgramCategory).options(
+        joinedload(m_club.ProgramCategory.translations))
 
     if ids:
         stmt = stmt.filter(m_club.ProgramCategory.id.in_(ids))

@@ -125,7 +125,8 @@ async def get_program_sessions_v1(
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
 ):
     try:
-        pass
+        sessions = await club_crud.get_sessions(ep_context.db, program_id)
+        return [s_club.Session.model_validate(session) for session in sessions]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get program sessions")
 
