@@ -9,5 +9,7 @@
     "logout_btn": "Abmelden",
     "pageNavigator_title3": "Zahlungsseiten",
     "billing_subscription_btn": "Mitgliedschaften",
-    "billing_history_btn": "Rechnungshistorie"
+    "billing_history_btn": "Rechnungshistorie",
+    "pageNavigator_title4": "Adminseiten",
+    "admin_identity_overview_btn": "Nutzerverifizierungen Übersicht"
 }
