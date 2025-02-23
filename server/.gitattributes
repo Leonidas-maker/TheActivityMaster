@@ -1,2 +1,2 @@
-app/data/* -diff
-*.json -diff
+app/data/*   linguist-generated -diff
+*.json       linguist-generated -diff

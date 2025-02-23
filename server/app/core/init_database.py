@@ -154,6 +154,23 @@ class init_country_states_city_mode(enum.Enum):
 async def init_country_states_city(
     db: AsyncSession, mode: init_country_states_city_mode = init_country_states_city_mode.country_state_city
 ):
+    # Static data to be saved to a file
+    match mode:
+        case init_country_states_city_mode.country_state_city:
+            enforced = "country_state_city"
+        case init_country_states_city_mode.country_state:
+            enforced = "country_state"
+        case init_country_states_city_mode.country:
+            enforced = "country"
+        case _:
+            enforced = "none"
+
+    static_data = {
+        "enforced": enforced,
+        "countries": []
+    }
+
+    # Load the data from the file
     file_path = os.path.join(os.path.dirname(__file__), "../data/country_states_city.json")
     with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
@@ -180,7 +197,19 @@ async def init_country_states_city(
 
     new_db_data = []
 
+
     for country in data:
+        static_data["countries"].append({
+             "name": country["name"],
+            "iso3": country["iso3"],
+            "iso2": country["iso2"],
+            "currency": country["currency"],
+            "currency_name":country["currency_name"],
+            "currency_symbol": country["currency_symbol"],
+            "translations":country["translations"],
+            "states": []
+        })
+
         if countries.get(country["name"]):
             country_db = countries[country["name"]]
         elif len(country["states"]) > 0:
@@ -194,6 +223,15 @@ async def init_country_states_city(
             continue
 
         for state in country["states"]:
+            static_data["countries"][-1]["states"].append(
+                {
+                     "name": state["name"],
+                "state_code": state["state_code"],
+                "type": state["type"],
+                "cities":[]
+                }
+            )
+
             state_key = f"{state['name']}_{country['name']}"
             if states.get(state_key):
                 state_db = states[state_key]
@@ -208,6 +246,8 @@ async def init_country_states_city(
                 continue
 
             for city in state["cities"]:
+                static_data["countries"][-1]["states"][-1]["cities"].append(city["name"])
+
                 city_key = f"{city['name']}_{state['name']}"
                 if cities.get(city_key):
                     city_db = cities[city_key]
@@ -220,6 +260,11 @@ async def init_country_states_city(
         db.add_all(new_db_data)
         await db.commit()
 
+    # Save the enforced data to a static file for frontend use
+    static_path = os.path.join(os.path.dirname(__file__), "../static/addresses.json")
+    with open(static_path, "w", encoding="utf-8") as f:
+        json.dump(static_data, f, ensure_ascii=False, indent=4)
+            
 
 async def init_program_categories(db: AsyncSession):
     file_path = os.path.join(os.path.dirname(__file__), "../data/program_categories.json")

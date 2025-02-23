@@ -3,11 +3,14 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import uvicorn
 import os
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis import asyncio as aioredis
 
-from core.database import engine, get_async_session, check_db_connection
+from core.database import engine, get_async_session, check_db_connection, get_db
 from config.settings import ENVIRONMENT
 from config.database import Base
-import core.init_database as init_db 
+import core.init_database as init_db
 
 from models.m_generic import *
 from models.m_user import *
@@ -25,6 +28,7 @@ from core.security import (
 from crud.audit import anonymize_ip_addresses
 from crud.auth import clean_tokens, totp_key_rotation, clean_2fa_table
 from crud.verification import delete_expired_identity_verifications
+from crud.club import update_session_occurrences
 
 from utils.jwt_keyfile_manager import JWTKeyManager
 from utils.totp_manager import TOTPManager
@@ -63,9 +67,16 @@ async def lifespan(app: FastAPI):
     ec_encryptor = AsymmetricECEncryptor()
     ec_encryptor_dependency.init(ec_encryptor)
 
-    # Initialize the Task Scheduler
+    # Initialize the Redis connection
     redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
-    scheduler = TaskSchedulerRedis(redis_host=redis_host)
+    redis_port = os.getenv("REDIS_PASSWORD", "root")
+
+    # Initialize the FastAPI Cache
+    redis = aioredis.Redis(host=redis_host, db=0, password=redis_port)
+    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+
+    # Initialize the Task Scheduler
+    scheduler = TaskSchedulerRedis(redis_host=redis_host, redis_password=redis_port, redis_db=1)
 
 
     # Clean up the audit logs
@@ -87,6 +98,15 @@ async def lifespan(app: FastAPI):
         "delete_expired_identity_verifications",
         delete_expired_identity_verifications,
         cron="0 0 */7 * *",
+        on_startup=True,
+        with_console=True,
+    )
+
+    # Update the session occurrences daily
+    scheduler.add_task(
+        "update_session_occurrences",
+        update_session_occurrences,
+        cron="0 0 * * *",
         on_startup=True,
         with_console=True,
     )

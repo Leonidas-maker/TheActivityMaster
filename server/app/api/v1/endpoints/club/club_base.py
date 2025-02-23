@@ -202,9 +202,25 @@ async def delete_club_v1(club_id: uuid.UUID = Path(..., description="The ID of t
     return {"message": "Not available yet. Please contact support."}
 
 
-@router.get("/{club_id}/sessions", tags=["Club - Program - Session"])
-async def get_sessions_v1(club_id: uuid.UUID = Path(..., description="The ID of the club")):
-    pass
+@router.get(
+    "/{club_id}/sessions",
+    response_model=List[s_club.Session],
+    tags=["Club - Program - Session", "Access: Hybrid"],
+    response_model_exclude_none=True,
+)
+async def get_program_sessions_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of sessions per page"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+):
+    try:
+        user_id = token_details.user_id if token_details else None
+        programs = await club_crud.get_authorized_sessions(ep_context.db, club_id, page, page_size, user_id)
+        return [s_club.Session.model_validate(program) for program in programs]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get program sessions")
 
 
 # ======================================================== #

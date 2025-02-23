@@ -109,7 +109,10 @@ async def totp_remove_v1(
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
-    """Remove the TOTP device"""
+    """Remove the TOTP device
+
+    Note Backup codes will be invalidated if no other 2FA method is enabled.
+    """
     try:
         await user_controller.totp_remove(ep_context, token_details, remove_totp)
         return {"message": "TOTP device removed"}

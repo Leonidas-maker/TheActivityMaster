@@ -558,7 +558,6 @@ async def is_user_trainee(db: AsyncSession, user_id: uuid.UUID, program_id: uuid
     )
     return bool(res.scalar())
 
-
 async def has_user_higher_club_level(
     db: AsyncSession,
     from_user_id: uuid.UUID,

@@ -4,3 +4,4 @@ __pycache__
 *.bin
 verifications
 keyfiles
+**/static/addresses.json

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, model_validator, conlist
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, model_validator, conlist, field_validator
 from typing import List, Optional, Dict, Tuple
 import uuid
 import datetime
@@ -7,21 +7,30 @@ from decimal import Decimal
 from schemas import s_generic
 from models.m_club import SessionType, Weekday, OccurrenceStatus, BookingStatus, PriceType, ProgramStatus
 
+from config.settings import DEFAULT_TIMEZONE
+
 
 # ======================================================== #
 # ======================= Employee ======================= #
 # ======================================================== #
-class Employee(BaseModel):
+class EmployeeBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-    first_name: str
-    last_name: str
-    email: EmailStr
+    first_name: str = Field(..., max_length=50, description="The first name of the employee.")
+    last_name: str = Field(..., max_length=50, description="The last name of the employee.")
+    email: EmailStr = Field(..., description="The email of the employee.")
 
+class Employee(EmployeeBase):
+    id: uuid.UUID = Field(..., description="The ID of the employee.")
+
+
+class Owner(EmployeeBase):
+    pass
 
 class EmployeeResponse(Employee):
     role_name: str
     role_level: int
+    program_assignments: List[uuid.UUID] = Field([], description="The IDs of the programs assigned to the trainer.")
+
 
 
 # ======================================================== #
@@ -43,7 +52,7 @@ class Club(ClubBase):
 
 
 class ClubDetails(Club):
-    owners: List[Employee]
+    owners: List[Owner]
 
 
 class ClubUpdate(BaseModel):
@@ -74,6 +83,63 @@ class UserClubRoleChange(BaseModel):
 ###########################################################################
 ############################ Program Offerings ############################
 ###########################################################################
+# ======================================================== #
+# ================== Session Occurrence ================== #
+# ======================================================== #
+class SessionOccurrence(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+
+    session_id: uuid.UUID
+
+    status: OccurrenceStatus = Field(..., description="The status of the occurrence.")
+
+    occurrence_date: datetime.date = Field(..., description="The date of the occurrence.")
+    start_datetime: Optional[datetime.datetime] = Field(
+        None, description="If the occurrence is rescheduled, this is the new start datetime."
+    )
+    end_datetime: Optional[datetime.datetime] = Field(
+        None, description="If the occurrence is rescheduled, this is the new end datetime."
+    )
+
+    note: Optional[str] = Field(None, max_length=500, description="A note about the occurrence.")
+
+    @model_validator(mode="after")
+    def validate_occurrence_timing(self) -> "SessionOccurrence":
+        if self.start_datetime and not self.end_datetime:
+            raise ValueError("End datetime must be provided.")
+        if self.end_datetime and not self.start_datetime:
+            raise ValueError("Start datetime must be provided.")
+        if self.start_datetime and self.end_datetime:
+            if self.status != OccurrenceStatus.RESCHEDULED:
+                raise ValueError("Start and end datetime must be provided only for rescheduled occurrences.")
+            if self.start_datetime >= self.end_datetime:
+                raise ValueError("End datetime must be after start datetime.")
+        return self
+
+
+class SessionOccurrenceChange(BaseModel):
+    occurrence_id: uuid.UUID
+    note: Optional[str] = None
+
+
+class SessionReschedule(SessionOccurrenceChange):
+    start_datetime: datetime.datetime = Field(..., description="The new start datetime.")
+    end_datetime: datetime.datetime = Field(..., description="The new end datetime.")
+
+    @model_validator(mode="after")
+    def validate_timing(self) -> "SessionReschedule":
+        if self.start_datetime >= self.end_datetime:
+            raise ValueError("End datetime must be after start datetime.")
+
+        self.start_datetime = self.start_datetime.replace(microsecond=0)
+        self.end_datetime = self.end_datetime.replace(microsecond=0)
+
+        return self
+
+
+class SessionReinstate(SessionOccurrenceChange):
+    pass
 
 
 # ======================================================== #
@@ -145,26 +211,174 @@ class SessionBase(BaseModel):
                     "For event sessions, day of week, start time, end time, and start date should not be provided."
                 )
         return self
-    
+
     @model_validator(mode="after")
-    def remove_seconds(self)-> "SessionBase":
-        if self.start_datetime:
+    def time_checker(self) -> "SessionBase":
+        if self.start_datetime and self.end_datetime:
             self.start_datetime = self.start_datetime.replace(microsecond=0)
-        if self.end_datetime:
             self.end_datetime = self.end_datetime.replace(microsecond=0)
-        if self.start_time:
+
+        if self.start_time and self.end_time:
             self.start_time = self.start_time.replace(microsecond=0)
-        if self.end_time:
             self.end_time = self.end_time.replace(microsecond=0)
+
+        if self.start_datetime and self.end_datetime and self.start_datetime >= self.end_datetime:
+            raise ValueError("End datetime must be after start datetime.")
+
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            raise ValueError("End time must be after start time.")
+
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValueError("End date must be after start date.")
         return self
 
 
 class SessionCreate(SessionBase):
-    pass
+    @field_validator("start_datetime", "end_datetime", "start_time", "end_time", "start_date", "end_date")
+    @classmethod
+    def ensure_timezone(cls, value):
+        today = datetime.datetime.now(tz=DEFAULT_TIMEZONE)
+        if isinstance(value, datetime.datetime) and value.tzinfo is None:
+            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
+            if new_value < today:
+                raise ValueError("Time must be in the future.")
+            return new_value
+        elif isinstance(value, datetime.time) and value.tzinfo is None:
+            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
+            if new_value < today.time():
+                raise ValueError("Time must be in the future.")
+            return new_value
+        return value
+
 
 class Session(SessionBase):
     id: uuid.UUID
     program_id: uuid.UUID = Field(..., description="The ID of the program to which the session belongs.")
+
+    occurrences: Optional[List[SessionOccurrence]] = Field(
+        None, description="The occurrences of the session if type is 'course'."
+    )
+
+    @model_validator(mode="after")
+    def check_occurrences(self) -> "Session":
+        if self.session_type == SessionType.EVENT:
+            self.occurrences = None
+        return self
+
+
+class SessionUpdate(BaseModel):
+    session_type: Optional[SessionType] = Field(None, description="The new type of the session.")
+    capacity: Optional[int] = Field(None, gt=0, description="The new maximum number of participants for the session.")
+    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="The new price of the session.")
+
+    membership_required: Optional[bool] = Field(None, description="The new membership requirement for the session.")
+
+    start_datetime: Optional[datetime.datetime] = Field(
+        None, description="The new start date and time for a one-time event."
+    )
+    end_datetime: Optional[datetime.datetime] = Field(
+        None, description="The new end date and time for a one-time event."
+    )
+
+    day_of_week: Optional[Weekday] = Field(None, description="The new day of the week for a recurring event.")
+    start_time: Optional[datetime.time] = Field(None, description="The new start time for a recurring event.")
+    end_time: Optional[datetime.time] = Field(None, description="The new end time for a recurring event.")
+    start_date: Optional[datetime.date] = Field(None, description="The new start date for a recurring event.")
+    end_date: Optional[datetime.date] = Field(None, description="The new end date for a recurring event.")
+
+    address: Optional[s_generic.Address] = Field(
+        None, description="Provide an address if the session is held at a different location."
+    )
+
+    null_end_date: bool = Field(False, description="If true, the end date will be set to None.")
+    refresh_future_occurrences: bool = Field(
+        False, description="If true, future occurrences will be deleted and recreated. If false only scheduled occurrences will be recreated."
+    )
+
+    @field_validator("start_datetime", "end_datetime", "start_time", "end_time", "start_date", "end_date")
+    @classmethod
+    def ensure_timezone(cls, value):
+        today = datetime.datetime.now(tz=DEFAULT_TIMEZONE)
+        if isinstance(value, datetime.datetime) and value.tzinfo is None:
+            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
+            if new_value < today:
+                raise ValueError("Time must be in the future.")
+            return new_value
+        elif isinstance(value, datetime.time) and value.tzinfo is None:
+            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
+            if new_value < today.time():
+                raise ValueError("Time must be in the future.")
+            return new_value
+        return value
+
+    @model_validator(mode="after")
+    def time_checker(self) -> "SessionUpdate":
+        if self.start_datetime and self.end_datetime:
+            self.start_datetime = self.start_datetime.replace(microsecond=0)
+            self.end_datetime = self.end_datetime.replace(microsecond=0)
+
+        if self.start_time and self.end_time:
+            self.start_time = self.start_time.replace(microsecond=0)
+            self.end_time = self.end_time.replace(microsecond=0)
+
+        if self.start_datetime and self.end_datetime and self.start_datetime >= self.end_datetime:
+            raise ValueError("End datetime must be after start datetime.")
+
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            raise ValueError("End time must be after start time.")
+
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValueError("End date must be after start date.")
+
+        return self
+
+    @model_validator(mode="after")
+    def check(self) -> "SessionUpdate":
+        if (
+            self.session_type is None
+            and self.capacity is None
+            and self.price is None
+            and self.membership_required is None
+            and self.start_datetime is None
+            and self.end_datetime is None
+            and self.day_of_week is None
+            and self.start_time is None
+            and self.end_time is None
+            and self.start_date is None
+            and self.end_date is None
+            and self.address is None
+            and not self.null_end_date
+            and not self.refresh_future_occurrences
+        ):
+            raise ValueError(
+                "At least one of the fields 'session_type', 'capacity', 'price', 'membership_required', "
+                "'start_datetime', 'end_datetime', 'day_of_week', 'start_time', 'end_time', 'start_date', 'end_date', "
+                "'address', 'null_end_date', or 'refresh_future_occurrences' must be provided."
+            )
+
+        event_time_exists = self.start_datetime is not None and self.end_datetime is not None
+        course_time_exists = (
+            self.day_of_week is not None
+            and self.start_time is not None
+            and self.end_time is not None
+            and self.start_date is not None
+        )
+
+        if self.session_type == SessionType.COURSE:
+            if not course_time_exists:
+                raise ValueError(
+                    "For course sessions, day of week, start time, end time, and start date must be provided."
+                )
+            if event_time_exists:
+                raise ValueError("For course sessions, start and end datetime should not be provided.")
+        elif self.session_type == SessionType.EVENT:
+            if not event_time_exists:
+                raise ValueError("For event sessions, start and end datetime must be provided.")
+            if course_time_exists:
+                raise ValueError(
+                    "For event sessions, day of week, start time, end time, and start date should not be provided."
+                )
+        return self
 
 
 # ======================================================== #
@@ -259,15 +473,17 @@ class ProgramUpdate(BaseModel):
             and self.pricing_model is None
             and self.categories is None
             and self.session_data is None
+            and self.status is None
         ):
             raise ValueError(
-                "At least one of the fields 'name', 'description', 'price', 'currency', 'pricing_model', 'categories', or 'session_prices' must be provided."
+                "At least one of the fields 'name', 'description', 'price', "
+                " 'currency', 'pricing_model', 'categories', 'session_data', or 'status' must be provided."
             )
 
         sessions_exist = self.session_data is not None and len(self.session_data) > 0
         price_correct = self.price is not None and self.capacity is not None
 
-        if self.pricing_model == PriceType.PACKAGE:
+        if self.pricing_model == PriceType.PACKAGE:#
             if not price_correct:
                 raise ValueError("Price and capacity must be provided if the pricing model is 'package'.")
             if sessions_exist:
@@ -285,52 +501,4 @@ class ProgramUpdate(BaseModel):
         if self.status == ProgramStatus.DRAFT:
             raise ValueError("Status cannot be set to 'draft'. Please use 'inactive' instead.")
 
-        return self
-
-
-# ======================================================== #
-# ================== Session Occurrence ================== #
-# ======================================================== #
-class SessionOccurrence(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: uuid.UUID
-
-    session_id: uuid.UUID
-
-    status: OccurrenceStatus = Field(..., description="The status of the occurrence.")
-
-    occurrence_datetime: datetime.date = Field(..., description="The date of the occurrence.")
-    start_datetime: Optional[datetime.datetime] = Field(
-        None, description="If the occurrence is rescheduled, this is the new start datetime."
-    )
-    end_datetime: Optional[datetime.datetime] = Field(
-        None, description="If the occurrence is rescheduled, this is the new end datetime."
-    )
-
-    note: Optional[str] = Field(None, max_length=500, description="A note about the occurrence.")
-
-    @model_validator(mode="after")
-    def validate_occurrence_timing(self) -> "SessionOccurrence":
-        if self.start_datetime and not self.end_datetime:
-            raise ValueError("End datetime must be provided.")
-        if self.end_datetime and not self.start_datetime:
-            raise ValueError("Start datetime must be provided.")
-        if self.start_datetime and self.end_datetime:
-            if self.status != OccurrenceStatus.RESCHEDULED:
-                raise ValueError("Start and end datetime must be provided only for rescheduled occurrences.")
-            if self.start_datetime >= self.end_datetime:
-                raise ValueError("End datetime must be after start datetime.")
-        return self
-
-
-class SessionOccurrenceChange(BaseModel):
-    occurrence_id: uuid.UUID
-    start_datetime: datetime.datetime
-    end_datetime: datetime.datetime
-    note: Optional[str] = None
-
-    @model_validator(mode="after")
-    def validate_timing(self) -> "SessionOccurrenceChange":
-        if self.start_datetime >= self.end_datetime:
-            raise ValueError("End datetime must be after start datetime.")
         return self

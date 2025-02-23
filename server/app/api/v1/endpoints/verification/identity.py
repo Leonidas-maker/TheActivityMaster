@@ -32,7 +32,13 @@ async def submit_identity_verification_v1(
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
-    """Submit an identity verification"""
+    """Submit an identity verification
+
+    Note: The images should be in the following order:
+        1. Front image of the ID
+        2. Back image of the ID
+        3. Selfie with the ID
+    """
     try:
         await verification_controller.submit_identity_verification(
             ep_context, verification_data, image_files, token_details.user_id

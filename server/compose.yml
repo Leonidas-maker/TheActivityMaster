@@ -19,12 +19,21 @@ services:
       timeout: 5s
       retries: 3
 
-  redis:
-    image: redis:latest
-    container_name: redis_container
-    command: redis-server --requirepass root
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: dragonfly
+    restart: unless-stopped
+    environment:
+      - DFLY_requirepass=root
+      - DFLY_port=6379
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     ports:
       - "6379:6379"
+    volumes:
+      - dragonfly_data:/data
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       start_period: 1m
@@ -41,9 +50,14 @@ services:
   #     PYTHON_VERSION: 3.12.8
     image: registry.gitlab.com/themastercollection/theactivitymaster/backend-dev
     container_name: backend
+    environment:
+      - DB_HOST=mariadb
+      - REDIS_HOST=dragonfly
+      - COLUMNS=120
+      - LINES=40
     depends_on:
       - mariadb
-      - redis
+      - dragonfly
     volumes:
       - backend_keyfiles:/app/config/keyfiles
       - backend_verifications:/app/config/verifications
@@ -59,13 +73,10 @@ services:
       timeout: 5s
       retries: 3
     tty: true
-    stdin_open: true
-    environment:
-      - COLUMNS=120
-      - LINES=40
-
+    stdin_open: true      
 
 volumes:
   mariadb_data:
+  dragonfly_data:
   backend_keyfiles:
   backend_verifications:

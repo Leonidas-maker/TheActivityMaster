@@ -4,6 +4,7 @@ from models.m_audit import *
 from models.m_payment import *
 from models.m_verification import *
 
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import warnings
 from sqlalchemy.inspection import inspect
@@ -38,19 +39,17 @@ from config.settings import DEFAULT_TIMEZONE
 from core.context import current_language_var
 
 
-########################################################################
-# Enums
-########################################################################
-
-
+###########################################################################
+################################## Enums ##################################
+###########################################################################
 class PriceType(enum.Enum):
     PACKAGE = "package"
     PER_SESSION = "per_session"
 
 
 class SessionType(enum.Enum):
-    COURSE = "course"  # Wiederkehrender Kurs
-    EVENT = "event"  # Einmaliges Event
+    COURSE = "course"  # Recurring Course
+    EVENT = "event"  # One-time Event
 
 
 class ProgramStatus(enum.Enum):
@@ -210,6 +209,7 @@ class Program(Base):
         default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
         onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
+    deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="program")
     club: Mapped["Club"] = relationship("Club", back_populates="programs")
@@ -220,9 +220,10 @@ class Program(Base):
     trainers: Mapped[List["User"]] = relationship("User", secondary="user_trainers")  # type: ignore
 
     __table_args__ = (
-        UniqueConstraint("club_id", "name", name="unique_program"),
+        UniqueConstraint("club_id", "name", "deleted_at", name="unique_program"),
         CheckConstraint("price >= 0", name="chk_price_non_negative"),
         CheckConstraint("capacity >= 0", name="chk_capacity_non_negative"),
+        CheckConstraint("status IN ('deleted', 'force_deleted') AND deleted_at IS NOT NULL", name="chk_deleted_status"),
         # Pricingmodell-Logic: Package-Pricing requires price and capacity, per_session requires none
         CheckConstraint(
             "((pricing_model = 'package' AND price IS NOT NULL AND capacity IS NOT NULL) OR "
@@ -271,8 +272,13 @@ class Session(Base):
     )
 
     program: Mapped["Program"] = relationship("Program", back_populates="sessions")
-    occurrences: Mapped[list["SessionOccurrence"]] = relationship("SessionOccurrence", back_populates="session")
-
+    occurrences: Mapped[list["SessionOccurrence"]] = relationship(
+        "SessionOccurrence",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        uselist=True,
+        order_by="SessionOccurrence.occurrence_date",
+    )
     address: Mapped["Address"] = relationship("Address")
     bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="session")
 
@@ -304,7 +310,9 @@ class SessionOccurrence(Base):
     __tablename__ = "session_occurrences"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False
+    )
     # The scheduled date of the occurrence (e.g., the planned appointment)
     occurrence_date: Mapped[datetime.date] = mapped_column(Date(), nullable=False)
     # Optional: Specific start/end times if these deviate from the regular schedule (e.g., for rescheduling)
@@ -371,11 +379,12 @@ class Membership(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
     price: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
     duration: Mapped[int] = mapped_column(Integer, nullable=False)  # Duration in Days
+
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
@@ -385,11 +394,18 @@ class Membership(Base):
         default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
         onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
+    deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     club: Mapped["Club"] = relationship("Club", back_populates="memberships")
     programs_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="membership")
     user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship(
         "MembershipSubscription", back_populates="membership"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("club_id", "name", "deleted_at", name="unique_membership"),
+        CheckConstraint("price >= 0", name="chk_price_non_negative"),
+        CheckConstraint("duration > 0", name="chk_duration_positive"),
     )
 
 
@@ -520,7 +536,9 @@ class UserTrainer(Base):
     __tablename__ = "user_trainers"
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), primary_key=True)
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("programs.id", ondelete="CASCADE"), primary_key=True
+    )
     assigned_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
@@ -543,6 +561,9 @@ BEGIN
         IF NEW.price IS NOT NULL OR NEW.capacity IS NOT NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, session price and capacity must be NULL';
         END IF;
+        IF NEW.membership_required = TRUE THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, membership_required must be FALSE';
+        END IF;
     ELSEIF p_model = 'per_session' THEN
         IF NEW.price IS NULL OR NEW.capacity IS NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PER_SESSION pricing, session price and capacity must be set';
@@ -564,6 +585,9 @@ BEGIN
         IF NEW.price IS NOT NULL OR NEW.capacity IS NOT NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, session price and capacity must be NULL';
         END IF;
+        IF NEW.membership_required = TRUE THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, membership_required must be FALSE';
+        END IF;
     ELSEIF p_model = 'per_session' THEN
         IF NEW.price IS NULL OR NEW.capacity IS NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PER_SESSION pricing, session price and capacity must be set';
@@ -573,6 +597,6 @@ END;
 """
 )
 
-# Die Trigger an die sessions-Tabelle anhängen (after_create-Event)
+# Add triggers to check session pricing consistency
 event.listen(Session.__table__, "after_create", trigger_session_pricing_before_insert)
 event.listen(Session.__table__, "after_create", trigger_session_pricing_before_update)

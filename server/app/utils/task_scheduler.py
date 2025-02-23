@@ -31,7 +31,7 @@ class TaskSchedulerRedis:
         self,
         redis_host: str = "localhost",
         redis_port: int = 6379,
-        redis_passwort: str = "root",
+        redis_password: str = "root",
         redis_db: int = 0,
         min_task_running_time: int = 1,
         max_task_block_time: int = 4,
@@ -69,7 +69,7 @@ class TaskSchedulerRedis:
             transient=True,  # Progress bar disappears when completed
         )
 
-        self.redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=redis_db, password=redis_passwort)
+        self.redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
 
         for attempt in range(1, max_redis_connection_tries + 1):
             try:

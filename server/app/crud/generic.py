@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
+from typing import List
 
 from models import m_generic
 from schemas import s_generic

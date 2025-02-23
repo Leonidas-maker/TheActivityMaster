@@ -3,6 +3,7 @@ from sqlalchemy import or_, ColumnElement
 import uuid
 from typing import Union, List, Dict, Optional
 from decimal import Decimal
+from fastapi_cache.decorator import cache
 
 
 from controllers import club as club_controller
@@ -18,6 +19,7 @@ from middleware.general import get_endpoint_context
 import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
+from utils.cache_keybuilder import request_key_builder
 
 from config.permissions import ClubPermissions
 
@@ -31,8 +33,6 @@ router = APIRouter()
 # ======================================================== #
 # ======================== Hybrid ======================== #
 # ======================================================== #
-
-
 @router.get(
     "", response_model=List[s_club.Program], tags=["Club - Program", "Access: Hybrid"], response_model_exclude_none=True
 )
@@ -49,6 +49,7 @@ async def get_programs_v1(
         return [s_club.Program.model_validate(program) for program in programs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get programs")
+
 
 
 @router.get(
@@ -69,8 +70,13 @@ async def get_program_v1(
     provide the authentication details to view a program with any status.**
     """
     try:
-        club_program = await club_controller.get_program(ep_context, token_details, club_id, program_id)
-        return s_club.ProgramDetails.model_validate(club_program)
+        user_id = token_details.user_id if token_details else None
+        program = await club_crud.get_authorized_program(ep_context.db, club_id, program_id, user_id, with_details=True)
+
+        if not program:
+            raise HTTPException(status_code=404, detail="Program not found")
+
+        return s_club.ProgramDetails.model_validate(program)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get program")
 
@@ -117,20 +123,40 @@ async def delete_program_v1(club_id: uuid.UUID, program_id: uuid.UUID):
 ###########################################################################
 ################################# Sessions ################################
 ###########################################################################
-@router.get("/{program_id}/sessions", tags=["Club - Program - Session"])
-async def get_program_sessions_v1(
-    club_id: uuid.UUID,
-    program_id: uuid.UUID,
+# ======================================================== #
+# ======================== Hybrid ======================== #
+# ======================================================== #
+@router.get(
+    "/{program_id}/sessions",
+    response_model=List[s_club.Session],
+    tags=["Club - Program - Session", "Access: Hybrid"],
+    response_model_exclude_none=True,
+)
+async def get_sessions_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
 ):
+    """Get sessions of a program
+
+    **Note: If the user has the permission to read programs or is a trainee of the program,
+    provide the authentication details to view the sessions of a program with any status.**
+    """
     try:
-        sessions = await club_crud.get_sessions(ep_context.db, program_id)
-        return [s_club.Session.model_validate(session) for session in sessions]
+        user_id = token_details.user_id if token_details else None
+        program = await club_crud.get_authorized_program(ep_context.db, club_id, program_id, user_id, with_details=True)
+        if not program:
+            raise HTTPException(status_code=404, detail="Program not found")
+
+        return [s_club.Session.model_validate(session) for session in program.sessions]
     except Exception as e:
-        await handle_exception(e, ep_context, "Failed to get program sessions")
+        await handle_exception(e, ep_context, "Failed to get sessions")
 
 
+# ======================================================== #
+# ======================== Private ======================= #
+# ======================================================== #
 @router.post(
     "/{program_id}/sessions",
     response_model=s_club.Session,
@@ -152,31 +178,178 @@ async def create_session_v1(
         await handle_exception(e, ep_context, "Failed to create session")
 
 
-@router.get("/{program_id}/sessions/{session_id}", tags=["Club - Program - Session"])
-async def get_session_v1(club_id: uuid.UUID, program_id: uuid.UUID, session_id: uuid.UUID):
-    pass
+@router.put(
+    "/{program_id}/sessions/{session_id}",
+    response_model=s_club.Session,
+    tags=["Club - Program - Session"],
+    response_model_exclude_none=True,
+)
+async def update_session_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    session_id: uuid.UUID = Path(..., description="The ID of the session"),
+    session_update: s_club.SessionUpdate = Body(..., description="The update values"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    """Update a session"""
+    try:
+        return await club_controller.update_session(
+            ep_context, token_details, club_id, program_id, session_id, session_update
+        )
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to update session")
 
 
-@router.put("/{program_id}/sessions/{session_id}", tags=["Club - Program - Session"])
-async def update_session_v1(club_id: uuid.UUID, program_id: uuid.UUID, session_id: uuid.UUID):
-    pass
-
-
-@router.delete("/{program_id}/sessions/{session_id}", tags=["Club - Program - Session"])
-async def delete_session_v1(club_id: uuid.UUID, program_id: uuid.UUID, session_id: uuid.UUID):
-    pass
+@router.delete(
+    "/{program_id}/sessions/{session_id}", response_model=s_generic.MessageResponse, tags=["Club - Program - Session"]
+)
+async def delete_session_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    session_id: uuid.UUID = Path(..., description="The ID of the session"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    try:
+        await club_controller.delete_session(ep_context, token_details, club_id, program_id, session_id)
+        return {"message": "Session deleted successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to delete session")
 
 
 # ======================================================== #
 # =================== SessionOccurrence ================== #
 # ======================================================== #
-@router.get("/{program_id}/sessions/{session_id}/occurrences", tags=["Club - Program - Session Occurrence"])
-async def get_occurrences_v1(club_id: uuid.UUID, session_id: uuid.UUID):
-    pass
+@router.put(
+    "/{program_id}/sessions/{session_id}/occurrences/reschedule",
+    response_model=s_generic.MessageResponse,
+    tags=["Club - Program - Session Occurrence"],
+)
+async def reschedule_occurrences_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    session_id: uuid.UUID = Path(..., description="The ID of the session"),
+    reschedule_data: List[s_club.SessionReschedule] = Body(..., description="The reschedule data"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    try:
+        await club_controller.reschedule_session_occurrences(
+            ep_context, token_details, club_id, program_id, session_id, reschedule_data
+        )
+        return {"message": "Occurrence rescheduled successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get occurrences")
 
 
 @router.put(
-    "/{program_id}/sessions/{session_id}/occurrences/{occurrence_id}", tags=["Club - Program - Session Occurrence"]
+    "/{program_id}/sessions/{session_id}/occurrences/reinstate",
+    tags=["Club - Program - Session Occurrence"],
 )
-async def update_occurrence_v1(club_id: uuid.UUID, session_id: uuid.UUID, occurrence_id: uuid.UUID):
-    pass
+async def reinstate_occurrences_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    session_id: uuid.UUID = Path(..., description="The ID of the session"),
+    occurrences_reinstate: List[s_club.SessionReinstate] = Body(..., description="The reinstate data"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    try:
+        await club_controller.reinstate_session_occurrences(
+            ep_context, token_details, club_id, program_id, session_id, occurrences_reinstate
+        )
+        return {"message": "Occurrences reinstated successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to reinstate occurrences")
+
+
+@router.delete(
+    "/{program_id}/sessions/{session_id}/occurrences/{occurrence_id}",
+    tags=["Club - Program - Session Occurrence"],
+)
+async def cancel_occurrence_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    session_id: uuid.UUID = Path(..., description="The ID of the session"),
+    occurrence_id: uuid.UUID = Path(..., description="The ID of the occurrence"),
+    note: Optional[str] = Body(None, description="The reason for deletion"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
+):
+    try:
+        await club_controller.cancel_session_occurrences(
+            ep_context, token_details, club_id, program_id, session_id, occurrence_id, note
+        )
+        return {"message": "Occurrence cancelled successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to cancel occurrence")
+
+###########################################################################
+################################# Trainers ################################
+###########################################################################
+@router.get(
+    "/{program_id}/trainers",
+    response_model=List[s_club.Employee],
+    tags=["Club - Program - Trainer"],
+    response_model_exclude_none=True,
+)
+async def get_trainers_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_PROGRAMS]))
+):
+    try:
+        trainers = await club_crud.get_trainers(ep_context.db, program_id)
+        return [s_club.Employee.model_validate(trainer) for trainer in trainers]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get trainers")
+
+@router.post(
+    "/{program_id}/trainers",
+    response_model=s_generic.MessageResponse,
+    tags=["Club - Program - Trainer"],
+    response_model_exclude_none=True,
+)
+async def add_trainer_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    user_id: uuid.UUID = Body(..., description="The ID of the user to add as a trainer"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])),
+):
+    try:
+        await club_controller.add_trainer(ep_context, token_details, club_id, program_id, user_id)
+        return {"message": "Trainer added successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to add trainer")
+
+@router.delete(
+    "/{program_id}/trainers/{trainer_id}",
+    response_model=s_generic.MessageResponse,
+    tags=["Club - Program - Trainer"],
+)
+async def remove_trainer_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    trainer_id: uuid.UUID = Path(..., description="The ID of the trainer"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])),
+):
+    try:
+        await club_controller.remove_trainer(ep_context, token_details, club_id, program_id, trainer_id)
+        return {"message": "Trainer removed successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to remove trainer")
+

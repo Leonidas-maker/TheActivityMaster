@@ -156,6 +156,7 @@ async def totp_register_init(ep_context: EndpointContext, token_details: core_se
             raise HTTPException(status_code=400, detail="TOTP already registered")
         else:
             await db.delete(totp_2fa)
+    await db.flush()
 
     with core_security.totp_manager_dependency.get() as totp_m:
         secret, encrypted_secret = totp_m.generate_totp_secret()

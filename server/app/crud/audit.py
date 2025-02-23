@@ -860,7 +860,94 @@ class AuditLogger:
             details=f"Created session {session_id} in club {club_id}: {details}",
         )
 
+    def session_updated(self, user_id: uuid.UUID, club_id: uuid.UUID, session_id: uuid.UUID, details: str):
+        """Log a session update action.
 
+        :param user_id: The user ID updating the session
+        :param session_id: The ID of the updated session
+        """
+        self.log_to_audit(
+            user_id,
+            action="Session Updated",
+            category=AuditLogCategories.CLUB,
+            details=f"Updated session {session_id} in club {club_id}: {details}",
+        )
+
+    def session_deleted(self, user_id: uuid.UUID, club_id: uuid.UUID, session_id: uuid.UUID):
+        """Log a session deletion action.
+
+        :param user_id: The user ID deleting the session
+        :param session_id: The ID of the deleted session
+        """
+        self.log_to_audit(
+            user_id,
+            action="Session Deleted",
+            category=AuditLogCategories.CLUB,
+            details=f"Deleted session {session_id} in club {club_id}",
+        )
+
+    # ======================================================== #
+    # ================== Session Occurrences ================= #
+    # ======================================================== #
+    def occurrence_rescheduled(
+        self, user_id: uuid.UUID, club_id: uuid.UUID, session_id: uuid.UUID, occurrence_id: uuid.UUID, details: str
+    ):
+        """Log an occurrence rescheduling action.
+
+        :param user_id: The user ID rescheduling the occurrence
+        :param occurrence_id: The ID of the rescheduled occurrence
+        """
+        self.log_to_audit(
+            user_id,
+            action="Occurrence Rescheduled",
+            category=AuditLogCategories.CLUB,
+            details=f"Rescheduled occurrence {occurrence_id} for session {session_id} in club {club_id}: {details}",
+        )
+
+    def occurrence_cancelled(
+        self, user_id: uuid.UUID, club_id: uuid.UUID, session_id: uuid.UUID, occurrence_id: uuid.UUID, details: str
+    ):
+        """Log an occurrence cancellation action.
+
+        :param user_id: The user ID cancelling the occurrence
+        :param occurrence_id: The ID of the cancelled occurrence
+        """
+        self.log_to_audit(
+            user_id,
+            action="Occurrence Cancelled",
+            category=AuditLogCategories.CLUB,
+            details=f"Cancelled occurrence {occurrence_id} for session {session_id} in club {club_id}: {details}",
+        )
+
+    # ======================================================== #
+    # ======================== Trainer ======================= #
+    # ======================================================== #
+    def trainer_added(self, user_id: uuid.UUID, club_id: uuid.UUID, program_id: uuid.UUID, trainer_id: uuid.UUID):
+        """Log a trainer addition action.
+
+        :param user_id: The user ID adding the trainer
+        :param trainer_id: The ID of the added trainer
+        """
+        self.log_to_audit(
+            user_id,
+            action="Trainer Added",
+            category=AuditLogCategories.CLUB,
+            details=f"Added trainer {trainer_id} to program {program_id} in club {club_id}",
+        )
+
+    def trainer_removed(self, user_id: uuid.UUID, club_id: uuid.UUID, program_id: uuid.UUID, trainer_id: uuid.UUID):
+        """Log a trainer removal action.
+
+        :param user_id: The user ID removing the trainer
+        :param trainer_id: The ID of the removed trainer
+        """
+        self.log_to_audit(
+            user_id,
+            action="Trainer Removed",
+            category=AuditLogCategories.CLUB,
+            details=f"Removed trainer {trainer_id} from program {program_id} in club {club_id}",
+        )
+            
 ###########################################################################
 ################################## Verify #################################
 ###########################################################################

@@ -48,7 +48,7 @@ class AccessTokenCheckerHybrid:
         if not application_id:
             return None
 
-        payload = await auth_crud.verify_token(db, token, TokenTypes.ACCESS, application_id)
+        payload = await auth_crud.verify_token(db, token, TokenTypes.ACCESS, application_id)       
 
         if not payload:
             raise credentials_exception
@@ -57,11 +57,11 @@ class AccessTokenCheckerHybrid:
 
 
 class AccessTokenChecker:
-    TRAINEE_CHECK_PERMISSION_LIST = [
+    TRAINEE_CHECK_PERMISSION_LIST = {
         ClubPermissions.READ_PROGRAMS,
         ClubPermissions.UPDATE_PROGRAMS,
         ClubPermissions.DELETE_PROGRAMS,
-    ]
+    }
 
     def __init__(
         self, generic_roles: Optional[list[str]] = None, club_permissions: Optional[list[ClubPermissions]] = None

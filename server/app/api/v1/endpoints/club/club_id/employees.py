@@ -61,6 +61,7 @@ async def get_employee_v1(
     """Get all employees of a club"""
     try:
         user_club_roles = await club_crud.get_club_employee_by_id(ep_context.db, club_id, user_id)
+        program_assignments = await club_crud.get_program_assignments(ep_context.db, club_id, user_id)
 
         if not user_club_roles:
             raise HTTPException(status_code=404, detail="This user is not an employee of this club")
@@ -72,9 +73,10 @@ async def get_employee_v1(
             first_name=user_club_roles.user.first_name,
             last_name=user_club_roles.user.last_name,
             email=user_club_roles.user.email,
+            program_assignments=program_assignments
         )
     except Exception as e:
-        await handle_exception(e, ep_context, "Failed to get employees")
+        await handle_exception(e, ep_context, "Failed to get employee")
 
 @router.post("", response_model=s_generic.MessageResponse, tags=["Club - Employee"])
 async def add_employee_v1(
