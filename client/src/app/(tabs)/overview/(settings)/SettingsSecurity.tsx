@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { getUserData } from "@/src/services/user/userService";
+import DefaultText from "@/src/components/textFields/DefaultText";
 
 const SettingsSecurity = () => {
     const { t } = useTranslation("settings");
     const router = useRouter();
     const [mfaMethods, setMfaMethods] = useState<string[]>([]);
+    const [isVerified, setIsVerified] = useState(false);
 
     useEffect(() => {
         // Fetch user data and set the available 2FA methods
         const getUserMethods = async () => {
             const userData = await getUserData();
             setMfaMethods(userData.methods_2fa);
+            console.log(userData);
         };
         getUserMethods();
     }, []);
@@ -49,14 +52,19 @@ const SettingsSecurity = () => {
     const pressFuntions = [handlePasswordChangePress, handleMultiFactorPress, handleAllLogoutPress];
 
     return (
-        <View className="flex h-screen bg-light_primary dark:bg-dark_primary">
+        <ScrollView className="flex h-screen bg-light_primary dark:bg-dark_primary">
             <PageNavigator
                 title={moduleTitle}
                 texts={securityTexts}
                 iconNames={securityIcon}
                 onPressFunctions={pressFuntions}
             />
-        </View>
+            {isVerified && (
+                <View>
+                    <DefaultText text={t("settings_verified_message")} />
+                </View>
+            )}
+        </ScrollView>
     );
 };
 

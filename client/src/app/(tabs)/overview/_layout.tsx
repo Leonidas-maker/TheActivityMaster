@@ -145,6 +145,18 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
+        name="(settings)/SettingsVerificationStatus"
+        options={{
+          headerTitle: t("settings_verification_status_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(settings)/SettingsSubmitVerification"
+        options={{
+          headerTitle: t("settings_submit_verification_header"),
+        }}
+      />
+      <Stack.Screen
         name="(billing)/BillingHistory"
         options={{
           headerTitle: t("billing_history_header"),

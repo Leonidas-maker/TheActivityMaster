@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Pressable, Alert, useColorScheme } from "react-native";
+import { View, Pressable, Alert, useColorScheme, ScrollView } from "react-native";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -105,14 +105,14 @@ const SettingsUser: React.FC = () => {
     );
 
     return (
-        <View className="flex h-screen bg-light_primary dark:bg-dark_primary">
+        <ScrollView className="flex h-screen bg-light_primary dark:bg-dark_primary">
             <PageNavigator
                 title={moduleTitle}
                 texts={filteredUserTexts}
                 iconNames={filteredUserIconNames}
                 onPressFunctions={filteredOnPressUserFunctions}
             />
-        </View>
+        </ScrollView>
     );
 };
 

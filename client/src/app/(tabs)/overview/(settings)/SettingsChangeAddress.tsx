@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from "react-native";
+import {
+    View,
+    KeyboardAvoidingView,
+    Platform,
+    Keyboard,
+    TouchableWithoutFeedback,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import Heading from "@/src/components/textFields/Heading";
@@ -8,28 +14,43 @@ import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import { changeAddress, getUserData } from "@/src/services/user/userService";
+import { getCountries } from "@/src/services/static/countryService";
+
+// Import the Dropdown component
+import Dropdown from "@/src/components/dropdown/Dropdown";
 
 const SettingsChangeAddress = () => {
     const router = useRouter();
-    const { t } = useTranslation("settings");
+    const { t, i18n } = useTranslation("settings");
 
+    // Initial user address values
     const [initialStreet, setInitialStreet] = useState("");
     const [initialZipCode, setInitialZipCode] = useState("");
     const [initialCity, setInitialCity] = useState("");
     const [initialState, setInitialState] = useState("");
     const [initialCountry, setInitialCountry] = useState("");
+
+    // Editable address fields
     const [street, setStreet] = useState("");
     const [zipCode, setZipCode] = useState("");
     const [city, setCity] = useState("");
     const [state, setState] = useState("");
+    // country holds the default country name to send to the backend
     const [country, setCountry] = useState("");
+
+    // Error states
     const [streetError, setStreetError] = useState(false);
     const [zipCodeError, setZipCodeError] = useState(false);
     const [cityError, setCityError] = useState(false);
     const [stateError, setStateError] = useState(false);
     const [countryError, setCountryError] = useState(false);
 
-    // Use useEffect to fetch the user data once when the component mounts
+    // State to hold full list of countries fetched from the API
+    const [fetchedCountries, setFetchedCountries] = useState<any[]>([]);
+    // Track the selected country's ISO2 code from the dropdown
+    const [selectedCountryKey, setSelectedCountryKey] = useState("");
+
+    // Fetch user data on mount
     useEffect(() => {
         async function fetchUserData() {
             const userData = await getUserData();
@@ -47,23 +68,55 @@ const SettingsChangeAddress = () => {
         fetchUserData();
     }, []);
 
+    // Fetch countries list. When initialCountry is set, try to match it
+    useEffect(() => {
+        async function fetchCountries() {
+            try {
+                const data = await getCountries();
+                setFetchedCountries(data.countries);
+                // If initialCountry is set, find its matching ISO2 code
+                if (initialCountry) {
+                    const defaultCountry = data.countries.find(
+                        (c: any) => c.name === initialCountry
+                    );
+                    if (defaultCountry) {
+                        setSelectedCountryKey(defaultCountry.iso2);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching countries", error);
+            }
+        }
+        fetchCountries();
+    }, [initialCountry]);
+
+    // When the selected country changes, update the 'country' state with the default name
+    useEffect(() => {
+        if (selectedCountryKey) {
+            const selected = fetchedCountries.find(
+                (c) => c.iso2 === selectedCountryKey
+            );
+            if (selected) {
+                setCountry(selected.name);
+            }
+        }
+    }, [selectedCountryKey, fetchedCountries]);
+
+    // Build dropdown options using the current language for display
+    const dropdownOptions = fetchedCountries.map((c) => {
+        // Use the translation for the current language, fallback to default name if not available
+        const translatedName = c.translations[i18n.language] || c.name;
+        return { key: c.iso2, value: translatedName };
+    });
+
+    // Handler for updating address
     const handleNameChangePress = async () => {
         if (!street.trim() || !zipCode.trim() || !city.trim() || !state.trim() || !country.trim()) {
-            if (!street.trim()) {
-                setStreetError(true);
-            }
-            if (!zipCode.trim()) {
-                setZipCodeError(true);
-            }
-            if (!city.trim()) {
-                setCityError(true);
-            }
-            if (!state.trim()) {
-                setStateError(true);
-            }
-            if (!country.trim()) {
-                setCountryError(true);
-            }
+            if (!street.trim()) setStreetError(true);
+            if (!zipCode.trim()) setZipCodeError(true);
+            if (!city.trim()) setCityError(true);
+            if (!state.trim()) setStateError(true);
+            if (!country.trim()) setCountryError(true);
             Toast.show({
                 type: "error",
                 text1: t("error_change_address_all_fields"),
@@ -82,9 +135,8 @@ const SettingsChangeAddress = () => {
         }
 
         try {
-            // Call the changeAddress service
+            // Call the changeAddress service using the default country name
             await changeAddress(street, zipCode, city, state, country);
-
             router.back();
         } catch (error) {
             Toast.show({
@@ -92,7 +144,6 @@ const SettingsChangeAddress = () => {
                 text1: t("error_change_address_failed"),
                 text2: t("error_change_address_failed_subheading"),
             });
-            return;
         }
     };
 
@@ -147,16 +198,22 @@ const SettingsChangeAddress = () => {
                         }}
                         hasError={stateError}
                     />
-                    <DefaultTextFieldInput
+                    <Dropdown
+                        search={true}
+                        setSelected={setSelectedCountryKey}
+                        values={dropdownOptions}
                         placeholder={t("change_country_placeholder")}
-                        value={country}
-                        onChangeText={(text) => {
-                            setCountry(text);
-                            if (text.trim()) {
-                                setCountryError(false);
-                            }
-                        }}
-                        hasError={countryError}
+                        save="key" 
+                        defaultOption={
+                            selectedCountryKey
+                                ? {
+                                    key: selectedCountryKey,
+                                    value:
+                                        fetchedCountries.find((c) => c.iso2 === selectedCountryKey)?.translations[i18n.language] ||
+                                        initialCountry,
+                                }
+                                : undefined
+                        }
                     />
                     <DefaultButton text={t("change_address_button")} onPress={handleNameChangePress} />
                     <DefaultToast />

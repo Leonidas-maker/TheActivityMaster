@@ -20,12 +20,15 @@ import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
 import SecondaryButton from "@/src/components/buttons/SecondaryButton";
 import OptionSwitch from "@/src/components/optionSwitch/OptionSwitch";
+// Import the Dropdown component for country selection
 import Dropdown from "@/src/components/dropdown/Dropdown";
 import StepProgressBar from "@/src/components/stepProgressBar/StepProgressBar";
 import Subheading from "@/src/components/textFields/Subheading";
+import { getCountries } from "@/src/services/static/countryService";
 
 const SignUp: React.FC = () => {
-    const { t } = useTranslation("auth");
+    // Destructure i18n along with t to get the current language
+    const { t, i18n } = useTranslation("auth");
     const router = useRouter();
     const { acceptedTerms: acceptedTermsParam } = useLocalSearchParams();
 
@@ -45,7 +48,7 @@ const SignUp: React.FC = () => {
     const [lastName, setLastName] = useState("");
 
     // Step 3: Personal Information.
-    const [country, setCountry] = useState("Germany");
+    const [country, setCountry] = useState("");
     const [street, setStreet] = useState("");
     const [city, setCity] = useState("");
     const [zip, setZip] = useState("");
@@ -68,11 +71,55 @@ const SignUp: React.FC = () => {
     const fieldAnim = useRef(new Animated.Value(0)).current;
     const isInitialMount = useRef(true);
 
+    // State to hold full countries list from the API
+    const [fetchedCountries, setFetchedCountries] = useState<any[]>([]);
+    // State to track the selected country's ISO2 code from the dropdown
+    const [selectedCountryKey, setSelectedCountryKey] = useState("");
+
     // Helper function to check if an email is valid.
     const isValidEmail = (email: string): boolean => {
         const emailRegex = /^\S+@\S+\.\S+$/;
         return emailRegex.test(email);
     };
+
+    // Fetch the countries and store the full response in state
+    useEffect(() => {
+        async function fetchCountries() {
+            try {
+                const data = await getCountries();
+                setFetchedCountries(data.countries);
+                // Optionally, set a default selected country based on your logic.
+                // For instance, if the default "Germany" is available, set it.
+                const defaultCountry = data.countries.find(
+                    (c: any) => c.name === "Germany"
+                );
+                if (defaultCountry) {
+                    setSelectedCountryKey(defaultCountry.iso2);
+                    setCountry(defaultCountry.name); // set default name for registration
+                }
+            } catch (error) {
+                console.error("Error fetching countries", error);
+            }
+        }
+        fetchCountries();
+    }, []);
+
+    // Update the country state (default name) whenever the selected country changes.
+    useEffect(() => {
+        if (selectedCountryKey) {
+            const selected = fetchedCountries.find((c) => c.iso2 === selectedCountryKey);
+            if (selected) {
+                setCountry(selected.name);
+            }
+        }
+    }, [selectedCountryKey, fetchedCountries]);
+
+    // Build dropdown list using the current language for display.
+    const dropdownOptions = fetchedCountries.map((c) => {
+        // Use the translation for the current language if available; otherwise fallback to the default name.
+        const translatedName = c.translations[i18n.language] || c.name;
+        return { key: c.iso2, value: translatedName };
+    });
 
     useFocusEffect(
         useCallback(() => {
@@ -152,7 +199,6 @@ const SignUp: React.FC = () => {
     const handleNext = () => {
         // Validate inputs for step 0 (Email and Username).
         if (currentStep === 0) {
-            // Check for empty fields.
             const isEmailEmpty = !email.trim();
             const isConfirmEmailEmpty = !confirmEmail.trim();
             const isUsernameEmpty = !username.trim();
@@ -170,7 +216,6 @@ const SignUp: React.FC = () => {
                 return;
             }
 
-            // Check if the provided emails are valid.
             if (!isValidEmail(email) || !isValidEmail(confirmEmail)) {
                 setEmailError(true);
                 setConfirmEmailError(true);
@@ -182,7 +227,6 @@ const SignUp: React.FC = () => {
                 return;
             }
 
-            // Check if emails match.
             if (email !== confirmEmail) {
                 setEmailError(true);
                 setConfirmEmailError(true);
@@ -219,7 +263,6 @@ const SignUp: React.FC = () => {
                 return;
             }
 
-            // Check if the password is at least 8 characters long.
             if (password.length < 8) {
                 setPasswordError(true);
                 setConfirmPasswordError(true);
@@ -231,7 +274,6 @@ const SignUp: React.FC = () => {
                 return;
             }
 
-            // Check if passwords match.
             if (password !== confirmPassword) {
                 setPasswordError(true);
                 setConfirmPasswordError(true);
@@ -270,6 +312,7 @@ const SignUp: React.FC = () => {
         }
 
         try {
+            // Use the country state which holds the default name required by the backend.
             const response = await register(
                 username,
                 email,
@@ -418,20 +461,9 @@ const SignUp: React.FC = () => {
                                 <View className="w-full items-center">
                                     <Subheading text={t("registration_step3_title")} />
                                     <DefaultTextFieldInput
-                                        placeholder={t("country_placeholder")}
-                                        value={country}
-                                        onChangeText={setCountry}
-                                        editable={false}
-                                    />
-                                    <DefaultTextFieldInput
                                         placeholder={t("street_placeholder")}
                                         value={street}
                                         onChangeText={setStreet}
-                                    />
-                                    <DefaultTextFieldInput
-                                        placeholder={t("city_placeholder")}
-                                        value={city}
-                                        onChangeText={setCity}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("zip_placeholder")}
@@ -439,9 +471,21 @@ const SignUp: React.FC = () => {
                                         onChangeText={setZip}
                                     />
                                     <DefaultTextFieldInput
+                                        placeholder={t("city_placeholder")}
+                                        value={city}
+                                        onChangeText={setCity}
+                                    />
+                                    <DefaultTextFieldInput
                                         placeholder={t("state_placeholder")}
                                         value={state}
                                         onChangeText={setState}
+                                    />
+                                    <Dropdown
+                                        search={true}
+                                        setSelected={setSelectedCountryKey}
+                                        values={dropdownOptions}
+                                        placeholder={t("country_placeholder")}
+                                        save="key"
                                     />
                                 </View>
                             )}
