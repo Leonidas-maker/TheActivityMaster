@@ -7,6 +7,7 @@ const secureStoreKeys = [
   "savedPassword",
   "access_token",
   "refresh_token",
+  "backup_codes",
 ];
 
 // Function to clear all data from AsyncStorage

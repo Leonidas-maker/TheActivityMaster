@@ -119,5 +119,10 @@
     "settings_receive_news_error_subheading": "Please try again later",
     "settings_receive_notification_header": "Change notification settings",
     "receive_news": "Email notifications",
-    "receive_news_text": "Newsletter, promotions and more"
+    "receive_news_text": "Newsletter, promotions and more",
+    "settings_enable_mfa_secret_copied": "Backup code successfully copied!",
+    "multi_factor_authentication_enable_success_title": "Multi-factor authentication successfully enabled",
+    "mfa_enable_success_button": "Back",
+    "mfa_enable_success_subheading": "Please save your backup code in a safe place, you will need it to recover your account.",
+    "mfa_enable_copy_secondary_button": "Copy backup code"
 }

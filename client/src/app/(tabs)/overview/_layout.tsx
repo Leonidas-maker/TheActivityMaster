@@ -123,6 +123,7 @@ export default function OverviewLayout() {
         options={{
           presentation: "modal",
           headerTitle: t("settings_multi_factor_header"),
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen
@@ -153,6 +154,18 @@ export default function OverviewLayout() {
         name="(billing)/BillingSubscription"
         options={{
           headerTitle: t("billing_subscription_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(admin)/AdminIdentityOverview"
+        options={{
+          headerTitle: t("admin_identity_overview_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(admin)/AdminIdentityApprove"
+        options={{
+          headerTitle: t("admin_identity_approve_header"),
         }}
       />
     </Stack>

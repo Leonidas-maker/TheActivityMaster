@@ -22,7 +22,7 @@ export const register = async (
   state: string,
   country: string,
   password: string,
-  newsletter_subscribed: boolean,
+  newsletter_subscribed: boolean
 ): Promise<any> => {
   try {
     // Prepare the request body with the correct structure
@@ -172,10 +172,23 @@ export const updateNewsletterSubscription = async (
   newsletter_subscription: boolean
 ): Promise<any> => {
   try {
-    const response = await axiosInstance.put("/user/me/newsletter?newsletter_subscribe=" + newsletter_subscription);
+    const response = await axiosInstance.put(
+      "/user/me/newsletter?newsletter_subscribe=" + newsletter_subscription
+    );
     return response.data;
   } catch (error) {
     console.error("Error during updateNewsletterSubscription call:", error);
+    throw error;
+  }
+};
+
+export const getUserRoles = async (): Promise<any> => {
+  try {
+    const response = await axiosInstance.get("/user/me/roles");
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getUserRoles call:", error);
     throw error;
   }
 };

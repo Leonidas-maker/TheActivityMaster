@@ -120,5 +120,10 @@
     "settings_receive_news_error_subheading": "Bitte versuche es später erneut",
     "settings_receive_notification_header": "Nachrichten Einstellungen ändern",
     "receive_news": "E-Mail-Benachrichtigungen",
-    "receive_news_text": "Newsletter, Aktionen und mehr"
+    "receive_news_text": "Newsletter, Aktionen und mehr",
+    "settings_enable_mfa_secret_copied": "Backup Code erfolgreich kopiert!",
+    "multi_factor_authentication_enable_success_title": "Multifaktor-Authentifizierung erfolgreich aktiviert",
+    "mfa_enable_success_subheading": "Speichere die Backup-Codes an einem sicheren Ort, da sie nicht erneut angezeigt werden. Du kannst sie verwenden, wenn du keinen Zugriff auf deinen Authenticator hast.",
+    "mfa_enable_copy_secondary_button": "Backup Codes kopieren",
+    "mfa_enable_success_button": "Zurück"
 }

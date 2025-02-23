@@ -9,5 +9,7 @@
     "logout_btn": "Logout",
     "pageNavigator_title3": "Payment Pages",
     "billing_subscription_btn": "Subscriptions",
-    "billing_history_btn": "Billing History"
+    "billing_history_btn": "Billing History",
+    "pageNavigator_title4": "Admin Pages",
+    "admin_identity_overview_btn": "User Verifications Overview"
 }
