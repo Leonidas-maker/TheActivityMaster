@@ -1,21 +1,16 @@
-from fastapi import APIRouter, Depends, Request, Header, File, UploadFile, HTTPException
-from fastapi.responses import FileResponse
-import uuid
+from fastapi import APIRouter, Depends
 from typing import List, Optional
 
 from controllers import verification as verification_controller
 
 from schemas import s_verification, s_generic
 
-import core.security as core_security
 from core.generic import EndpointContext
 
 from middleware.general import get_endpoint_context
-import middleware.auth as auth_middleware
 
 from utils.exceptions import handle_exception
 
-from config import settings
 from api.v1.endpoints.verification import identity
 
 

@@ -145,7 +145,7 @@ async def get_identity_verification_image_v1(
         file_name = await verification_controller.get_identity_verification_image(ep_context, verification_id, index)
         if not os.path.exists(file_name):
             raise HTTPException(status_code=404, detail="Image not found")
-        return FileResponse(file_name)
+        return FileResponse(file_name, media_type="image/png")
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get identity verification image")
 

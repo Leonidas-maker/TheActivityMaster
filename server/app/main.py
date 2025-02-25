@@ -28,7 +28,8 @@ from core.security import (
 from crud.audit import anonymize_ip_addresses
 from crud.auth import clean_tokens, totp_key_rotation, clean_2fa_table
 from crud.verification import delete_expired_identity_verifications
-from crud.club import update_session_occurrences
+from crud.club import update_session_occurrences, refresh_bookings_status
+from crud.transactions import check_pending_transactions
 
 from utils.jwt_keyfile_manager import JWTKeyManager
 from utils.totp_manager import TOTPManager
@@ -111,6 +112,25 @@ async def lifespan(app: FastAPI):
         with_console=True,
     )
 
+    # Refresh the bookings status every 15 minutes
+    scheduler.add_task(
+        "refresh_bookings_status",
+        refresh_bookings_status,
+        cron="*/15 * * * *",
+        on_startup=True,
+        with_console=True,
+    )
+
+    #! Uncomment this if you have the payment system over the Stripe-API
+    # Check pending transactions every 5 minutes
+    # scheduler.add_task(
+    #     "check_pending_transactions",
+    #     check_pending_transactions,
+    #     cron="*/5 * * * *",
+    #     on_startup=True,
+    #     with_console=True,
+    # )
+
     scheduler.start()
     yield
     scheduler.stop()
@@ -150,7 +170,6 @@ app.mount("/static", StaticFiles(directory=static_folder), name="static")
 @app.get("/ping")
 def read_root():
     return {"message": "pong"}
-
 
 if __name__ == "__main__":
     import uvicorn

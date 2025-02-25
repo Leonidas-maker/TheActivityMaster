@@ -68,7 +68,6 @@ async def get_club(
 
     return club
 
-
 async def update_club(
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,

@@ -51,7 +51,6 @@ async def get_programs_v1(
         await handle_exception(e, ep_context, "Failed to get programs")
 
 
-
 @router.get(
     "/{program_id}",
     response_model=s_club.ProgramDetails,
@@ -295,6 +294,7 @@ async def cancel_occurrence_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to cancel occurrence")
 
+
 ###########################################################################
 ################################# Trainers ################################
 ###########################################################################
@@ -308,13 +308,16 @@ async def get_trainers_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_PROGRAMS]))
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_PROGRAMS])
+    ),
 ):
     try:
         trainers = await club_crud.get_trainers(ep_context.db, program_id)
         return [s_club.Employee.model_validate(trainer) for trainer in trainers]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get trainers")
+
 
 @router.post(
     "/{program_id}/trainers",
@@ -327,13 +330,16 @@ async def add_trainer_v1(
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     user_id: uuid.UUID = Body(..., description="The ID of the user to add as a trainer"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
 ):
     try:
         await club_controller.add_trainer(ep_context, token_details, club_id, program_id, user_id)
         return {"message": "Trainer added successfully."}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to add trainer")
+
 
 @router.delete(
     "/{program_id}/trainers/{trainer_id}",
@@ -345,11 +351,12 @@ async def remove_trainer_v1(
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     trainer_id: uuid.UUID = Path(..., description="The ID of the trainer"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+    ),
 ):
     try:
         await club_controller.remove_trainer(ep_context, token_details, club_id, program_id, trainer_id)
         return {"message": "Trainer removed successfully."}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to remove trainer")
-

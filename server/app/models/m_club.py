@@ -1,9 +1,3 @@
-from models.m_generic import *
-from models.m_club import *
-from models.m_audit import *
-from models.m_payment import *
-from models.m_verification import *
-
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import warnings
@@ -30,7 +24,6 @@ from decimal import Decimal
 import uuid
 import enum
 from typing import List, Optional
-import datetime
 
 
 from config.database import Base
@@ -75,18 +68,15 @@ class OccurrenceStatus(enum.Enum):
     CANCELLED = "cancelled"
     RESCHEDULED = "rescheduled"
 
-
-class BookingStatus(enum.Enum):
-    PENDING = "Pending"
-    CONFIRMED = "Confirmed"
-    CANCELLED = "Cancelled"
-    COMPLETED = "Completed"
-    CANCELLED_BY_CLUB = "Cancelled by Club"
-
-
 ###########################################################################
-################################### MAIN ##################################
+############################# Database Models #############################
 ###########################################################################
+from models.m_generic import *
+from models.m_audit import *
+from models.m_verification import *
+from models.m_payment import *
+import datetime
+
 class Club(Base):
     __tablename__ = "clubs"
 
@@ -192,11 +182,14 @@ class Program(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[str] = deferred(mapped_column(String(500), nullable=False))
 
-    price: Mapped[Decimal | None] = mapped_column(DECIMAL(10, 2), nullable=True)
+    price: Mapped[int | None] = mapped_column(Integer, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
     pricing_model: Mapped[PriceType] = mapped_column(Enum(PriceType), nullable=False, default=PriceType.PACKAGE)
 
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Membership required to access the program
+    membership_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     status: Mapped[ProgramStatus] = mapped_column(Enum(ProgramStatus), nullable=False, default=ProgramStatus.DRAFT)
 
@@ -213,7 +206,7 @@ class Program(Base):
 
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="program")
     club: Mapped["Club"] = relationship("Club", back_populates="programs")
-    memberships: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="program")
+    memberships_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="program")
     categories: Mapped[List["ProgramCategory"]] = relationship(
         "ProgramCategory", secondary="program_category_association", back_populates="programs"
     )
@@ -223,7 +216,9 @@ class Program(Base):
         UniqueConstraint("club_id", "name", "deleted_at", name="unique_program"),
         CheckConstraint("price >= 0", name="chk_price_non_negative"),
         CheckConstraint("capacity >= 0", name="chk_capacity_non_negative"),
-        CheckConstraint("status IN ('deleted', 'force_deleted') AND deleted_at IS NOT NULL", name="chk_deleted_status"),
+        CheckConstraint(
+            "status NOT IN ('deleted', 'force_deleted') OR deleted_at IS NOT NULL", name="chk_deleted_status"
+        ),
         # Pricingmodell-Logic: Package-Pricing requires price and capacity, per_session requires none
         CheckConstraint(
             "((pricing_model = 'package' AND price IS NOT NULL AND capacity IS NOT NULL) OR "
@@ -244,10 +239,7 @@ class Session(Base):
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Individual price for the session
-    price: Mapped[Decimal | None] = mapped_column(DECIMAL(10, 2), nullable=True)
-
-    # True if the session requires a membership
-    membership_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    price: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Fields for one-time events:
     start_datetime: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -279,8 +271,8 @@ class Session(Base):
         uselist=True,
         order_by="SessionOccurrence.occurrence_date",
     )
-    address: Mapped["Address"] = relationship("Address")
-    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="session")
+    address: Mapped["Address"] = relationship("Address")  # type: ignore
+    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="session")  # type: ignore
 
     __table_args__ = (
         CheckConstraint("price >= 0", name="chk_price_non_negative"),
@@ -336,42 +328,6 @@ class SessionOccurrence(Base):
 
 
 ###########################################################################
-################################# BOOKINGS ################################
-###########################################################################
-class Booking(Base):
-    __tablename__ = "bookings"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    booking_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("booking_types.id"), nullable=False)
-    status: Mapped[BookingStatus] = mapped_column(Enum(BookingStatus), nullable=False)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
-    )
-    updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
-    )
-
-    user: Mapped["User"] = relationship("User", back_populates="bookings")  # type: ignore
-    session: Mapped["Session"] = relationship("Session", back_populates="bookings")
-    booking_type: Mapped["BookingType"] = relationship("BookingType", back_populates="bookings")
-
-
-class BookingType(Base):
-    __tablename__ = "booking_types"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
-
-    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="booking_type")
-
-
-###########################################################################
 ############################### Memberships ###############################
 ###########################################################################
 class Membership(Base):
@@ -415,11 +371,10 @@ class MembershipAccess(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
     program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
-    additional_fee: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
+    additional_fee: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     membership: Mapped["Membership"] = relationship("Membership", back_populates="programs_access")
-    program: Mapped["Program"] = relationship("Program", back_populates="memberships")
+    program: Mapped["Program"] = relationship("Program", back_populates="memberships_access")
 
     __table_args__ = (UniqueConstraint("membership_id", "program_id", name="unique_membership_access"),)
 
@@ -437,28 +392,10 @@ class MembershipSubscription(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")  # type: ignore
     membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")
-    transactions: Mapped[List["MembershipTransaction"]] = relationship(
-        "MembershipTransaction", back_populates="membership_subscription"
+    transactions: Mapped[List["Transaction"]] = relationship( # type: ignore
+        "Transaction", secondary="membership_transactions", back_populates="membership_subscription"
     )
-
     __table_args__ = (UniqueConstraint("membership_id", "user_id", name="unique_membership_subscription"),)
-
-
-class MembershipTransaction(Base):
-    __tablename__ = "membership_transactions"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_subscription_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False
-    )
-    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
-    )
-
-    membership_subscription: Mapped["MembershipSubscription"] = relationship(
-        "MembershipSubscription", back_populates="transactions"
-    )
 
 
 ###########################################################################
@@ -561,9 +498,6 @@ BEGIN
         IF NEW.price IS NOT NULL OR NEW.capacity IS NOT NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, session price and capacity must be NULL';
         END IF;
-        IF NEW.membership_required = TRUE THEN
-            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, membership_required must be FALSE';
-        END IF;
     ELSEIF p_model = 'per_session' THEN
         IF NEW.price IS NULL OR NEW.capacity IS NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PER_SESSION pricing, session price and capacity must be set';
@@ -584,9 +518,6 @@ BEGIN
     IF p_model = 'package' THEN
         IF NEW.price IS NOT NULL OR NEW.capacity IS NOT NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, session price and capacity must be NULL';
-        END IF;
-        IF NEW.membership_required = TRUE THEN
-            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'For programs with PACKAGE pricing, membership_required must be FALSE';
         END IF;
     ELSEIF p_model = 'per_session' THEN
         IF NEW.price IS NULL OR NEW.capacity IS NULL THEN

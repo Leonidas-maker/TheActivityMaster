@@ -42,6 +42,12 @@ services:
       timeout: 5s
       retries: 3
 
+  stripe:
+    image: stripe/stripe-mock:latest
+    container_name: stripe
+    ports:
+      - "12111:12111"
+
   backend:
   # build:
   #   context: ./app
@@ -53,6 +59,7 @@ services:
     environment:
       - DB_HOST=mariadb
       - REDIS_HOST=dragonfly
+      - STRIPE_MOCK_HOST=stripe
       - COLUMNS=120
       - LINES=40
     depends_on:

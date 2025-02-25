@@ -1,10 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_, exists, and_, ColumnElement
+from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, func
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import undefer, joinedload
 from typing import List, Tuple, Optional, Dict
 import uuid
-from decimal import Decimal
 import datetime
 from rich.console import Console
 from dateutil.rrule import rrule, WEEKLY
@@ -12,11 +11,12 @@ import traceback
 
 from schemas import s_club
 
-from models import m_club
+from models import m_club, m_payment
 
 from crud import audit as audit_crud, generic as generic_crud
 
 from config.permissions import ClubPermissions
+
 
 ###########################################################################
 ################################# Helpers #################################
@@ -50,6 +50,20 @@ def authorized_read_program_db_condition(user_id: uuid.UUID, club_id: uuid.UUID)
         )
     )
     return exists(subquery).correlate(m_club.Program)
+
+
+def active_sessions_db_condition() -> ColumnElement[bool]:
+    return and_(
+        or_(
+            m_club.Session.end_date >= datetime.datetime.now(tz=datetime.timezone.utc),
+            m_club.Session.end_date == None,
+        ),
+        or_(
+            m_club.Session.end_datetime >= datetime.datetime.now(tz=datetime.timezone.utc),
+            m_club.Session.end_datetime == None,
+        ),
+    )
+
 
 ###########################################################################
 ########################### Session Occurrences ###########################
@@ -380,6 +394,59 @@ async def get_session(
     return res.unique().scalar_one_or_none()
 
 
+async def get_active_session(
+    db: AsyncSession, program_id: uuid.UUID, session_id: uuid.UUID, query_options: list = []
+) -> m_club.Session:
+    """Get a session by ID which is active and not past
+
+    :param db: The database session
+    :param program_id: The ID of the program
+    :param session_id: The ID of the session
+    :return: The session with the given ID
+    """
+    res = await db.execute(
+        select(m_club.Session)
+        .filter(
+            m_club.Session.program_id == program_id,
+            m_club.Session.id == session_id,
+            active_sessions_db_condition(),
+        )
+        .options(*query_options)
+    )
+    return res.unique().scalar_one_or_none()
+
+
+async def get_bookable_sessions(db: AsyncSession, session_ids: List[uuid.UUID]) -> List[m_club.Session]:
+    """Get bookable sessions which are active, not past and not requiring membership
+
+    :param db: The database session
+    :param session_ids: The IDs of the sessions
+    :return: A list of sessions
+    """
+    bookings_count_subquery = (
+        select(func.count(m_payment.Booking.id))
+        .where(m_payment.Booking.session_id == m_club.Session.id)
+        .scalar_subquery()
+    )
+
+    res = await db.execute(
+        select(m_club.Session)
+        .join(m_club.Program)
+        .filter(
+            m_club.Program.status == m_club.ProgramStatus.ACTIVE,
+            m_club.Program.pricing_model == m_club.PriceType.PER_SESSION,
+            m_club.Session.id.in_(session_ids),
+            active_sessions_db_condition(),
+            m_club.Session.capacity > bookings_count_subquery,
+        )
+        .options(
+            joinedload(m_club.Session.program).joinedload(m_club.Program.memberships_access),
+            joinedload(m_club.Session.program).joinedload(m_club.Program.club),
+        )
+    )
+    return list(res.unique().scalars().all())
+
+
 async def get_authorized_sessions(
     db: AsyncSession, club_id: uuid.UUID, page: int, page_size: int, user_id: Optional[uuid.UUID] = None
 ) -> List[m_club.Session]:
@@ -408,6 +475,14 @@ async def get_authorized_sessions(
                     m_club.Program.status == m_club.ProgramStatus.ACTIVE,
                     # Authorized sessions for the user
                     authorized_read_program_db_condition(user_id, club_id),
+                ),
+                or_(
+                    m_club.Session.end_date >= datetime.datetime.now(tz=datetime.timezone.utc),
+                    m_club.Session.end_date == None,
+                ),
+                or_(
+                    m_club.Session.end_datetime >= datetime.datetime.now(tz=datetime.timezone.utc),
+                    m_club.Session.end_datetime == None,
                 ),
             )
         )
@@ -457,7 +532,6 @@ async def create_session(db: AsyncSession, program_id: uuid.UUID, session: s_clu
         session_type=session.session_type,
         capacity=session.capacity,
         price=session.price,
-        membership_required=session.membership_required,
         start_datetime=session.start_datetime,
         end_datetime=session.end_datetime,
         day_of_week=session.day_of_week,
@@ -539,10 +613,6 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
     if session_update.price and session.price != session_update.price:
         details += f"Price: {session.price} -> {session_update.price}"
         session.price = session_update.price
-
-    if session_update.membership_required and session.membership_required != session_update.membership_required:
-        details += f"Membership Required: {session.membership_required} -> {session_update.membership_required}"
-        session.membership_required = session_update.membership_required
 
     if session_update.address:
         new_address = await generic_crud.get_create_address(db, session_update.address)
@@ -742,6 +812,7 @@ async def create_program(db: AsyncSession, club_id: uuid.UUID, program: s_club.P
         currency=program.currency,
         pricing_model=program.pricing_model,
         capacity=program.capacity,
+        membership_required=program.membership_required,
         status=program.status,
         categories=categories or [],
     )
@@ -795,6 +866,76 @@ async def get_authorized_programs(
     return list(res.unique().scalars().all())
 
 
+async def get_program(
+    db: AsyncSession,
+    club_id: uuid.UUID,
+    program_id: uuid.UUID,
+    with_details: bool = False,
+    with_club: bool = False,
+    status: Optional[m_club.ProgramStatus] = None,
+) -> m_club.Program:
+    """Get a program by ID
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :param program_id: The ID of the program
+    :param with_details: Whether to load additional details
+    :param status: The status of the program
+    :return: The program with the given ID
+    """
+    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
+    conditions = [m_club.Program.id == program_id, m_club.Program.club_id == club_id]
+
+    if with_details:
+        query_options.append(joinedload(m_club.Program.sessions))
+
+    if with_club:
+        query_options.append(joinedload(m_club.Program.club))
+
+    if status:
+        conditions.append(m_club.Program.status == status)
+
+    res = await db.execute(select(m_club.Program).options(*query_options).filter(and_(*conditions)))
+    return res.unique().scalar_one_or_none()
+
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
+
+
+async def get_bookable_programs(db: AsyncSession, program_ids: List[uuid.UUID]) -> List[m_club.Program]:
+    """Get bookable programs
+
+    :param db: The database session
+    :param program_ids: The IDs of the programs
+    :return: A list of programs
+    """
+    bookings_count_subquery = (
+        select(func.count(m_payment.Booking.id))
+        .where(m_payment.Booking.session_id == m_club.Session.id)
+        .scalar_subquery()
+    )
+
+    res = await db.execute(
+        select(m_club.Program)
+        .join(m_club.Session)
+        .filter(
+            m_club.Program.status == m_club.ProgramStatus.ACTIVE,
+            m_club.Program.pricing_model == m_club.PriceType.PACKAGE,
+            m_club.Program.id.in_(program_ids),
+            active_sessions_db_condition(),
+            m_club.Session.capacity > bookings_count_subquery,
+        )
+        .options(
+            joinedload(m_club.Program.sessions),
+            joinedload(m_club.Program.memberships_access),
+            joinedload(m_club.Program.club),
+            joinedload(m_club.Program.sessions).joinedload(m_club.Session.program),
+        )
+    )
+    return list(res.unique().scalars().all())
+
+
 async def get_authorized_program(
     db: AsyncSession,
     club_id: uuid.UUID,
@@ -840,35 +981,6 @@ async def get_authorized_program(
         )
 
     res = await db.execute(query.options(*query_options))
-    return res.unique().scalar_one_or_none()
-
-
-async def get_program(
-    db: AsyncSession,
-    club_id: uuid.UUID,
-    program_id: uuid.UUID,
-    with_details: bool = False,
-    status: Optional[m_club.ProgramStatus] = None,
-) -> m_club.Program:
-    """Get a program by ID
-
-    :param db: The database session
-    :param club_id: The ID of the club
-    :param program_id: The ID of the program
-    :param with_details: Whether to load additional details
-    :param status: The status of the program
-    :return: The program with the given ID
-    """
-    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
-    conditions = [m_club.Program.id == program_id, m_club.Program.club_id == club_id]
-
-    if with_details:
-        query_options.append(joinedload(m_club.Program.sessions))
-
-    if status:
-        conditions.append(m_club.Program.status == status)
-
-    res = await db.execute(select(m_club.Program).options(*query_options).filter(and_(*conditions)))
     return res.unique().scalar_one_or_none()
 
 
@@ -925,6 +1037,10 @@ async def update_program(
         details += f"Capacity: {program.capacity} -> {program_update.capacity}"
         program.capacity = program_update.capacity
 
+    if program_update.membership_required and program_update.membership_required != program_update.membership_required:
+        details += f"Membership Required: {program.membership_required} -> {program_update.membership_required}"
+        program.membership_required = program_update.membership_required
+
     if program_update.pricing_model and program.pricing_model != program_update.pricing_model:
         details += f"Pricing Model: {program.pricing_model} -> {program_update.pricing_model}"
         program.pricing_model = program_update.pricing_model
@@ -933,7 +1049,7 @@ async def update_program(
         # Reset all session prices to 0 if the pricing model is PACKAGE
         if program.pricing_model == m_club.PriceType.PACKAGE:
             for session in program.sessions:
-                session.price = Decimal(0)
+                session.price = 0
 
         # Reset program price and capacity if the pricing model is PER_SESSION
         if program_update.pricing_model == m_club.PriceType.PER_SESSION:

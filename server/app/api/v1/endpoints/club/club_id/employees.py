@@ -20,7 +20,8 @@ from config.permissions import ClubPermissions
 
 router = APIRouter()
 
-@router.get("/all", response_model=Dict[str, List[s_club.Employee]]	, tags=["Club - Employee"])
+
+@router.get("/all", response_model=Dict[str, List[s_club.Employee]], tags=["Club - Employee"])
 async def get_employees_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
@@ -39,11 +40,14 @@ async def get_employees_v1(
         club_roles = await club_crud.get_club_employees(ep_context.db, club_id)
         employees = {}
         for role in club_roles:
-            employees[role.name] = [s_club.Employee.model_validate(user_club_role.user) for user_club_role in role.user_club_roles]
-        
+            employees[role.name] = [
+                s_club.Employee.model_validate(user_club_role.user) for user_club_role in role.user_club_roles
+            ]
+
         return employees
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get employees")
+
 
 @router.get(f"", response_model=s_club.EmployeeResponse, tags=["Club - Employee"])
 async def get_employee_v1(
@@ -51,11 +55,7 @@ async def get_employee_v1(
     user_id: uuid.UUID = Query(..., description="The User ID of the employee"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(
-            club_permissions=[
-                ClubPermissions.READ_EMPLOYEES
-            ]
-        )
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_EMPLOYEES])
     ),
 ):
     """Get all employees of a club"""
@@ -73,10 +73,11 @@ async def get_employee_v1(
             first_name=user_club_roles.user.first_name,
             last_name=user_club_roles.user.last_name,
             email=user_club_roles.user.email,
-            program_assignments=program_assignments
+            program_assignments=program_assignments,
         )
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get employee")
+
 
 @router.post("", response_model=s_generic.MessageResponse, tags=["Club - Employee"])
 async def add_employee_v1(
@@ -93,6 +94,7 @@ async def add_employee_v1(
         return s_generic.MessageResponse(message="Role assigned successfully")
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to add employee")
+
 
 @router.put("", tags=["Club - Employee"])
 async def update_employee_v1(

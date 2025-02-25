@@ -212,13 +212,11 @@ async def init_country_states_city(
 
         if countries.get(country["name"]):
             country_db = countries[country["name"]]
-        elif len(country["states"]) > 0:
+        else:
             country_db = Country(name=country["name"], iso2=country["iso2"], iso3=country["iso3"])
             new_db_data.append(country_db)
             countries[country["name"]] = country_db
-        else:
-            continue
-
+       
         if mode == init_country_states_city_mode.country:
             continue
 
@@ -235,12 +233,10 @@ async def init_country_states_city(
             state_key = f"{state['name']}_{country['name']}"
             if states.get(state_key):
                 state_db = states[state_key]
-            elif len(state["cities"]) > 0:
+            else:
                 state_db = State(name=state["name"], country=country_db)
                 new_db_data.append(state_db)
                 states[state_key] = state_db
-            else:
-                continue
 
             if mode == init_country_states_city_mode.country_state:
                 continue
