@@ -1,7 +1,9 @@
 import { axiosInstance } from "../api";
 
 interface IdentityVerificationData {
-  image_files: File[];
+  front_image: string;
+  rear_image: string;
+  selfie_image: string;
   id_card_mrz: string;
   first_name: string;
   last_name: string;
@@ -19,7 +21,9 @@ export const getSelfStatus = async () => {
 };
 
 export const submitIdentityVerification = async ({
-  image_files,
+  front_image,
+  rear_image,
+  selfie_image,
   id_card_mrz,
   first_name,
   last_name,
@@ -28,12 +32,25 @@ export const submitIdentityVerification = async ({
   try {
     const formData = new FormData();
 
-    // Append each image file to the form data
-    image_files.forEach((file) => {
-      formData.append("image_files", file);
-    });
+    formData.append("image_files", {
+      uri: front_image,
+      name: "front.png",
+      type: "image/png",
+    } as any);
 
-    // Append the rest of the required fields
+    formData.append("image_files", {
+      uri: rear_image,
+      name: "rear.png",
+      type: "image/png",
+    } as any);
+
+    formData.append("image_files", {
+      uri: selfie_image,
+      name: "selfie.png",
+      type: "image/png",
+    } as any);
+
+    // Now append the rest of the fields
     formData.append("id_card_mrz", id_card_mrz);
     formData.append("first_name", first_name);
     formData.append("last_name", last_name);

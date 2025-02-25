@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { View, TouchableOpacity, ScrollView, Text } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { useRouter } from "expo-router";
-import { getGerTerms, getEnTerms } from "@/src/services/termsService";
+import { getGerTerms, getEnTerms } from "@/src/services/static/termsService";
 import { useTranslation } from "react-i18next"
 import { useColorScheme } from "nativewind";
 

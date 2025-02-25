@@ -28,5 +28,9 @@
     "settings_deactivate_mfa_header": "Deactivate Two-Factor-Authentication",
     "verify_email_header": "Verify Email",
     "settings_reset_password_verify_header": "Check your E-Mail",
-    "settings_reset_password_header": "New password"
+    "settings_reset_password_header": "New password",
+    "admin_identity_overview_header": "Identity Overview",
+    "admin_identity_approve_header": "Approve Identity",
+    "settings_submit_verification_header": "Submit Verification",
+    "settings_verification_status_header": "Verification Status"
 }

@@ -1,3 +1,11 @@
 {
-    
+    "pendingVerifications_header": "Pending Verifications",
+    "identityVerification_header": "Identity Verification",
+    "first_name_text": "First Name",
+    "last_name_text": "Last Name",
+    "dob_text": "Date of Birth",
+    "created_at_text": "Created At",
+    "expires_at_text": "Expires At",
+    "reject_btn": "Reject",
+    "approve_btn": "Approve"
 }

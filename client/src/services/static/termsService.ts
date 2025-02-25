@@ -1,4 +1,4 @@
-import { axiosInstance } from "./static";
+import { axiosInstance } from "../static";
 
 export const getGerTerms = async (): Promise<any> => {
   try {
