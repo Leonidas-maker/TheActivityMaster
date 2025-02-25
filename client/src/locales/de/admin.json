@@ -1,3 +1,11 @@
 {
-    
+    "pendingVerifications_header": "Ausstehende Verifikationen",
+    "identityVerification_header": "Identitätsverifikation",
+    "first_name_text": "Vorname",
+    "last_name_text": "Nachname",
+    "dob_text": "Geburtsdatum",
+    "created_at_text": "Erstellt am",
+    "expires_at_text": "Läuft ab",
+    "reject_btn": "Ablehnen",
+    "approve_btn": "Genehmigen"
 }

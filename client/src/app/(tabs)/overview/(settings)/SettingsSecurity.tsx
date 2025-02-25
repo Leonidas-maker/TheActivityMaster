@@ -10,14 +10,12 @@ const SettingsSecurity = () => {
     const { t } = useTranslation("settings");
     const router = useRouter();
     const [mfaMethods, setMfaMethods] = useState<string[]>([]);
-    const [isVerified, setIsVerified] = useState(false);
 
     useEffect(() => {
         // Fetch user data and set the available 2FA methods
         const getUserMethods = async () => {
             const userData = await getUserData();
             setMfaMethods(userData.methods_2fa);
-            console.log(userData);
         };
         getUserMethods();
     }, []);
@@ -59,11 +57,6 @@ const SettingsSecurity = () => {
                 iconNames={securityIcon}
                 onPressFunctions={pressFuntions}
             />
-            {isVerified && (
-                <View>
-                    <DefaultText text={t("settings_verified_message")} />
-                </View>
-            )}
         </ScrollView>
     );
 };

@@ -46,7 +46,7 @@ interface Verification {
     return (
       <ScrollView className="h-screen  bg-light_primary dark:bg-dark_primary">
         <PageNavigator
-          title="Pending Verifications"
+          title={t("pendingVerifications_header")}
           texts={texts}
           onPressFunctions={onPressFunctions}
           iconNames={iconNames}

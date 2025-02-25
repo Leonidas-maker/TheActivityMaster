@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#B3BCBB"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.TheMasterCollection.TheActivityMaster",
@@ -47,6 +49,13 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#B3BCBB"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow TheActivityMaster to access your photos",
+          "cameraPermission": "Allow TheActivityMaster to access your camera"
         }
       ]
     ],

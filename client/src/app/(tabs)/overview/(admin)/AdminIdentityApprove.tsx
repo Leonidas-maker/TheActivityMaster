@@ -1,94 +1,126 @@
 import React, { useEffect, useState } from "react";
-import { View, Image, Text, ScrollView } from "react-native";
+import { View, ScrollView, TouchableOpacity, Text } from "react-native";
+// Import SafeAreaView to respect safe areas
+import { SafeAreaView } from "react-native-safe-area-context";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { getVerification, getVerificationImage } from "@/src/services/verificiation/identityService";
+import { getVerification } from "@/src/services/verificiation/identityService";
+import VerificationImage from "@/src/components/images/VerificationImage";
+import Heading from "@/src/components/textFields/Heading";
+import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
+import { approveVerification, rejectVerification } from "@/src/services/verificiation/identityService";
 
+//TODO: Add reasoning for rejecting verification
 const AdminIdentityApprove = () => {
-    const { t } = useTranslation("admin");
-    const router = useRouter();
+  const { t } = useTranslation("admin");
+  const router = useRouter();
+  const { verification_id } = useLocalSearchParams();
 
-    const { verification_id } = useLocalSearchParams();
+  // State for verification details and image URIs
+  const [verificationId, setVerificationId] = useState<string>("");
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [dob, setDob] = useState("");
+  const [createdAt, setCreatedAt] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
 
-    // State for storing verification details and images
-    const [verificationDetails, setVerificationDetails] = useState(null);
-    const [frontImage, setFrontImage] = useState(null);
-    const [backImage, setBackImage] = useState(null);
-    const [selfieImage, setSelfieImage] = useState(null);
+  useEffect(() => {
+    const fetchVerification = async () => {
+      try {
+        // Get the verification ID from parameters (ensure it's a string)
+        const id = Array.isArray(verification_id) ? verification_id[0] : verification_id;
+        setVerificationId(id);
 
-    useEffect(() => {
-        const fetchVerification = async () => {
-            try {
-                // Ensure we have a valid id from the URL parameters
-                const id = Array.isArray(verification_id) ? verification_id[0] : verification_id;
+        // Fetch verification details
+        const verification = await getVerification(id);
+        setLastName(verification.last_name);
+        setFirstName(verification.first_name);
+        setDob(verification.date_of_birth);
+        setCreatedAt(verification.created_at);
+        setExpiresAt(verification.expires_at);
+      } catch (error) {
+        console.error("Failed to fetch verification:", error);
+      }
+    };
 
-                // Fetch verification details only once
-                const verification = await getVerification(id);
-                console.log("Verification:", verification);
-                setVerificationDetails(verification);
+    fetchVerification();
+  }, [verification_id]);
 
-                // Concurrently fetch the images using correct indexes:
-                // 0 for front image, 1 for back image, 2 for selfie image.
-                const [frontImg, backImg, selfieImg] = await Promise.all([
-                    getVerificationImage(id, 0),
-                    getVerificationImage(id, 1),
-                    getVerificationImage(id, 2)
-                ]);
-                console.log("Front Image:", frontImg);
-                console.log("Back Image:", backImg);
-                console.log("Selfie Image:", selfieImg);
+  const handleApprovePress = async () => {
+    try {
+      await approveVerification(verificationId);
+      while (router.canGoBack()) {
+        router.back();
+      }
+    } catch (error) {
+      console.error("Failed to approve verification:", error);
+    }
+  }
 
-                // Set state based on whether an image was returned or not
-                setFrontImage(frontImg || null);
-                setBackImage(backImg || null);
-                setSelfieImage(selfieImg || null);
-            } catch (error) {
-                console.error("Failed to fetch verification:", error);
-            }
-        };
+  const handleRejectPress = async () => {
+    try {
+      await rejectVerification(verificationId, "Rejected by admin");
+      while (router.canGoBack()) {
+        router.back();
+      }
+    } catch (error) {
+      console.error("Failed to reject verification:", error);
+    }
+  }
 
-        fetchVerification();
-    }, [verification_id]);
+  return (
+    <SafeAreaView edges={["left", "right"]} className="bg-light_primary dark:bg-dark_primary flex-1 px-2">
+      <ScrollView>
+        <View className="my-4">
+          <Heading text={t("identityVerification_header")} />
+        </View>
 
-    return (
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="flex bg-light_primary dark:bg-dark_primary p-4">
-            <DefaultText text={t("test_text")} />
+        <View className="justify-center items-center">
+          <DefaultText text={t("first_name_text")} />
+          <DefaultTextFieldInput editable={false} value={firstName} />
+          <DefaultText text={t("last_name_text")} />
+          <DefaultTextFieldInput editable={false} value={lastName} />
+          <DefaultText text={t("dob_text")} />
+          <DefaultTextFieldInput editable={false} value={dob} />
+          <DefaultText text={t("created_at_text")} />
+          <DefaultTextFieldInput editable={false} value={createdAt} />
+          <DefaultText text={t("expires_at_text")} />
+          <DefaultTextFieldInput editable={false} value={expiresAt} />
+        </View>
 
-            {/* Display verification details */}
-            <View className="my-4">
-                <DefaultText text="Verification Details:" />
-                {verificationDetails ? (
-                    <DefaultText text={JSON.stringify(verificationDetails, null, 2)} />
-                ) : (
-                    <DefaultText text="No verification details available" />
-                )}
-            </View>
-
-            {/* Display images with conditional rendering */}
-            <View className="my-2">
-                {frontImage ? (
-                    <Image source={{ uri: frontImage }} style={{ width: 200, height: 200 }} />
-                ) : (
-                    <DefaultText text="Front image not available" />
-                )}
-            </View>
-            <View className="my-2">
-                {backImage ? (
-                    <Image source={{ uri: backImage }} style={{ width: 200, height: 200 }} />
-                ) : (
-                    <DefaultText text="Back image not available" />
-                )}
-            </View>
-            <View className="my-2">
-                {selfieImage ? (
-                    <Image source={{ uri: selfieImage }} style={{ width: 200, height: 200 }} />
-                ) : (
-                    <DefaultText text="Selfie image not available" />
-                )}
-            </View>
-        </ScrollView>
-    );
+        <View className="my-4">
+          <VerificationImage verificationId={verificationId} index={0} />
+        </View>
+        <View className="my-4">
+          <VerificationImage verificationId={verificationId} index={1} />
+        </View>
+        <View className="my-4">
+          <VerificationImage verificationId={verificationId} index={2} />
+        </View>
+      </ScrollView>
+      <View className="flex-row justify-around items-center border-t border-gray-200 dark:border-gray-700">
+        {/* Decline button */}
+        <TouchableOpacity
+          onPress={handleRejectPress}
+          className="p-6 rounded-md"
+        >
+          <Text style={{ color: "red", fontSize: 20, fontWeight: "bold" }}>
+            {t("reject_btn")}
+          </Text>
+        </TouchableOpacity>
+        {/* Accept button */}
+        <TouchableOpacity
+          onPress={handleApprovePress}
+          className="p-6 rounded-md"
+        >
+          <Text style={{ color: "green", fontSize: 20, fontWeight: "bold" }}>
+            {t("approve_btn")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
 };
 
 export default AdminIdentityApprove;

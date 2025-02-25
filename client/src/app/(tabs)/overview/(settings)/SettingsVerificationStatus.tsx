@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import Heading from "@/src/components/textFields/Heading";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -11,13 +11,13 @@ const SettingsVerificationStatus = () => {
     const router = useRouter();
 
     return (
-        <View className="flex bg-light_primary dark:bg-dark_primary">
+        <ScrollView className="flex h-screen bg-light_primary dark:bg-dark_primary">
             <Heading text={t("verification_status")} />
 
             <DefaultText text={t("verification_status_text")} />
 
             <DefaultButton text={t("submit_verification_button")} onPress={() => router.navigate("/")} />
-        </View>
+        </ScrollView>
     )
 }
 
