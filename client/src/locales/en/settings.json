@@ -144,5 +144,15 @@
     "error_missing_fields_subheading": "Please fill in all fields",
     "error_submit_verification_failed": "Verification failed",
     "error_submit_verification_failed_subheading": "Please try again",
-    "accountVerification_status_btn": "Verification status"
+    "accountVerification_status_btn": "Verification status",
+    "verification_status": "Verification status",
+    "delete_verification": "Delete",
+    "cancel": "Cancel",
+    "delete_verification_alert_title": "Delete verification",
+    "delete_verification_alert_text": "Are you sure you want to delete the verification?",
+    "verification_status_pending_text": "Your verfication is still pending. Please wait for the result. You can delete the verification at any time.",
+    "delete_verification_button": "Delete verification",
+    "verification_status_approved_text": "Your verification has been approved! You have now access to all features. You can delete the verification at any time.",
+    "verification_status_verified_at": "Verified at: ",
+    "verification_status_expires_at": "Expires at: "
 }

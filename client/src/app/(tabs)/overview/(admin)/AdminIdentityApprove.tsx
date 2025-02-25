@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, ScrollView, TouchableOpacity, Text } from "react-native";
+import { View, ScrollView, TouchableOpacity, Text, Alert } from "react-native";
 // Import SafeAreaView to respect safe areas
 import { SafeAreaView } from "react-native-safe-area-context";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -48,6 +48,23 @@ const AdminIdentityApprove = () => {
   }, [verification_id]);
 
   const handleApprovePress = async () => {
+    Alert.alert(
+      t("approve_verification_alert_title"),
+      t("approve_verification_alert_message"),
+      [
+        {
+          text: t("cancel_btn"),
+          style: "cancel",
+        },
+        {
+          text: t("approve_btn"),
+          onPress: approveVerificationAndNavigate,
+        },
+      ]
+    );
+  };
+
+  const approveVerificationAndNavigate = async () => {
     try {
       await approveVerification(verificationId);
       while (router.canGoBack()) {
@@ -56,9 +73,26 @@ const AdminIdentityApprove = () => {
     } catch (error) {
       console.error("Failed to approve verification:", error);
     }
-  }
+  };
 
   const handleRejectPress = async () => {
+    Alert.alert(
+      t("reject_verification_alert_title"),
+      t("reject_verification_alert_message"),
+      [
+        {
+          text: t("cancel_btn"),
+          style: "cancel",
+        },
+        {
+          text: t("reject_btn"),
+          onPress: rejectVerificationAndNavigate,
+        },
+      ]
+    );
+  };
+
+  const rejectVerificationAndNavigate = async () => {
     try {
       await rejectVerification(verificationId, "Rejected by admin");
       while (router.canGoBack()) {
