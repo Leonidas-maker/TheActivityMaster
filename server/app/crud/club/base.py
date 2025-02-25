@@ -38,6 +38,25 @@ async def club_exists(db: AsyncSession, club_name: Optional[str] = None, club_id
     return bool(res.scalar())
 
 
+async def has_club_stripe_account(db: AsyncSession, club_id: uuid.UUID) -> bool:
+    """Check if a club has a stripe account
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :return: True if the club has a stripe account, False otherwise
+    """
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.Club)
+                .filter(m_club.Club.id == club_id, m_club.Club.stripe_account_id != None)
+            )
+        )
+    )
+    return bool(res.scalar())
+
+
 async def create_club(db: AsyncSession, user_id: uuid.UUID, club: s_club.ClubCreate) -> m_club.Club:
     """Create a club
 
@@ -94,6 +113,25 @@ async def get_clubs(db: AsyncSession, page: int, page_size: int, city: str) -> L
     stmt = stmt.limit(page_size).offset((page - 1) * page_size)
 
     res = await db.execute(stmt)
+    return list(res.scalars().all())
+
+
+async def get_user_clubs(db: AsyncSession, user_id: uuid.UUID) -> List[m_club.Club]:
+    """Get all clubs for a user
+
+    :param db: The database session
+    :param user_id: The ID of the user
+    :return: A list of clubs
+    """
+    query_options = [joinedload(m_club.Club.address), undefer(m_club.Club.description)]
+
+    res = await db.execute(
+        select(m_club.Club)
+        .join(m_club.Club.club_roles)
+        .join(m_club.ClubRole.user_club_roles)
+        .filter(m_club.UserClubRole.user_id == user_id)
+        .options(*query_options)
+    )
     return list(res.scalars().all())
 
 
@@ -282,6 +320,7 @@ async def get_program_assignments(db: AsyncSession, club_id: uuid.UUID, user_id:
     )
     return [row[0] for row in res.all()]
 
+
 async def add_trainer(db: AsyncSession, program_id: uuid.UUID, user_id: uuid.UUID) -> m_club.UserTrainer:
     """Add a trainer to a program
 
@@ -304,9 +343,7 @@ async def get_trainers(db: AsyncSession, program_id: uuid.UUID) -> List[m_user.U
     :return: A list of UserTrainer associated with the program
     """
     res = await db.execute(
-        select(m_user.User)
-        .join(m_club.UserTrainer)
-        .filter(m_club.UserTrainer.program_id == program_id)
+        select(m_user.User).join(m_club.UserTrainer).filter(m_club.UserTrainer.program_id == program_id)
     )
     return list(res.scalars().all())
 

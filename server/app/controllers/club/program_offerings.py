@@ -56,6 +56,9 @@ async def create_program(
     if await club_crud.program_exists(db, club_id, new_program.name):
         raise HTTPException(status_code=400, detail="Program name already exists")
 
+    if new_program.status == m_club.ProgramStatus.ACTIVE and await club_crud.has_club_stripe_account(db, club_id) is False:
+        raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
+
     try:
         program = await club_crud.create_program(db, club_id, new_program)
     except ValueError as e:
@@ -90,7 +93,7 @@ async def update_program(
     audit_log = ep_context.audit_logger
     issuer_id = token_details.user_id
 
-    program = await club_crud.get_program(db, club_id, program_id, with_details=True)
+    program = await club_crud.get_program(db, club_id, program_id, with_details=True, with_club=True)
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
@@ -100,6 +103,9 @@ async def update_program(
 
     if program_update.pricing_model and program.status == m_club.ProgramStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot change pricing model of an active program")
+    
+    if program_update.status and program_update.status == m_club.ProgramStatus.ACTIVE and program.club.stripe_account_id is None:
+        raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
 
     try:
         details = await club_crud.update_program(db, program, program_update)
@@ -173,15 +179,10 @@ async def create_session(
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
-    if program.pricing_model == m_club.PriceType.PACKAGE:
-        if program.status == m_club.ProgramStatus.ACTIVE:
-            raise HTTPException(
-                status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
-            )
-        if new_session.membership_required:
-            raise HTTPException(
-                status_code=400, detail="Cannot set membership required for a session with pricing model 'package'"
-            )
+    if program.pricing_model == m_club.PriceType.PACKAGE and program.status == m_club.ProgramStatus.ACTIVE:
+        raise HTTPException(
+            status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
+        )
 
     if new_session.session_type == m_club.SessionType.EVENT and await club_crud.session_exists_event(
         db, program_id, new_session.start_datetime, new_session.end_datetime  # type: ignore
@@ -230,7 +231,7 @@ async def update_session(
     audit_log = ep_context.audit_logger
     issuer_id = token_details.user_id
 
-    session = await club_crud.get_session(
+    session = await club_crud.get_active_session(
         db,
         program_id,
         session_id,
@@ -244,14 +245,9 @@ async def update_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session.program.pricing_model == m_club.PriceType.PACKAGE:
-        if session.program.status == m_club.ProgramStatus.ACTIVE:
+    if session.program.pricing_model == m_club.PriceType.PACKAGE and session.program.status == m_club.ProgramStatus.ACTIVE:
             raise HTTPException(
                 status_code=400, detail="Cannot update a session for an active program with pricing model 'package'"
-            )
-        if session_update.membership_required:
-            raise HTTPException(
-                status_code=400, detail="Cannot set membership required for a session with pricing model 'package'"
             )
 
     try:
@@ -286,7 +282,7 @@ async def delete_session(
     audit_log = ep_context.audit_logger
     issuer_id = token_details.user_id
 
-    session_to_delete = await club_crud.get_session(
+    session_to_delete = await club_crud.get_active_session(
         db,
         program_id,
         session_id,

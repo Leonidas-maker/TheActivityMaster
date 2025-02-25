@@ -1,11 +1,13 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, model_validator, conlist, field_validator
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, model_validator, conlist, field_validator, RootModel
 from typing import List, Optional, Dict, Tuple
 import uuid
 import datetime
-from decimal import Decimal
 
 from schemas import s_generic
-from models.m_club import SessionType, Weekday, OccurrenceStatus, BookingStatus, PriceType, ProgramStatus
+from models.m_club import SessionType, Weekday, OccurrenceStatus, PriceType, ProgramStatus
+from models.m_payment import BookingStatus, BookingType
+
+from models import m_club
 
 from config.settings import DEFAULT_TIMEZONE
 
@@ -19,6 +21,7 @@ class EmployeeBase(BaseModel):
     last_name: str = Field(..., max_length=50, description="The last name of the employee.")
     email: EmailStr = Field(..., description="The email of the employee.")
 
+
 class Employee(EmployeeBase):
     id: uuid.UUID = Field(..., description="The ID of the employee.")
 
@@ -26,11 +29,11 @@ class Employee(EmployeeBase):
 class Owner(EmployeeBase):
     pass
 
+
 class EmployeeResponse(Employee):
     role_name: str
     role_level: int
     program_assignments: List[uuid.UUID] = Field([], description="The IDs of the programs assigned to the trainer.")
-
 
 
 # ======================================================== #
@@ -150,9 +153,7 @@ class SessionBase(BaseModel):
 
     session_type: SessionType = Field(..., description="The type of the session.")
     capacity: Optional[int] = Field(None, gt=0, description="The maximum number of participants for the session.")
-    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="The price of the session.")
-
-    membership_required: bool
+    price: Optional[int] = Field(None, ge=0, description="The price of the session.")
 
     # one time event
     start_datetime: Optional[datetime.datetime] = Field(
@@ -264,14 +265,13 @@ class Session(SessionBase):
         if self.session_type == SessionType.EVENT:
             self.occurrences = None
         return self
+    
 
 
 class SessionUpdate(BaseModel):
     session_type: Optional[SessionType] = Field(None, description="The new type of the session.")
     capacity: Optional[int] = Field(None, gt=0, description="The new maximum number of participants for the session.")
-    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="The new price of the session.")
-
-    membership_required: Optional[bool] = Field(None, description="The new membership requirement for the session.")
+    price: Optional[int] = Field(None, ge=0, description="The new price of the session.")
 
     start_datetime: Optional[datetime.datetime] = Field(
         None, description="The new start date and time for a one-time event."
@@ -292,7 +292,8 @@ class SessionUpdate(BaseModel):
 
     null_end_date: bool = Field(False, description="If true, the end date will be set to None.")
     refresh_future_occurrences: bool = Field(
-        False, description="If true, future occurrences will be deleted and recreated. If false only scheduled occurrences will be recreated."
+        False,
+        description="If true, future occurrences will be deleted and recreated. If false only scheduled occurrences will be recreated.",
     )
 
     @field_validator("start_datetime", "end_datetime", "start_time", "end_time", "start_date", "end_date")
@@ -338,7 +339,6 @@ class SessionUpdate(BaseModel):
             self.session_type is None
             and self.capacity is None
             and self.price is None
-            and self.membership_required is None
             and self.start_datetime is None
             and self.end_datetime is None
             and self.day_of_week is None
@@ -396,11 +396,19 @@ class ProgramBase(BaseModel):
     name: str = Field(..., max_length=100, description="The name of the program.")
     description: str = Field(..., min_length=10, max_length=500, description="The description of the program.")
 
-    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="The price of the program.")
+    price: Optional[int] = Field(
+        None,
+        ge=0,
+        description="The price of the program (e.g. 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal currency).",
+    )
     currency: str = Field(..., max_length=3, description="The currency of the program.")
     pricing_model: PriceType = Field(..., description="The pricing model of the program.")
 
     capacity: Optional[int] = Field(None, gt=0, description="The maximum number of participants for the program.")
+
+    membership_required: bool = Field(
+        False, description="Whether a membership is required to participate in the program."
+    )
 
     @model_validator(mode="after")
     def price_and_price_model(self) -> "ProgramBase":
@@ -452,16 +460,28 @@ class ProgramUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100, description="The new name of the program.")
     description: Optional[str] = Field(None, max_length=500, description="The new description of the program.")
 
-    price: Optional[Decimal] = Field(None, ge=0, decimal_places=2, description="The new price of the program.")
+    price: Optional[int] = Field(
+        None,
+        ge=0,
+        description="The new price of the program in cents (e.g. 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal currency)",
+    )
     currency: Optional[str] = Field(None, max_length=3, description="The new currency of the program.")
     pricing_model: Optional[PriceType] = Field(None, description="The new pricing model of the program.")
 
     capacity: Optional[int] = Field(None, gt=0, description="The new maximum number of participants for the program.")
 
+    membership_required: Optional[bool] = Field(
+        None, description="Whether a membership is required to participate in the program."
+    )
+
     status: Optional[ProgramStatus] = Field(None, description="The new status of the program.")
 
     categories: Optional[List[int]] = Field(None, max_length=5, description="The new categories of the program.")
-    session_data: Optional[Dict[uuid.UUID, Tuple[Decimal, int]]] = None
+    session_data: Optional[Dict[uuid.UUID, Tuple[int, int]]] = Field(
+        None,
+        description="The new session data for the program. Key is the session ID and value is a tuple of price "
+        "(e.g. 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal currency) and capacity.",
+    )
 
     @model_validator(mode="after")
     def check(self) -> "ProgramUpdate":
@@ -483,7 +503,7 @@ class ProgramUpdate(BaseModel):
         sessions_exist = self.session_data is not None and len(self.session_data) > 0
         price_correct = self.price is not None and self.capacity is not None
 
-        if self.pricing_model == PriceType.PACKAGE:#
+        if self.pricing_model == PriceType.PACKAGE:  #
             if not price_correct:
                 raise ValueError("Price and capacity must be provided if the pricing model is 'package'.")
             if sessions_exist:
@@ -502,3 +522,73 @@ class ProgramUpdate(BaseModel):
             raise ValueError("Status cannot be set to 'draft'. Please use 'inactive' instead.")
 
         return self
+
+
+###########################################################################
+################################# Booking #################################
+###########################################################################
+
+
+class TransactionData(BaseModel):
+    stripe_account_id: str
+    total_amount: int
+    currency: str
+
+    def __getitem__(self, key):
+        if hasattr(self, key):
+            return getattr(self, key)
+        else:
+            raise AttributeError(f"{key} is not a valid attribute.")
+
+    def __setitem__(self, key, value):
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            raise AttributeError(f"{key} is not a valid attribute.")
+
+
+class BookingBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    session_id: uuid.UUID = Field(..., description="The ID of the session for which the booking was made.")
+    booking_type: BookingType = Field(..., description="The type of the booking.")
+
+
+class Booking(BookingBase):
+    id: uuid.UUID = Field(..., description="The ID of the booking.")
+    club_id: uuid.UUID = Field(..., description="The ID of the club for which the booking was made.")
+    program_id: uuid.UUID = Field(..., description="The ID of the program for which the booking was made.")
+
+    user_id: uuid.UUID = Field(..., description="The ID of the user who made the booking.")
+    status: BookingStatus = Field(..., description="The status of the booking.")
+    transaction_id: Optional[uuid.UUID] = Field(None, description="The ID of the transaction for the booking.")
+    price: int = Field(..., description="The price of the booking.")
+    pricing_model: PriceType = Field(..., description="The pricing model of the booking.")
+
+    @model_validator(mode="after")
+    def check_booking_type(self) -> "Booking":
+        if self.booking_type == BookingType.MEMBERSHIP_ACCESS and self.transaction_id:
+            raise ValueError("Transaction ID should not be provided for membership access bookings.")
+
+        if self.booking_type in [BookingType.PAID, BookingType.MEMBERSHIP] and not self.transaction_id:
+            raise ValueError("Transaction ID must be provided for paid bookings.")
+
+        return self
+
+
+class BookingDetails(Booking):
+    program: Program
+    session: Session
+
+class ClubBooking(Booking):
+    user_id: uuid.UUID = Field(..., description="The ID of the user who made the booking.")
+
+
+class BookingCreateRequest(BaseModel):
+    club_id: uuid.UUID = Field(..., description="The ID of the club for which the booking was made.")
+    program_ids: List[uuid.UUID] = Field(
+        ..., max_length=5, description="The IDs of the programs for which the booking was made."
+    )
+    session_ids: List[uuid.UUID] = Field(
+        ..., max_length=10, description="The IDs of the sessions for which the booking was made."
+    )

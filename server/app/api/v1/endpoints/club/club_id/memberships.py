@@ -4,6 +4,7 @@ import uuid
 # Router for club membership endpoints
 router = APIRouter()
 
+
 ###########################################################################
 ################################### Main ##################################
 ###########################################################################
@@ -31,6 +32,7 @@ async def update_membership_v1(club_id: uuid.UUID, membership_id: uuid.UUID):
 async def delete_membership_v1(club_id: uuid.UUID, membership_id: uuid.UUID):
     pass
 
+
 ###########################################################################
 ############################## Subscriptions ##############################
 ###########################################################################
@@ -39,15 +41,11 @@ async def get_subscriptions_v1(club_id: uuid.UUID):
     pass
 
 
-@router.get(
-    "/{membership_id}/subscriptions/{subscription_id}", tags=["Club - Membership Subscription"]
-)
+@router.get("/{membership_id}/subscriptions/{subscription_id}", tags=["Club - Membership Subscription"])
 async def get_subscription_v1(club_id: uuid.UUID, membership_id: uuid.UUID, subscription_id: uuid.UUID):
     pass
 
 
-@router.delete(
-    "/{membership_id}/subscriptions/{subscription_id}", tags=["Club - Membership Subscription"]
-)
+@router.delete("/{membership_id}/subscriptions/{subscription_id}", tags=["Club - Membership Subscription"])
 async def delete_subscription_v1(club_id: uuid.UUID, membership_id: uuid.UUID, subscription_id: uuid.UUID):
     pass

@@ -6,6 +6,7 @@ import datetime
 from typing import Optional
 import traceback
 from rich.console import Console
+import stripe
 
 from models.m_audit import AuthenticationLog, AuditLog, AuthMethods, ErrorLog, ErrorLevels, AuditLogCategories
 
@@ -947,6 +948,74 @@ class AuditLogger:
             category=AuditLogCategories.CLUB,
             details=f"Removed trainer {trainer_id} from program {program_id} in club {club_id}",
         )
+
+    # ======================================================== #
+    # ======================== Booking ======================= #
+    # ======================================================== #
+    def bookings_created(self, user_id: uuid.UUID, details: str):
+        """Log a booking creation action.
+
+        :param user_id: The user ID creating the booking
+        """
+        self.log_to_audit(
+            user_id,
+            action="Booking Created",
+            category=AuditLogCategories.USER,
+            details=details,
+        )
+    
+    def bookings_updated(self, user_id: uuid.UUID, details: str):
+        """Log a booking update action.
+
+        :param user_id: The user ID updating the booking
+        """
+        self.log_to_audit(
+            user_id,
+            action="Booking Updated",
+            category=AuditLogCategories.USER,
+            details=details,
+        )
+    
+    def booking_storno(self, user_id: uuid.UUID, details: str):
+        """Log a booking storno action.
+
+        :param user_id: The user ID storno the booking
+        """
+        self.log_to_audit(
+            user_id,
+            action="Booking Storno",
+            category=AuditLogCategories.USER,
+            details=details,
+        )
+
+    # ======================================================== #
+    # ====================== Transaction ===================== #
+    # ======================================================== #
+    def transaction_created(self, user_id: uuid.UUID, transaction_id: uuid.UUID, payment_intent: stripe.PaymentIntent):
+        """Log a transaction creation action.
+
+        :param user_id: The user ID creating the transaction
+        :param transaction_id: The ID of the created transaction
+        :param payment_intent: The associated payment intent
+        """
+        self.log_to_audit(
+            user_id,
+            action="Transaction Created",
+            category=AuditLogCategories.USER,
+            details=f"Created transaction {transaction_id} with payment intent {payment_intent.id}. Details: {payment_intent.amount} {payment_intent.currency}",
+        )
+
+    def transaction_updated(self, user_id: uuid.UUID, transaction_id: uuid.UUID, details: str):
+        """Log a transaction update action.
+
+        :param user_id: The user ID updating the transaction
+        """
+        self.log_to_audit(
+            user_id,
+            action="Transaction Updated",
+            category=AuditLogCategories.USER,
+            details=f"Updated transaction {transaction_id}: {details}",
+        )        
             
 ###########################################################################
 ################################## Verify #################################

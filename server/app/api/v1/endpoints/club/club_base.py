@@ -8,7 +8,7 @@ from api.v1.endpoints.club.club_id import base as club_id_router
 
 from controllers import club as club_controller
 from schemas import s_club, s_generic, s_user, s_role
-from models import m_club
+from models import m_club, m_payment
 
 from core.generic import EndpointContext
 import core.security as core_security
@@ -121,8 +121,16 @@ async def get_program_categories_v1(
 ################################### User ##################################
 ###########################################################################
 @router.get("/me", tags=["User"])
-async def get_my_clubs_v1():
-    pass
+async def get_my_clubs_v1(
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        user_id = token_details.user_id
+        clubs = await club_crud.get_user_clubs(ep_context.db, user_id)
+        return [s_club.Club.model_validate(club) for club in clubs]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user clubs")
 
 
 @router.get("/me/memberships", tags=["User"])
@@ -130,14 +138,45 @@ async def get_my_memberships_v1():
     pass
 
 
-@router.get("/me/booked", tags=["User"])
-async def get_my_booked_sessions_v1():
-    pass
+@router.get("/me/booked", tags=["User"], response_model=List[s_club.Booking], response_model_exclude_none=True)
+async def get_my_booked_sessions_v1(
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        user_id = token_details.user_id
+        sessions = await club_crud.get_bookings_by_user_id(
+            ep_context.db,
+            user_id,
+            stats=[
+                m_payment.BookingStatus.PENDING,
+                m_payment.BookingStatus.CONFIRMED,
+                m_payment.BookingStatus.CANCELLED,
+                m_payment.BookingStatus.CANCELLED_BY_CLUB,
+            ],
+        )
+        return [s_club.Booking.model_validate(session) for session in sessions]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user booked sessions")
 
 
-@router.get("/me/attended", tags=["User"])
-async def get_my_attended_sessions_v1():
-    pass
+@router.get("/me/attended", tags=["User"], response_model=List[s_club.Booking], response_model_exclude_none=True)
+async def get_my_attended_sessions_v1(
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        user_id = token_details.user_id
+        sessions = await club_crud.get_bookings_by_user_id(
+            ep_context.db,
+            user_id,
+            stats=[
+                m_payment.BookingStatus.COMPLETED,
+            ],
+        )
+        return [s_club.Booking.model_validate(session) for session in sessions]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user attended sessions")
 
 
 ###########################################################################
@@ -231,6 +270,40 @@ async def get_bookings_v1(club_id: uuid.UUID = Path(..., description="The ID of 
     pass
 
 
-# ======================================================== #
-# ================= Employee & Club Roles ================ #
-# ======================================================== #
+@router.post("/book", tags=["Club - Booking"])
+async def create_booking_v1(
+    booking_create: List[s_club.BookingCreateRequest],
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        bookings, intent = await club_controller.create_booking(ep_context, token_details, booking_create)
+        return {"bookings": bookings, "client_secret": intent.client_secret}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to create booking")
+
+
+@router.get("/bookings/{booking_id}", response_model=s_club.BookingDetails, response_model_exclude_none=True, tags=["Club - Booking"])
+async def get_booking_v1(
+    booking_id: uuid.UUID,
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        booking = await club_crud.get_bookings_by_user_id_and_id(ep_context.db, booking_id, token_details.user_id)
+        return s_club.BookingDetails.model_validate(booking)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get booking")
+
+
+@router.delete("/bookings/{booking_id}", tags=["Club - Booking"])
+async def delete_booking_v1(
+    booking_id: uuid.UUID,
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        #TODO: Implement cancel booking
+        return {"message": "Not available yet. Please contact support."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to cancel booking")

@@ -17,7 +17,7 @@ from sqlalchemy import (
     Computed,
 )
 import uuid
-from datetime import datetime
+import datetime
 import enum
 from typing import Dict
 
@@ -49,14 +49,14 @@ class User(Base):
     is_anonymized: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     address: Mapped["Address"] = relationship("Address")
@@ -101,7 +101,7 @@ class User(Base):
 
         return any(
             iv.status == VerificationStatus.APPROVED
-            and iv.expires_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.now(DEFAULT_TIMEZONE)
+            and iv.expires_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(DEFAULT_TIMEZONE)
             for iv in self.identity_verifications
         )
 
@@ -135,8 +135,8 @@ class UserRole(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
     role_id: Mapped[int] = mapped_column(Integer, ForeignKey("generic_roles.id"), primary_key=True)
-    assigned_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    assigned_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
 
     __table_args__ = (UniqueConstraint("user_id", "role_id", name="unique_user_role"),)
@@ -172,14 +172,14 @@ class User2FA(Base):
     )  # Number of failed attempts; -1 if the method is not validated
     device_name: Mapped[str] = mapped_column(String(100), nullable=True)  # Name of the device
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     user: Mapped["User"] = relationship("User", back_populates="_2fa")
@@ -208,14 +208,14 @@ class UserPasskey(Base):
     )  # Counter zum Verhindern von Replay-Attacken
     device_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Name des Geräts
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(DEFAULT_TIMEZONE),
-        onupdate=lambda: datetime.now(DEFAULT_TIMEZONE),
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     user: Mapped["User"] = relationship("User", back_populates="passkeys")
@@ -235,10 +235,10 @@ class UserToken(Base):
 
     application_id_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     token_type: Mapped[TokenTypes] = mapped_column(Enum(TokenTypes), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(DEFAULT_TIMEZONE)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="tokens")
 
