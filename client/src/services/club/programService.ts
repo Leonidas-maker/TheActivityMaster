@@ -78,7 +78,7 @@ export const createProgram = async (
   }
 };
 
-const getProgram = async (club_id: string, program_id: string) => {
+export const getProgram = async (club_id: string, program_id: string) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/programs/${program_id}`
@@ -91,7 +91,7 @@ const getProgram = async (club_id: string, program_id: string) => {
   }
 };
 
-const updateProgram = async (
+export const updateProgram = async (
   club_id: string,
   program_id: string,
   name: string,
@@ -129,7 +129,7 @@ const updateProgram = async (
   }
 };
 
-const deleteProgram = async (club_id: string, program_id: string) => {
+export const deleteProgram = async (club_id: string, program_id: string) => {
   try {
     const response = await axiosInstance.delete(
       `/clubs/${club_id}/programs/${program_id}`
@@ -142,7 +142,7 @@ const deleteProgram = async (club_id: string, program_id: string) => {
   }
 };
 
-const searchPrograms = async (
+export const searchPrograms = async (
     query: string,
     category_id: number,
     min_price: number,
@@ -162,7 +162,7 @@ const searchPrograms = async (
     }
 };
 
-const getProgramCategories = async (
+export const getProgramCategories = async (
     language: string
 ) => {
     try {
