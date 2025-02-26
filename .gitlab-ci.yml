@@ -65,6 +65,6 @@ docker_build:
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
   script:
-    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker pull $CI_REGISTRY_IMAGE/backend-dev:latest || true
     - docker build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from "$CI_REGISTRY_IMAGE/backend-dev:latest" -t "$CI_REGISTRY_IMAGE/backend-dev:latest" server/app/
     - docker push "$CI_REGISTRY_IMAGE/backend-dev:latest"

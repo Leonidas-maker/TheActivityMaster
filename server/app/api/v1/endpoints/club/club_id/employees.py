@@ -114,7 +114,7 @@ async def update_employee_v1(
 
 
 @router.delete("", response_model=s_generic.MessageResponse, tags=["Club - Employee"])
-async def remove_club_role_v1(
+async def remove_employee_role_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     user_id: uuid.UUID = Query(..., description="The ID of the user to remove from the role"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
