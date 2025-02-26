@@ -7,5 +7,10 @@
     "created_at_text": "Created At",
     "expires_at_text": "Expires At",
     "reject_btn": "Reject",
-    "approve_btn": "Approve"
+    "approve_btn": "Approve",
+    "reject_verification_alert_title": "Reject Verification",
+    "reject_verification_alert_message": "Are you sure you want to reject this verification?",
+    "cancel_btn": "Cancel",
+    "approve_verification_alert_title": "Approve Verification",
+    "approve_verification_alert_message": "Are you sure you want to approve this verification?"
 }

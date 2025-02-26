@@ -145,5 +145,15 @@
     "error_missing_fields_subheading": "Bitte füllen Sie alle Felder aus",
     "error_submit_verification_failed": "Verifikation fehlgeschlagen",
     "error_submit_verification_failed_subheading": "Bitte versuchen Sie es erneut",
-    "accountVerification_status_btn": "Verifikationsstatus"
+    "accountVerification_status_btn": "Verifikationsstatus",
+    "verification_status": "Verifikationsstatus",
+    "delete_verification": "Löschen",
+    "cancel": "Abbrechen",
+    "delete_verification_alert_title": "Verifikation löschen",
+    "delete_verification_alert_text": "Sind Sie sicher, dass Sie die Verifikation löschen möchten?",
+    "delete_verification_button": "Verifikation löschen",
+    "verification_status_pending_text": "Ihre Verifikation wird überprüft. Bitte haben Sie etwas Geduld. Sie können Ihre Verifikation jederzeit löschen.",
+    "verification_status_approved_text": "Sie sind verifiziert! Sie haben jetzt Zugriff auf alle Funktionen. Sie können Ihre Verifikation jederzeit löschen.",
+    "verification_status_verified_at": "Verifiziert am: ",
+    "verification_status_expires_at": "Läuft ab: "
 }
