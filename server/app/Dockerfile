@@ -21,7 +21,7 @@ RUN adduser \
 
 COPY requirements.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --no-cache-dir -r requirements.txt
+    python -m pip install -r requirements.txt
 
 RUN mkdir -p /app/config/keyfiles && chown -R appuser:appuser /app/config/keyfiles
 RUN mkdir -p /app/config/verifications && chown -R appuser:appuser /app/config/verifications
