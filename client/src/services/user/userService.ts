@@ -192,3 +192,47 @@ export const getUserRoles = async (): Promise<any> => {
     throw error;
   }
 };
+
+export const getUserClubs = async () => {
+  try {
+    const response = await axiosInstance.get("/clubs/me");
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getUserClubs call:", error);
+    throw error;
+  }
+};
+
+export const getUserMemberships = async () => {
+  try {
+    const response = await axiosInstance.get("/clubs/me/memberships");
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getUserMemberships call:", error);
+    throw error;
+  }
+};
+
+export const getUserBooked = async () => {
+  try {
+    const response = await axiosInstance.get("/clubs/me/booked");
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getUserBooked call:", error);
+    throw error;
+  }
+};
+
+export const getUserAttended = async () => {
+  try {
+    const response = await axiosInstance.get("/clubs/me/attended");
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getUserAttended call:", error);
+    throw error;
+  }
+};
