@@ -18,6 +18,7 @@ console = Console()
 MAX_RETRIES = 5
 RETRY_WAIT_SECONDS = 10
 
+
 async def check_db_connection(engine):
     """
     Check the database connection and retry if it fails
@@ -28,7 +29,7 @@ async def check_db_connection(engine):
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
-            return  
+            return
         except OperationalError as e:
             console.log(f"Database connection failed, retrying... (attempt {attempt}/{MAX_RETRIES})")
             if attempt < MAX_RETRIES:
@@ -38,6 +39,7 @@ async def check_db_connection(engine):
                 raise RuntimeError(
                     f"Database connection failed after {MAX_RETRIES} attempts (URL: {engine.url})"
                 ) from e
+
 
 if ENVIRONMENT == "dev":
     db_host = os.getenv("DB_HOST", "127.0.0.1")
@@ -69,7 +71,14 @@ else:
 
     SQLALCHEMY_DATABASE_URL = f"{db_user}:{encoded_db_password}@{db_host}:3306/{db_database}"
 
-engine = create_async_engine(f"mysql+asyncmy://{SQLALCHEMY_DATABASE_URL}", connect_args=ssl_args, pool_pre_ping=True)
+engine = create_async_engine(
+    f"mysql+asyncmy://{SQLALCHEMY_DATABASE_URL}",
+    connect_args=ssl_args,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+)
+
 
 @event.listens_for(engine.sync_engine, "connect")
 def set_session_timezone(dbapi_connection, connection_record):
@@ -77,7 +86,9 @@ def set_session_timezone(dbapi_connection, connection_record):
     cursor.execute(f"SET time_zone = '{DEFAULT_TIMEZONE.zone}'")
     cursor.close()
 
-AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, future=True)
+
+AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, future=True, autocommit=False)
+
 
 async def get_db() -> AsyncIterator[AsyncSession]:
     db = AsyncSessionLocal()

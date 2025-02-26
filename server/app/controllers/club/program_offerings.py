@@ -183,6 +183,11 @@ async def create_session(
         raise HTTPException(
             status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
         )
+    
+    if program.pricing_model == m_club.PriceType.PER_SESSION and new_session.price is None or new_session.capacity is None:
+        raise HTTPException(
+            status_code=400, detail="Each session must have a price and capacity if the pricing model is 'per_session'."
+        )
 
     if new_session.session_type == m_club.SessionType.EVENT and await club_crud.session_exists_event(
         db, program_id, new_session.start_datetime, new_session.end_datetime  # type: ignore
@@ -190,7 +195,7 @@ async def create_session(
         raise HTTPException(status_code=400, detail="Event session with the same start and end times already exists")
 
     if new_session.session_type == m_club.SessionType.COURSE and await club_crud.session_exists_course(
-        db, program_id, new_session.start_time, new_session.end_time, new_session.day_of_week  # type: ignore
+        db, program_id, new_session.day_of_week , new_session.start_time, new_session.end_time # type: ignore
     ):
         raise HTTPException(
             status_code=400, detail="Course session with the same start and end times and day of week already"

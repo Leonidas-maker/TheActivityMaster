@@ -345,7 +345,6 @@ async def session_exists_course(
     day_of_week: int,
     start_time: datetime.time,
     end_time: datetime.time,
-    weekday: m_club.Weekday,
 ) -> bool:
     """Check if a session already exists
 
@@ -359,7 +358,6 @@ async def session_exists_course(
             m_club.Session.day_of_week == day_of_week,
             m_club.Session.start_time == start_time,
             m_club.Session.end_time == end_time,
-            m_club.Session.weekday == weekday,
         ]
     )
     res = await db.execute(

@@ -50,7 +50,7 @@ async def purge_sensitive_fields(
             m_verification.VerificationStatus.APPROVED if approved else m_verification.VerificationStatus.REJECTED
         )
         if approved:
-            expire_date = datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=730)
+            verification.expires_at = datetime.datetime.now(DEFAULT_TIMEZONE) + datetime.timedelta(days=730)
         await db.flush()
     return verification
 

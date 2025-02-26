@@ -44,7 +44,7 @@ def add_to_transaction_data(
                 currency=session.program.currency,
             )
         else:
-            if transaction_data[session.program.club_id]["currency"] != session.currency:
+            if transaction_data[session.program.club_id]["currency"] != session.program.currency:
                 raise ValueError(f"Currency mismatch for session {session.id}")
 
             transaction_data[session.program.club_id]["total_amount"] += (

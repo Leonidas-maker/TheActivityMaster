@@ -120,7 +120,7 @@ async def get_program_categories_v1(
 ###########################################################################
 ################################### User ##################################
 ###########################################################################
-@router.get("/me", tags=["User"])
+@router.get("/me", tags=["User"], response_model=s_club.Club, response_model_exclude_none=True)
 async def get_my_clubs_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
@@ -254,6 +254,11 @@ async def get_program_sessions_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
 ):
+    """Get sessions of a club
+
+    **Note: If the user has the permission to read programs or is a trainee of the program,
+    provide the authentication details to view the sessions of a program with any status.**
+    """
     try:
         user_id = token_details.user_id if token_details else None
         programs = await club_crud.get_authorized_sessions(ep_context.db, club_id, page, page_size, user_id)
@@ -283,7 +288,12 @@ async def create_booking_v1(
         await handle_exception(e, ep_context, "Failed to create booking")
 
 
-@router.get("/bookings/{booking_id}", response_model=s_club.BookingDetails, response_model_exclude_none=True, tags=["Club - Booking"])
+@router.get(
+    "/bookings/{booking_id}",
+    response_model=s_club.BookingDetails,
+    response_model_exclude_none=True,
+    tags=["Club - Booking"],
+)
 async def get_booking_v1(
     booking_id: uuid.UUID,
     ep_context: EndpointContext = Depends(get_endpoint_context),
@@ -303,7 +313,7 @@ async def delete_booking_v1(
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
 ):
     try:
-        #TODO: Implement cancel booking
+        # TODO: Implement cancel booking
         return {"message": "Not available yet. Please contact support."}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to cancel booking")

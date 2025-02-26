@@ -43,6 +43,11 @@ async def get_programs_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
 ):
+    """Get programs of a club
+
+    **Note: If the user has the permission to read programs or is a trainee of the program,
+    provide the authentication details to view a program with any status.**
+    """
     try:
         user_id = token_details.user_id if token_details else None
         programs = await club_crud.get_authorized_programs(ep_context.db, club_id, page, page_size, user_id)

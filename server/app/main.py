@@ -6,6 +6,8 @@ import os
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
+from rich.console import Console
+from rich.style import Style
 
 from core.database import engine, get_async_session, check_db_connection, get_db
 from config.settings import ENVIRONMENT
@@ -39,10 +41,34 @@ from utils.task_scheduler import TaskSchedulerRedis
 
 from api.v1.router import router as v1_router
 
+banner = """                                                                                                                                                                                                                                                                                         
+.------------------------------------------------.
+|       🏃͋̔͊‍̾̔͊♂͒̒͘️̒͊͝ T̕͝͠h̾̀̕e̾͑̾A͋͠c̔͆̒t͆̀͝i̐͆v̽́i̒͘͘t̀̚͠y͛̽M͋̚a̿͒s̓́͒t̓̈́e͋̈́̽r͛̚ -̔͒ B̓̕͠a̐͐͝c̓̈́͠k͊̔͝e̾͐͠n̈́͌͋d̾̈́̾          |
+'------------------------------------------------'
+                   .-~~~~-.
+                 .'        '.
+                /            \\
+               /              \\
+              |   ( )    ( )   |
+              |       ^^       |
+              |   \\   __   /   |
+              |    \\      /    |
+              \\     \\____/     /
+               \\              /
+                 '.         .'
+                   '-.~~.-'
+
+"""
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if ENVIRONMENT == "prod":
+        console = Console()
+        style = Style(color="red", bold=True)
+        console.print(banner, style=style)
+
     await check_db_connection(engine)
+
     async with engine.begin() as conn:
         # await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
