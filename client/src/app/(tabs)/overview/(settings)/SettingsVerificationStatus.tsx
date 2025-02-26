@@ -54,7 +54,8 @@ const SettingsVerificationStatus = () => {
         while (router.canGoBack()) {
             router.back();
         }
-    }
+        router.navigate("/");
+    };
 
     return (
         <ScrollView className="flex h-screen bg-light_primary dark:bg-dark_primary">
