@@ -333,7 +333,7 @@ async def get_trainers_v1(
 async def add_trainer_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
-    user_id: uuid.UUID = Body(..., description="The ID of the user to add as a trainer"),
+    user_id: uuid.UUID = Query(..., description="The ID of the user to add as a trainer"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])

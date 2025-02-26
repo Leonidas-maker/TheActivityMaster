@@ -62,10 +62,9 @@ banner = """
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if ENVIRONMENT == "prod":
-        console = Console()
-        style = Style(color="red", bold=True)
-        console.print(banner, style=style)
+    console = Console()
+    style = Style(color="red", bold=True)
+    console.print(banner, style=style)
 
     await check_db_connection(engine)
 
