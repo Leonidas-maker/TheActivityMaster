@@ -57,14 +57,14 @@ docker_build:
       changes:
         - server/app/**/*
     - when: never
-  before_script: []
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   services:
     - name: docker:dind
-      command: ["--tls=false"]
   variables:
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_BUILDKIT: "1"
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
   script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build --cache-from "$CI_REGISTRY_IMAGE/backend-dev:latest" -t "$CI_REGISTRY_IMAGE/backend-dev:latest" server/app/
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from "$CI_REGISTRY_IMAGE/backend-dev:latest" -t "$CI_REGISTRY_IMAGE/backend-dev:latest" server/app/
     - docker push "$CI_REGISTRY_IMAGE/backend-dev:latest"
