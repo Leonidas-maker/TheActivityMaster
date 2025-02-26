@@ -60,18 +60,92 @@ async def create_bookings(
 
 
 async def get_booking_by_id(db: AsyncSession, booking_id: uuid.UUID) -> m_payment.Booking:
+    """Get a booking by its ID
+
+    :param db: The database session
+    :param booking_id: The ID of the booking
+    :return: The booking
+    """
     booking = await db.execute(select(m_payment.Booking).filter(m_payment.Booking.id == booking_id))
     return booking.unique().scalar()
 
 
+async def get_bookings_by_ids(
+    db: AsyncSession, booking_ids: List[uuid.UUID], with_ids: bool = False, additional_query_options = []
+) -> List[m_payment.Booking]:
+    """Get bookings by their IDs
+
+    :param db: The database session
+    :param booking_ids: The IDs of the bookings
+    :return: The bookings
+    """
+    query_options = []
+    if with_ids:
+        query_options.extend(
+            [
+                joinedload(m_payment.Booking.session).load_only(m_club.Session.program_id),
+                joinedload(m_payment.Booking.session)
+                .joinedload(m_club.Session.program)
+                .load_only(m_club.Program.club_id),
+            ]
+        )
+    if additional_query_options:
+        query_options.extend(additional_query_options)
+
+    bookings = await db.execute(
+        select(m_payment.Booking).options(*query_options).filter(m_payment.Booking.id.in_(booking_ids))
+    )
+    return list(bookings.unique().scalars().all())
+
+
 async def get_bookings_by_session_id(db: AsyncSession, session_id: uuid.UUID) -> List[m_payment.Booking]:
+    """Get bookings by session ID
+
+    :param db: The database session
+    :param session_id: The ID of the session
+    :return: The bookings
+    """
     bookings = await db.execute(select(m_payment.Booking).filter(m_payment.Booking.session_id == session_id))
     return list(bookings.unique().scalars().all())
 
+async def get_bookings_by_club_id(
+    db: AsyncSession, club_id: uuid.UUID, status: m_payment.BookingStatus = m_payment.BookingStatus.CONFIRMED, additional_filters = []
+) -> List[m_payment.Booking]:
+    """Get bookings by club ID
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :param stats: List of booking statuses to filter
+    :return: The bookings associated with the club
+    """
+    bookings = await db.execute(
+        select(m_payment.Booking).options(
+            joinedload(m_payment.Booking.session).load_only(m_club.Session.program_id),
+            joinedload(m_payment.Booking.session).joinedload(m_club.Session.program).load_only(m_club.Program.club_id),
+            joinedload(m_payment.Booking.user).load_only(m_user.User.id, m_user.User.first_name, m_user.User.last_name),
+        )
+        .options(
+            joinedload(m_payment.Booking.session).load_only(m_club.Session.program_id),
+            joinedload(m_payment.Booking.session).joinedload(m_club.Session.program).load_only(m_club.Program.club_id),
+        )
+        .filter(
+            m_club.Session.program.has(m_club.Program.club_id == club_id),
+            m_payment.Booking.status == status,
+            and_(*additional_filters)
+        )
+    )
+    return list(bookings.unique().scalars().all())
 
 async def get_bookings_by_user_id(
     db: AsyncSession, user_id: uuid.UUID, stats: List[m_payment.BookingStatus] = []
 ) -> List[m_payment.Booking]:
+    """Get bookings by user ID
+
+    :param db: The database session
+    :param user_id: The ID of the user
+    :param stats: List of booking statuses to filter
+    :return: The bookings associated with the user
+    """
     bookings = await db.execute(
         select(m_payment.Booking)
         .options(
@@ -86,6 +160,14 @@ async def get_bookings_by_user_id(
 async def get_bookings_by_user_id_and_id(
     db: AsyncSession, booking_id: uuid.UUID, user_id: uuid.UUID
 ) -> m_payment.Booking:
+    """Get a booking by its ID and user ID
+
+    :param db: The database session
+    :param booking_id: The ID of the booking
+    :param user_id: The ID of the user
+    :return: The booking
+    """
+
     booking = await db.execute(
         select(m_payment.Booking)
         .options(
@@ -131,6 +213,20 @@ async def has_user_booked(db: AsyncSession, user_id: uuid.UUID, session_ids: Lis
     return bool(res.scalar())
 
 
+async def change_booking_stats(db: AsyncSession, booking_ids: List[uuid.UUID], status: m_payment.BookingStatus) -> bool:
+    """Change the status of the bookings
+
+    :param db: The database session
+    :param booking_ids: The IDs of the bookings
+    :param status: The new status of the bookings
+    :return: True if the status was changed, False otherwise
+    """
+    res = await db.execute(
+        update(m_payment.Booking).values(status=status).filter(m_payment.Booking.id.in_(booking_ids))
+    )
+    return res.rowcount == len(booking_ids)
+
+
 ###########################################################################
 ############################## Recurring Task #############################
 ###########################################################################
@@ -147,11 +243,11 @@ async def refresh_bookings_status(db: AsyncSession, console: Console) -> bool:
                 m_payment.Booking.status == m_payment.BookingStatus.CONFIRMED,
                 m_payment.Booking.session_id == m_club.Session.id,
                 or_(
-                    m_club.Session.end_date >= datetime.datetime.now(tz=datetime.timezone.utc),
+                    m_club.Session.end_date < datetime.datetime.now(tz=datetime.timezone.utc),
                     m_club.Session.end_date == None,
                 ),
                 or_(
-                    m_club.Session.end_datetime >= datetime.datetime.now(tz=datetime.timezone.utc),
+                    m_club.Session.end_datetime < datetime.datetime.now(tz=datetime.timezone.utc),
                     m_club.Session.end_datetime == None,
                 ),
             )

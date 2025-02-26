@@ -30,7 +30,7 @@ from core.security import (
 from crud.audit import anonymize_ip_addresses
 from crud.auth import clean_tokens, totp_key_rotation, clean_2fa_table
 from crud.verification import delete_expired_identity_verifications
-from crud.club import update_session_occurrences, refresh_bookings_status
+from crud.club import update_session_occurrences, refresh_bookings_status, set_programs_inactive, delete_marked_clubs
 from crud.transactions import check_pending_transactions
 
 from utils.jwt_keyfile_manager import JWTKeyManager
@@ -59,6 +59,7 @@ banner = """
                    '-.~~.-'
 
 """
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -104,7 +105,6 @@ async def lifespan(app: FastAPI):
     # Initialize the Task Scheduler
     scheduler = TaskSchedulerRedis(redis_host=redis_host, redis_password=redis_port, redis_db=1)
 
-
     # Clean up the audit logs
     scheduler.add_task(
         "anonymize_ip_addresses", anonymize_ip_addresses, cron="0 0 * * *", on_startup=True, with_console=True
@@ -117,7 +117,14 @@ async def lifespan(app: FastAPI):
     scheduler.add_task("totp_key_rotation", totp_key_rotation, cron="0 0 */14 * *", on_startup=True, with_console=True)
 
     # Clean up the 2fa table
-    scheduler.add_task("clean_2fa", clean_2fa_table, cron="*/15 * * * *", on_startup=True, with_console=True, blocked_by=["totp_key_rotation"])
+    scheduler.add_task(
+        "clean_2fa",
+        clean_2fa_table,
+        cron="*/15 * * * *",
+        on_startup=True,
+        with_console=True,
+        blocked_by=["totp_key_rotation"],
+    )
 
     # Delete expired identity verifications every 7 days
     scheduler.add_task(
@@ -137,6 +144,24 @@ async def lifespan(app: FastAPI):
         with_console=True,
     )
 
+    # Delete clubs that are marked for deletion every week
+    scheduler.add_task(
+        "delete_marked_clubs",
+        delete_marked_clubs,
+        cron="0 0 * * 0",
+        with_console=True,
+    )
+
+    # Update program status to inactive if the end date is passed
+    scheduler.add_task(
+        "set_programs_inactive",
+        set_programs_inactive,
+        cron="0 0 * * *",
+        on_startup=True,
+        with_console=True,
+        blocked_by=["delete_marked_clubs"],
+    )
+    
     # Refresh the bookings status every 15 minutes
     scheduler.add_task(
         "refresh_bookings_status",
@@ -146,15 +171,14 @@ async def lifespan(app: FastAPI):
         with_console=True,
     )
 
-    #! Uncomment this if you have the payment system over the Stripe-API
     # Check pending transactions every 5 minutes
-    # scheduler.add_task(
-    #     "check_pending_transactions",
-    #     check_pending_transactions,
-    #     cron="*/5 * * * *",
-    #     on_startup=True,
-    #     with_console=True,
-    # )
+    scheduler.add_task(
+        "check_pending_transactions",
+        check_pending_transactions,  #! Dummy function is used for now
+        cron="*/5 * * * *",
+        on_startup=True,
+        with_console=True,
+    )
 
     scheduler.start()
     yield
@@ -193,8 +217,9 @@ app.mount("/static", StaticFiles(directory=static_folder), name="static")
 
 
 @app.get("/ping")
-def read_root():
+def ping():
     return {"message": "pong"}
+
 
 if __name__ == "__main__":
     import uvicorn

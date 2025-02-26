@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, func
+from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, func, update
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import undefer, joinedload
 from typing import List, Tuple, Optional, Dict
@@ -372,7 +372,6 @@ async def session_exists_course(
         )
     )
     return bool(res.scalar())
-
 
 async def get_session(
     db: AsyncSession, program_id: uuid.UUID, session_id: uuid.UUID, query_options: list = []
@@ -999,6 +998,33 @@ async def search_programs(
     res = await db.execute(query.offset((page - 1) * page_size).limit(page_size).options(*query_options))
     return list(res.unique().scalars().all())
 
+async def is_price_model_package(db: AsyncSession, program_id: Optional[uuid.UUID] = None, session_id: Optional[uuid.UUID] = None) -> bool:
+    """Check if the price model of a program or session is PACKAGE
+
+    :param db: The database session
+    :param program_id: The ID of the program
+    :param session_id: The ID of the session
+    :return: True if the price model is PACKAGE, False otherwise
+    """
+    conditions = []
+    if program_id:
+        conditions.append(m_club.Program.id == program_id)
+    if session_id:
+        conditions.append(m_club.Session.id == session_id)
+
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.Program)
+                .filter(
+                    and_(*conditions),
+                    m_club.Program.pricing_model == m_club.PriceType.PACKAGE,
+                )
+            )
+        )
+    )
+    return bool(res.scalar())
 
 async def update_program(
     db: AsyncSession,
@@ -1134,7 +1160,6 @@ async def get_program_categories(db: AsyncSession, ids: Optional[List[int]] = No
 ###########################################################################
 async def update_session_occurrences(db: AsyncSession, console: Console) -> bool:
     """Create session occurrences for all programs with recurring sessions"""
-    # Add audit logs
     audit_logger = audit_crud.AuditLogger(db)
     audit_logger.sys_info("Updating session occurrences")
 
@@ -1195,5 +1220,51 @@ async def update_session_occurrences(db: AsyncSession, console: Console) -> bool
         audit_logger.sys_error("Error updating session occurrences", traceback=traceback.format_exc())
         await db.commit()
         console.log("[red][ERROR][/red]\t\tError updating session occurrences")
+        console.print_exception()
+        return False
+
+
+async def set_programs_inactive(db: AsyncSession, console: Console) -> bool:
+    """Set all programs to inactive if all sessions are in the past"""
+    audit_logger = audit_crud.AuditLogger(db)
+    audit_logger.sys_info("Setting programs inactive")
+
+    try:
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Subquery: Check if there are any sessions that have not yet ended
+        session_active = exists().where(
+            (m_club.Session.program_id == m_club.Program.id) &
+            or_(
+                m_club.Session.end_date >= now,
+                m_club.Session.end_datetime >= now,
+            )
+        )
+
+        # UPDATE statement: Set the status to INACTIVE when:
+        # - the program is currently active and
+        # - there are no future sessions
+        stmt = (
+            update(m_club.Program)
+            .where(
+                m_club.Program.status == m_club.ProgramStatus.ACTIVE,
+                ~session_active
+            )
+            .values(status=m_club.ProgramStatus.INACTIVE)
+        )
+
+        res = await db.execute(stmt)
+
+        num_updated = res.rowcount
+        audit_logger.sys_info(f"Set {num_updated} programs to inactive")
+        await db.commit()
+
+        console.log(f"[blue][INFO][/blue]\t\tSet {num_updated} programs to inactive")
+        return True
+    except Exception as e:
+        await db.rollback()
+        audit_logger.sys_error("Error setting programs inactive", traceback=traceback.format_exc())
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tError setting programs inactive")
         console.print_exception()
         return False

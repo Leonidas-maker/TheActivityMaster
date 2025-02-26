@@ -9,9 +9,9 @@ import traceback
 
 from schemas import s_club, s_payment
 
-from models import m_club, m_user, m_payment
+from models import m_club, m_payment
 
-from crud import role as role_crud, generic as generic_crud, audit as audit_crud
+from crud import audit as audit_crud, club as club_crud
 
 from core import transactions as core_transactions
 
@@ -19,6 +19,14 @@ from core import transactions as core_transactions
 async def create_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_data: Dict[uuid.UUID, s_club.TransactionData]
 ) -> Tuple[m_payment.Transaction, stripe.PaymentIntent]:
+    """Create a transaction
+
+    :param db: The database session
+    :param user_id: The ID of the user
+    :param transaction_data: The transaction data
+    :return: The transaction and the payment intent
+    """
+
     if not transaction_data or len(transaction_data) == 0:
         raise ValueError("No transactions to process")
 
@@ -105,6 +113,13 @@ async def create_transaction(
 async def add_transfer_id_to_split_transactions(
     db: AsyncSession, transaction_id: uuid.UUID
 ) -> List[m_payment.SplitTransaction]:
+    """Add transfer ID to split transactions
+
+    :param db: The database session
+    :param transaction_id: The ID of the transaction
+    :return: The split transactions
+    """
+
     split_transactions = await db.execute(
         select(m_payment.SplitTransaction)
         .join(m_payment.Transaction)
@@ -134,10 +149,164 @@ async def add_transfer_id_to_split_transactions(
     return list(split_transactions_db)
 
 
+async def get_transaction_by_id(
+    db: AsyncSession, transaction_id: uuid.UUID, with_details: bool = False
+) -> m_payment.Transaction:
+    """Get a transaction by ID
+
+    :param db: The database session
+    :param transaction_id: The ID of the transaction
+    :return: The transaction
+    """
+    options = []
+    if with_details:
+        options.extend(
+            [
+                joinedload(m_payment.Transaction.bookings),
+                joinedload(m_payment.Transaction.bookings)
+                .joinedload(m_payment.Booking.session)
+                .load_only(m_club.Session.program_id),
+                joinedload(m_payment.Transaction.bookings)
+                .joinedload(m_payment.Booking.session)
+                .joinedload(m_club.Session.program)
+                .load_only(m_club.Program.club_id),
+            ]
+        )
+
+    transaction = await db.execute(select(m_payment.Transaction).filter(m_payment.Transaction.id == transaction_id))
+    return transaction.unique().scalar()
+
+
+async def create_refund(
+    db: AsyncSession,
+    bookings: List[m_payment.Booking],
+    reason: str,
+    is_user_refund: bool = True,
+    check_pricing_model: bool = True,
+) -> List[m_payment.Refund]:
+    """Create a refund
+
+    :param db: The database session
+    :param bookings: List of bookings to refund
+    :param reason: Reason for the refund
+    :param is_user_refund: Indicates if this is a user-initiated refund, defaults to True
+    :return: A tuple containing the refund object and the Stripe refund object
+    """
+    # Fetch transaction with all details
+    transaction = await get_transaction_by_id(db, bookings[0].transaction_id, with_details=True)
+
+    if transaction.status in [m_payment.TransactionStatus.FAILED, m_payment.TransactionStatus.FAILED]:
+        raise ValueError("Transaction is not successful")
+
+    refund_amount_per_club: Dict[str, int] = {}
+
+    for booking in bookings:
+        if transaction.id != booking.transaction_id:
+            raise ValueError("Bookings do not belong to the same transaction")
+        if booking.status != m_payment.BookingStatus.CONFIRMED:
+            raise ValueError("Booking is not confirmed")
+        if check_pricing_model and club_crud.is_price_model_package(db, session_id=booking.session_id):
+            raise ValueError("Cannot refund bookings with package pricing model")
+
+        refund_amount_per_club[str(booking.club_id)] = (
+            refund_amount_per_club.get(str(booking.club_id), 0) + booking.price_snapshot
+        )
+
+    stripe_fee = core_transactions.get_payment_fee(transaction.external_charge_id)
+
+    club_ids = [booking.club_id for booking in bookings]
+
+    refunds_db: List[m_payment.Refund] = []
+    if len(club_ids) > 1:
+        sum_refund_amount = sum(refund_amount_per_club.values())
+        if (
+            sum_refund_amount > transaction.amount
+            or transaction.amount_refunded + sum_refund_amount > transaction.amount
+        ):
+            raise ValueError("Refund amount exceeds transaction amount")
+
+        fee_per_club: Dict[str, int] = {}
+        amount_per_club: Dict[str, int] = {}
+        split_transactions: Dict[str, m_payment.SplitTransaction] = {}
+        for split_transaction in transaction.split_details:
+            fee_per_club[str(split_transaction.club_id)] = int(
+                (split_transaction.amount / transaction.amount) * stripe_fee
+            )
+            amount_per_club[str(split_transaction.club_id)] = split_transaction.amount
+            split_transactions[str(split_transaction.club_id)] = split_transaction
+
+        if is_user_refund:
+            for club_id in club_ids:
+                refund_amount_per_club[str(club_id)] -= round(
+                    (refund_amount_per_club[str(club_id)] / amount_per_club[str(club_id)]) * fee_per_club[str(club_id)]
+                )
+
+        club_reversals = {}
+
+        # TODO - Implement recurring task to check if the transfer reversal is successful and initiate refund
+        for refund_club_id, refund_amount in refund_amount_per_club.items():
+            split_transaction = split_transactions[refund_club_id]
+            if split_transaction.amount_refunded + refund_amount > split_transaction.amount:
+                raise ValueError("Refund amount exceeds split transaction amount")
+
+            club_reversals[refund_club_id] = core_transactions.create_reversal(
+                transfer_id=split_transaction.external_transfer_id,
+                amount=refund_amount,
+            )
+            refund = m_payment.Refund(
+                transaction_id=transaction.id,
+                user_id=transaction.user_id,
+                club_id=uuid.UUID(refund_club_id),
+                refund_type=(
+                    m_payment.RefundType.USER_REQUESTED if is_user_refund else m_payment.RefundType.CANCELLED_BY_CLUB
+                ),
+                amount=refund_amount,
+                reason=reason,
+                status=m_payment.TransactionStatus.PENDING,
+            )
+            refunds_db.append(refund)
+
+            split_transaction.amount_refunded += refund_amount
+            transaction.amount_refunded += refund_amount
+    else:
+        refund_amount = sum(refund_amount_per_club.values())
+        if refund_amount > transaction.amount or transaction.amount_refunded + refund_amount > transaction.amount:
+            raise ValueError("Refund amount exceeds transaction amount")
+
+        if is_user_refund:
+            refund_amount -= int((refund_amount / transaction.amount) * stripe_fee)
+        refund = core_transactions.create_refund(transaction.external_charge_id, refund_amount)
+        refunds_db.append(
+            m_payment.Refund(
+                transaction_id=transaction.id,
+                user_id=transaction.user_id,
+                club_id=club_ids[0],
+                refund_type=(
+                    m_payment.RefundType.USER_REQUESTED if is_user_refund else m_payment.RefundType.CANCELLED_BY_CLUB
+                ),
+                amount=refund_amount,
+                reason=reason,
+                status=m_payment.TransactionStatus.PENDING,
+            )
+        )
+        transaction.amount_refunded += refund_amount
+
+    db.add_all(refunds_db)
+    await db.flush()
+    return refunds_db
+
+
 ###########################################################################
 ############################## Recurring Task #############################
 ###########################################################################
 async def check_pending_transactions(db: AsyncSession, console: Console) -> bool:
+    """Check pending transactions
+
+    :param db: The database session
+    :param console: The console
+    :return: True if successful, False otherwise
+    """
+
     audit_logger = audit_crud.AuditLogger(db)
     audit_logger.sys_info("Checking pending transactions")
 

@@ -1,16 +1,20 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_, exists, and_, ColumnElement
+from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, update
 from sqlalchemy.orm import undefer, joinedload
 from typing import List, Tuple, Optional, Dict
 import uuid
+import traceback
+from rich.console import Console
+import datetime
 
 from schemas import s_club
 
 from models import m_club, m_generic, m_user
 
-from crud import role as role_crud, generic as generic_crud
+from crud import role as role_crud, generic as generic_crud, audit as audit_crud
 
 from config.permissions import ClubPermissions
+from config.settings import DEFAULT_TIMEZONE
 
 
 ###########################################################################
@@ -106,7 +110,7 @@ async def get_clubs(db: AsyncSession, page: int, page_size: int, city: str) -> L
             stmt.join(m_club.Club.address)
             .join(m_generic.Address.postal_code)
             .join(m_generic.PostalCode.city)
-            .filter(m_generic.City.name == city)
+            .filter(m_generic.City.name == city, m_club.Club.is_deleted == False)
             .order_by(m_club.Club.name)
         )
 
@@ -195,7 +199,7 @@ async def search_clubs(db: AsyncSession, query: str, page: int = 1, page_size: i
         .join(m_generic.City, m_generic.PostalCode.city_id == m_generic.City.id)
         .join(m_generic.State, m_generic.City.state_id == m_generic.State.id)
         .join(m_generic.Country, m_generic.State.country_id == m_generic.Country.id)
-        .where(
+        .filter(
             or_(
                 m_club.Club.name.ilike(search_pattern),
                 m_club.Club.description.ilike(search_pattern),
@@ -204,7 +208,8 @@ async def search_clubs(db: AsyncSession, query: str, page: int = 1, page_size: i
                 m_generic.City.name.ilike(search_pattern),
                 m_generic.State.name.ilike(search_pattern),
                 m_generic.Country.name.ilike(search_pattern),
-            )
+            ),
+            m_club.Club.is_deleted == False,
         )
         .limit(page_size)
         .offset((page - 1) * page_size)
@@ -248,15 +253,35 @@ async def update_club(db: AsyncSession, club: m_club.Club, club_update: s_club.C
     return details
 
 
-# TODO - Implement Delete Club workflow
-# async def delete_club(db: AsyncSession, club_id: uuid.UUID) -> None:
-#     """Delete a club
+async def is_club_deletable(db: AsyncSession, club_id: uuid.UUID) -> bool:
+    """Check if a club is deletable
 
-#     :param db: The database session
-#     :param club_id: The ID of the club to delete
-#     """
-#     await db.execute(delete(m_club.Club).where(m_club.Club.id == club_id))
-#     await db.flush()
+    :param db: The database session
+    :param club_id: The ID of the club
+    :return: True if the club is deletable, False otherwise
+    """
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.Program)
+                .filter(m_club.Program.club_id == club_id, m_club.Program.status == m_club.ProgramStatus.ACTIVE)
+            )
+        )
+    )
+    return not bool(res.scalar())
+
+
+async def delete_club(db: AsyncSession, club_id: uuid.UUID) -> None:
+    """Mark a club as deleted
+
+    Note: This does not delete the club, but marks it as deleted. After X days, the club will be deleted.
+
+    :param db: The database session
+    :param club_id: The ID of the club to close
+    """
+    await db.execute(update(m_club.Club).where(m_club.Club.id == club_id).values(is_deleted=True))
+    await db.flush()
 
 
 ###########################################################################
@@ -361,3 +386,33 @@ async def remove_trainer(db: AsyncSession, program_id: uuid.UUID, user_id: uuid.
         )
     )
     await db.flush()
+
+
+###########################################################################
+############################## Recurring Task #############################
+###########################################################################
+async def delete_marked_clubs(db: AsyncSession, console: Console) -> bool:
+    """Delete clubs that have been marked as deleted"""
+    audit_logger = audit_crud.AuditLogger(db)
+    audit_logger.sys_info("Removing old clubs")
+    try:
+        res = await db.execute(
+            delete(m_club.Club).filter(
+                m_club.Club.is_deleted == True,
+                m_club.Club.updated_at < datetime.datetime.now(tz=DEFAULT_TIMEZONE) - datetime.timedelta(days=1095),
+            )
+        )
+
+        num_deleted = res.rowcount
+        audit_logger.sys_info(f"Removed {num_deleted} old clubs")
+        await db.commit()
+
+        console.log(f"[blue][INFO][/blue]\t\tRemoved {num_deleted} old clubs")
+        return True
+    except Exception as e:
+        await db.rollback()
+        audit_logger.sys_error("Error removing old clubs", traceback=traceback.format_exc())
+        await db.commit()
+        console.log("[red][ERROR][/red]\t\tError removing old clubs")
+        console.print_exception()
+        return False

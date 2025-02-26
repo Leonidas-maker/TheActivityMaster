@@ -5,7 +5,7 @@ import datetime
 
 from schemas import s_generic
 from models.m_club import SessionType, Weekday, OccurrenceStatus, PriceType, ProgramStatus
-from models.m_payment import BookingStatus, BookingType
+from models.m_payment import BookingStatus, BookingType, PaymentMethod, TransactionStatus
 
 from models import m_club
 
@@ -52,6 +52,7 @@ class ClubCreate(ClubBase):
 
 class Club(ClubBase):
     id: uuid.UUID
+    is_deleted: bool = Field(False, description="Whether the club is marked for deletion.")
 
 
 class ClubDetails(Club):
@@ -265,7 +266,6 @@ class Session(SessionBase):
         if self.session_type == SessionType.EVENT:
             self.occurrences = None
         return self
-    
 
 
 class SessionUpdate(BaseModel):
@@ -580,8 +580,18 @@ class BookingDetails(Booking):
     program: Program
     session: Session
 
-class ClubBooking(Booking):
-    user_id: uuid.UUID = Field(..., description="The ID of the user who made the booking.")
+
+class UserClubBooking(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID = Field(..., description="The ID of the user who made the booking.")
+    first_name: str = Field(..., max_length=50, description="The first name of the user who made the booking.")
+    last_name: str = Field(..., max_length=50, description="The last name of the user who made the booking.")
+
+
+class ClubBooking(BookingBase):
+    program_id: uuid.UUID = Field(..., description="The ID of the program for which the booking was made.")
+    price: int = Field(..., description="The price of the booking.")
+    user: UserClubBooking = Field(..., description="The user who made the booking.")
 
 
 class BookingCreateRequest(BaseModel):
@@ -592,3 +602,29 @@ class BookingCreateRequest(BaseModel):
     session_ids: List[uuid.UUID] = Field(
         ..., max_length=10, description="The IDs of the sessions for which the booking was made."
     )
+
+
+class SplitTransaction(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID = Field(..., description="The ID of the split transaction.")
+    transaction_id: uuid.UUID = Field(..., description="The ID of the transaction.")
+
+    club_id: uuid.UUID = Field(..., description="The ID of the club.")
+    amount: int = Field(..., description="The amount of the split transaction.")
+    amount_refunded: int = Field(..., description="The amount refunded for the split transaction.")
+
+
+class Transaction(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID = Field(..., description="The ID of the transaction.")
+    user_id: uuid.UUID = Field(..., description="The ID of the user who made the transaction.")
+
+    amount: int = Field(..., description="The total amount of the transaction.")
+    amount_refunded: int = Field(..., description="The total amount refunded for the transaction.")
+    currency: str = Field(..., description="The currency of the transaction.")
+    status: TransactionStatus = Field(..., description="The status of the transaction.")
+    payment_method: PaymentMethod = Field(..., description="The payment method of the transaction.")
+    created_at: datetime.datetime = Field(..., description="The creation date of the transaction.")
+    updated_at: datetime.datetime = Field(..., description="The last update date of the transaction.")
+
+    split_details: List[SplitTransaction] = Field([], description="The split details of the transaction.")

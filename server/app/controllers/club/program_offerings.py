@@ -6,14 +6,14 @@ from typing import List, Union, Optional, Tuple
 from config.settings import DEBUG, DEFAULT_TIMEZONE
 from config.permissions import ClubPermissions
 
-from models import m_user, m_club
+from models import m_user, m_club, m_payment
 from schemas import s_club, s_generic, s_role
 
 from crud import (
-    verification as verification_crud,
     club as club_crud,
     user as user_crud,
     role as role_crud,
+    transactions as transactions_crud,
 )
 
 from core.generic import EndpointContext
@@ -56,7 +56,10 @@ async def create_program(
     if await club_crud.program_exists(db, club_id, new_program.name):
         raise HTTPException(status_code=400, detail="Program name already exists")
 
-    if new_program.status == m_club.ProgramStatus.ACTIVE and await club_crud.has_club_stripe_account(db, club_id) is False:
+    if (
+        new_program.status == m_club.ProgramStatus.ACTIVE
+        and await club_crud.has_club_stripe_account(db, club_id) is False
+    ):
         raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
 
     try:
@@ -103,8 +106,12 @@ async def update_program(
 
     if program_update.pricing_model and program.status == m_club.ProgramStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot change pricing model of an active program")
-    
-    if program_update.status and program_update.status == m_club.ProgramStatus.ACTIVE and program.club.stripe_account_id is None:
+
+    if (
+        program_update.status
+        and program_update.status == m_club.ProgramStatus.ACTIVE
+        and program.club.stripe_account_id is None
+    ):
         raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
 
     try:
@@ -183,8 +190,12 @@ async def create_session(
         raise HTTPException(
             status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
         )
-    
-    if program.pricing_model == m_club.PriceType.PER_SESSION and new_session.price is None or new_session.capacity is None:
+
+    if (
+        program.pricing_model == m_club.PriceType.PER_SESSION
+        and new_session.price is None
+        or new_session.capacity is None
+    ):
         raise HTTPException(
             status_code=400, detail="Each session must have a price and capacity if the pricing model is 'per_session'."
         )
@@ -195,7 +206,7 @@ async def create_session(
         raise HTTPException(status_code=400, detail="Event session with the same start and end times already exists")
 
     if new_session.session_type == m_club.SessionType.COURSE and await club_crud.session_exists_course(
-        db, program_id, new_session.day_of_week , new_session.start_time, new_session.end_time # type: ignore
+        db, program_id, new_session.day_of_week, new_session.start_time, new_session.end_time  # type: ignore
     ):
         raise HTTPException(
             status_code=400, detail="Course session with the same start and end times and day of week already"
@@ -250,10 +261,13 @@ async def update_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session.program.pricing_model == m_club.PriceType.PACKAGE and session.program.status == m_club.ProgramStatus.ACTIVE:
-            raise HTTPException(
-                status_code=400, detail="Cannot update a session for an active program with pricing model 'package'"
-            )
+    if (
+        session.program.pricing_model == m_club.PriceType.PACKAGE
+        and session.program.status == m_club.ProgramStatus.ACTIVE
+    ):
+        raise HTTPException(
+            status_code=400, detail="Cannot update a session for an active program with pricing model 'package'"
+        )
 
     try:
         details = await club_crud.update_session(db, session, session_update)
@@ -309,10 +323,18 @@ async def delete_session(
                 status_code=400,
                 detail="Cannot delete a session that is not membership required and pricing model is package. Please delete the program instead",
             )
-        if session_to_delete.program.pricing_model == m_club.PriceType.PER_SESSION:
-            # TODO Refund users that have booked the session
-            raise HTTPException(status_code=400, detail="Currently not supported")
-        raise HTTPException(status_code=400, detail="The handling of this program pricing model is not supported")
+        elif session_to_delete.program.pricing_model == m_club.PriceType.PER_SESSION:
+            bookings = await club_crud.get_bookings_by_session_id(db, session_id)
+
+            #* This only works for per session pricing model
+            for booking in bookings:
+                await transactions_crud.create_refund(
+                    db, [booking], "Club cancelled session", is_user_refund=False, check_pricing_model=False
+                )
+
+                booking.status = m_payment.BookingStatus.CANCELLED_BY_CLUB
+        else:
+            raise HTTPException(status_code=400, detail="The handling of this program pricing model is not supported")
 
     # TODO EMAIL - Notify users that have booked the session
     await db.delete(session_to_delete)

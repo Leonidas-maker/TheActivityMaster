@@ -3,7 +3,7 @@ from sqlalchemy import update, select
 from sqlalchemy.sql.expression import and_
 import uuid
 import datetime
-from typing import Optional
+from typing import Optional, List, Tuple, Dict
 import traceback
 from rich.console import Console
 import stripe
@@ -814,6 +814,19 @@ class AuditLogger:
             details=f"Updated club {club_id}: {details}",
         )
 
+    def club_deleted(self, user_id: uuid.UUID, club_id: uuid.UUID):
+        """Log a club deletion action.
+
+        :param user_id: The user ID deleting the club
+        :param club_id: The ID of the deleted club
+        """
+        self.log_to_audit(
+            user_id,
+            action="Club Deleted",
+            category=AuditLogCategories.CLUB,
+            details=f"Deleted club {club_id}",
+        )
+
     # ======================================================== #
     # ======================== Program ======================= #
     # ======================================================== #
@@ -927,6 +940,8 @@ class AuditLogger:
         """Log a trainer addition action.
 
         :param user_id: The user ID adding the trainer
+        :param club_id: The club ID to which the trainer is added
+        :param program_id: The program ID to which the trainer is added
         :param trainer_id: The ID of the added trainer
         """
         self.log_to_audit(
@@ -940,6 +955,8 @@ class AuditLogger:
         """Log a trainer removal action.
 
         :param user_id: The user ID removing the trainer
+        :param club_id: The club ID from which the trainer is removed
+        :param program_id: The program ID from which the trainer is removed
         :param trainer_id: The ID of the removed trainer
         """
         self.log_to_audit(
@@ -956,6 +973,7 @@ class AuditLogger:
         """Log a booking creation action.
 
         :param user_id: The user ID creating the booking
+        :param details: The details of the booking
         """
         self.log_to_audit(
             user_id,
@@ -963,11 +981,12 @@ class AuditLogger:
             category=AuditLogCategories.USER,
             details=details,
         )
-    
+
     def bookings_updated(self, user_id: uuid.UUID, details: str):
         """Log a booking update action.
 
         :param user_id: The user ID updating the booking
+        :param details: The details of the booking
         """
         self.log_to_audit(
             user_id,
@@ -975,15 +994,16 @@ class AuditLogger:
             category=AuditLogCategories.USER,
             details=details,
         )
-    
-    def booking_storno(self, user_id: uuid.UUID, details: str):
-        """Log a booking storno action.
 
-        :param user_id: The user ID storno the booking
+    def bookings_cancelled(self, user_id: uuid.UUID, details: str):
+        """Log a booking cancellation action.
+
+        :param user_id: The user ID cancelling the booking
+        :param details: The details of the booking
         """
         self.log_to_audit(
             user_id,
-            action="Booking Storno",
+            action="Booking Cancelled",
             category=AuditLogCategories.USER,
             details=details,
         )
@@ -1015,8 +1035,30 @@ class AuditLogger:
             action="Transaction Updated",
             category=AuditLogCategories.USER,
             details=f"Updated transaction {transaction_id}: {details}",
-        )        
-            
+        )
+
+    def refunds_created(
+        self,
+        user_id: uuid.UUID,
+        transaction_id: uuid.UUID,
+        refund_ids: List[uuid.UUID],
+        details: str,
+        is_initiated_by_user: bool,
+    ):
+        """Log a refund creation action.
+
+        :param user_id: The user ID creating the refund
+        :param transaction_id: The ID of the refunded transaction
+        :param refund_ids: The IDs of the created refunds
+        """
+        self.log_to_audit(
+            user_id,
+            action="Refund Created",
+            category=AuditLogCategories.USER if is_initiated_by_user else AuditLogCategories.CLUB,
+            details=f"Created refunds {" ".join([str(refund_id) for refund_id in refund_ids])} for transaction {transaction_id}: {details}",
+        )
+
+
 ###########################################################################
 ################################## Verify #################################
 ###########################################################################

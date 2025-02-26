@@ -49,8 +49,7 @@ class PaymentMethod(enum.Enum):
 
 
 class RefundType(enum.Enum):
-    FULL = "Full Refund"
-    PARTIAL = "Partial Refund"
+    USER_REQUESTED = "User Requested"
     CANCELLED_BY_CLUB = "Cancelled by Club"
 
 
@@ -88,7 +87,7 @@ class Booking(Base):
     transaction: Mapped["Transaction"] = relationship("Transaction", back_populates="bookings")
 
     @property
-    def program(self) -> Optional["Program"]:
+    def program(self) -> Optional["Program"]: # type: ignore
         state = inspect(self)
         if "session" in state.unloaded:
             warnings.warn("session not loaded returning None")
@@ -185,7 +184,7 @@ class Transaction(Base):
         "MembershipSubscription", secondary="membership_transactions", back_populates="transactions"
     )
 
-    split_details: Mapped[List["SplitTransaction"]] = relationship("SplitTransaction", back_populates="transaction")
+    split_details: Mapped[List["SplitTransaction"]] = relationship("SplitTransaction", back_populates="transaction", lazy="joined")
 
 
 class SplitTransaction(Base):

@@ -539,6 +539,26 @@ async def has_user_any_club_permission(
 
     return bool(res.scalar_one_or_none())
 
+async def is_user_club_owner(db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID) -> bool:
+    """
+    Check if a user is the owner of a specific club.
+
+    :param db: AsyncSession: Database session
+    :param user_id: UUID: ID of the user to check
+    :param club_id: UUID: ID of the club to check for ownership
+    :return: bool: True if the user is the owner, otherwise False
+    """
+    res = await db.execute(
+        select(
+            exists(
+                select(1)
+                .select_from(m_club.Club).join(m_club.ClubRole).join(m_club.UserClubRole)
+                .filter(m_club.Club.id == club_id, m_club.UserClubRole.user_id == user_id, m_club.ClubRole.level == 0)
+            )
+        )
+    )
+    return bool(res.scalar_one_or_none())
+
 async def is_user_trainee(db: AsyncSession, user_id: uuid.UUID, program_id: uuid.UUID) -> bool:
     """Check if a user is a trainee of a program
 

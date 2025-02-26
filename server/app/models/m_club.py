@@ -84,11 +84,17 @@ class Club(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
     stripe_account_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
-    is_closed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
     address: Mapped["Address"] = relationship("Address")  # type: ignore

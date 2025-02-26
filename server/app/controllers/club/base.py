@@ -68,6 +68,7 @@ async def get_club(
 
     return club
 
+
 async def update_club(
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
@@ -103,6 +104,32 @@ async def update_club(
     response = s_club.Club.model_validate(club)
     await db.commit()
     return response
+
+
+async def delete_club(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+) -> None:
+    """Delete a club
+
+    :param ep_context: The endpoint context containing database and logger
+    :param club_id: The ID of the club to delete
+    :return: None
+    """
+    db = ep_context.db
+    audit_log = ep_context.audit_logger
+    user_id = token_details.user_id
+    if not await role_crud.is_user_club_owner(db, user_id, club_id):
+        raise HTTPException(status_code=403, detail="User is not an owner of the club")
+
+    if not await club_crud.is_club_deletable(db, club_id):
+        raise HTTPException(status_code=403, detail="Club is not deletable. Ensure there are no active programs")
+
+    await club_crud.delete_club(db, club_id)
+    audit_log.club_deleted(user_id, club_id)
+
+    await db.commit()
 
 
 ###########################################################################
@@ -336,5 +363,3 @@ async def remove_employee(
     await role_crud.remove_employee(db, club_id, user_id)
     audit_log.club_employee_removed(issuer_id, club_id, user_id, 0)
     await db.commit()
-
-

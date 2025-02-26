@@ -2,6 +2,7 @@ from fastapi import HTTPException
 import uuid
 from typing import List, Union, Optional, Tuple, Dict
 import stripe
+from sqlalchemy.orm import joinedload
 
 from models import m_user, m_club, m_payment
 from schemas import s_club, s_role
@@ -72,7 +73,7 @@ def add_to_transaction_data(
 ###########################################################################
 ################################### Main ##################################
 ###########################################################################
-async def create_booking(
+async def create_bookings(
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     booking_create_request: List[s_club.BookingCreateRequest],
@@ -187,3 +188,78 @@ async def create_booking(
 
     await db.commit()
     return bookings_res, payment_intent
+
+
+async def user_cancel_bookings(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    booking_ids: List[uuid.UUID],
+) -> m_payment.Transaction:
+    audit_log = ep_context.audit_logger
+    db = ep_context.db
+    user_id = token_details.user_id
+
+    bookings = await club_crud.get_bookings_by_ids(
+        db,
+        booking_ids,
+        additional_query_options=[
+            joinedload(m_payment.Booking.session),
+            joinedload(m_payment.Booking.session).joinedload(m_club.Session.program),
+            joinedload(m_payment.Booking.session)
+            .joinedload(m_club.Session.program)
+            .joinedload(m_club.Program.sessions)
+            .load_only(m_club.Session.id),
+        ],
+    )
+
+    if not bookings:
+        raise HTTPException(status_code=400, detail="Invalid booking_ids")
+
+    for booking in bookings:
+        if booking.user_id != user_id:
+            raise HTTPException(status_code=400, detail="Booking not found")
+        if booking.status in {m_payment.BookingStatus.CANCELLED, m_payment.BookingStatus.CANCELLED_BY_CLUB}:
+            raise HTTPException(status_code=400, detail="Booking already cancelled")
+        elif booking.status == m_payment.BookingStatus.COMPLETED:
+            raise HTTPException(status_code=400, detail="Booking already completed")
+        elif booking.status == m_payment.BookingStatus.PENDING:
+            raise HTTPException(
+                status_code=400,
+                detail="Booking not yet confirmed and payment not yet processed. Please wait a few minutes and try again",
+            )
+
+        if booking.session.program.pricing_model == m_club.PriceType.PACKAGE:
+            booked_sessions_ids = {session.id for session in booking.session.program.sessions}
+            for session in booking.session.program.sessions:
+                if session.id not in booked_sessions_ids:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"For package booking, all sessions must be cancelled. Missing {session.id}",
+                    )
+
+    bookings_to_refund = [booking for booking in bookings if booking.booking_type not in m_payment.FREE_BOOKING_TYPES]
+
+    if bookings_to_refund:
+        try:
+            refunds = await transactions_crud.create_refund(
+                db, bookings_to_refund, "User requested refund", check_pricing_model=False
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        audit_log.refunds_created(
+            user_id=user_id,
+            transaction_id=bookings_to_refund[0].transaction_id,
+            refund_ids=[refund.id for refund in refunds],
+            details=f"User initiated refund for {", ".join([str(booking.id) for booking in bookings_to_refund])}",
+            is_initiated_by_user=True,
+        )
+
+    await club_crud.change_booking_stats(db, booking_ids, m_payment.BookingStatus.CANCELLED)
+    details = f"User requested refund for {', '.join([str(booking.id) for booking in bookings])}"
+    audit_log.bookings_cancelled(user_id, details)
+
+    transaction_id = bookings[0].transaction_id
+    await db.commit()
+    transaction = await transactions_crud.get_transaction_by_id(db, transaction_id)
+    return transaction
