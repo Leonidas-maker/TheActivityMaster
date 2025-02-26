@@ -251,7 +251,7 @@ async def user_cancel_bookings(
             user_id=user_id,
             transaction_id=bookings_to_refund[0].transaction_id,
             refund_ids=[refund.id for refund in refunds],
-            details=f"User initiated refund for {", ".join([str(booking.id) for booking in bookings_to_refund])}",
+            details=f"User initiated refund for {', '.join([str(booking.id) for booking in bookings_to_refund])}",
             is_initiated_by_user=True,
         )
 

@@ -1051,11 +1051,12 @@ class AuditLogger:
         :param transaction_id: The ID of the refunded transaction
         :param refund_ids: The IDs of the created refunds
         """
+        refund_ids_str = " ".join([str(refund_id) for refund_id in refund_ids])
         self.log_to_audit(
             user_id,
             action="Refund Created",
             category=AuditLogCategories.USER if is_initiated_by_user else AuditLogCategories.CLUB,
-            details=f"Created refunds {" ".join([str(refund_id) for refund_id in refund_ids])} for transaction {transaction_id}: {details}",
+            details=f"Created refunds {refund_ids_str} for transaction {transaction_id}: {details}",
         )
 
 

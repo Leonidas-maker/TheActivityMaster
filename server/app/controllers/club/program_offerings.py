@@ -326,13 +326,25 @@ async def delete_session(
         elif session_to_delete.program.pricing_model == m_club.PriceType.PER_SESSION:
             bookings = await club_crud.get_bookings_by_session_id(db, session_id)
 
-            #* This only works for per session pricing model
+            # * This only works for per session pricing model
             for booking in bookings:
-                await transactions_crud.create_refund(
-                    db, [booking], "Club cancelled session", is_user_refund=False, check_pricing_model=False
+                refunds = await transactions_crud.create_refund(
+                    db, [booking], f"Club {club_id} cancelled session", is_user_refund=False, check_pricing_model=False
+                )
+                refund_details = f"Club {club_id} cancelled session refund for booking: {booking.id}"
+                audit_log.refunds_created(
+                    issuer_id,
+                    booking.transaction_id,
+                    [refund.id for refund in refunds],
+                    refund_details,
+                    is_initiated_by_user=False,
                 )
 
                 booking.status = m_payment.BookingStatus.CANCELLED_BY_CLUB
+
+            details = f"Club {club_id} cancelled session with bookings: {', '.join([str(booking.id) for booking in bookings])}"
+            audit_log.bookings_cancelled(issuer_id, details)
+
         else:
             raise HTTPException(status_code=400, detail="The handling of this program pricing model is not supported")
 
