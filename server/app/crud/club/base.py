@@ -308,7 +308,9 @@ async def get_club_employees(db: AsyncSession, club_id: uuid.UUID) -> List[m_clu
     return list(club_roles)
 
 
-async def get_club_employee_by_id(db: AsyncSession, club_id: uuid.UUID, user_id: uuid.UUID) -> m_club.UserClubRole:
+async def get_club_employee_by_id(
+    db: AsyncSession, club_id: uuid.UUID, user_id: uuid.UUID, with_details: bool = False
+) -> m_club.UserClubRole:
     """Get a club employee by ID
 
     :param db: The database session
@@ -317,6 +319,17 @@ async def get_club_employee_by_id(db: AsyncSession, club_id: uuid.UUID, user_id:
     :return: The user club role
     """
     query_options = [joinedload(m_club.UserClubRole.user), joinedload(m_club.UserClubRole.club_role)]
+
+    if with_details:
+        query_options.extend(
+            [
+                joinedload(m_club.UserClubRole.club_role).undefer(m_club.ClubRole.description),
+                joinedload(m_club.UserClubRole.club_role).joinedload(m_club.ClubRole.permissions),
+                joinedload(m_club.UserClubRole.club_role).joinedload(m_club.ClubRole.permissions).undefer(
+                    m_club.Permission.description
+                ),
+            ]
+        )
 
     res = await db.execute(
         select(m_club.UserClubRole)

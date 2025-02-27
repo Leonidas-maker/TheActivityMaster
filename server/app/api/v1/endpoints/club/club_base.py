@@ -351,3 +351,24 @@ async def get_program_sessions_v1(
         return [s_club.Session.model_validate(program) for program in programs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get program sessions")
+
+@router.get(
+    "/{club_id}/me",
+    response_model=s_role.ClubRole,
+    tags=["Club - Employee"],
+    response_model_exclude_none=True,
+)
+async def get_my_club_permissions_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()
+)):
+    """Get the user's role in a club"""
+    try:
+        user_id = token_details.user_id
+        role = await club_crud.get_club_employee_by_id(ep_context.db, club_id, user_id, with_details=True)
+        if not role:
+            raise HTTPException(status_code=404, detail="You are not an employee of this club")
+        return s_role.ClubRole.model_validate(role.club_role)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user club permissions")
