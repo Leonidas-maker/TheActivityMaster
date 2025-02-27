@@ -1,5 +1,13 @@
 import { axiosInstance } from "../api";
 
+interface address {
+  street: string;
+  postal_code: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
 export const getUserData = async (): Promise<any> => {
   try {
     const response = await axiosInstance.get("/user/me");
@@ -16,11 +24,7 @@ export const register = async (
   email: string,
   first_name: string,
   last_name: string,
-  street: string,
-  postal_code: string,
-  city: string,
-  state: string,
-  country: string,
+  address: address | null,
   password: string,
   newsletter_subscribed: boolean
 ): Promise<any> => {
@@ -31,13 +35,7 @@ export const register = async (
       email,
       first_name,
       last_name,
-      address: {
-        street,
-        postal_code,
-        city,
-        state,
-        country,
-      },
+      address,
       password,
       newsletter_subscribed,
     };

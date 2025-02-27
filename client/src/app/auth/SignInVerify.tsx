@@ -11,7 +11,7 @@ import Heading from "@/src/components/textFields/Heading";
 import TwoFactorInput from "@/src/components/textInputs/TwoFactorInput";
 import { useRouter } from "expo-router";
 import { asyncRemoveData, asyncSaveData } from "@/src/services/asyncStorageService";
-import { getUserRoles } from "@/src/services/user/userService";
+import { getUserData, getUserRoles } from "@/src/services/user/userService";
 
 interface GenericRole {
     name: string;
@@ -58,6 +58,7 @@ const SignInVerify: React.FC = () => {
             await asyncSaveData("isLoggedIn", "true");
 
             await checkRole();
+            await checkVerifiedStatus();
 
             router.navigate("/(tabs)");
         } catch (error: any) {
@@ -84,6 +85,19 @@ const SignInVerify: React.FC = () => {
 
         } catch (error) {
             console.log("Error during fetchUserRoles call:", error);
+        }
+    };
+
+    const checkVerifiedStatus = async () => {
+        try {
+            const response = await getUserData();
+            if (response.identity_verified === true) {
+                await asyncSaveData("isVerified", "true");
+            } else {
+                await asyncRemoveData("isVerified");
+            }
+        } catch (error) {
+            console.error("Error during fetchUserData call:", error);
         }
     };
 

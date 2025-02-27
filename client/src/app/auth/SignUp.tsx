@@ -26,6 +26,14 @@ import StepProgressBar from "@/src/components/stepProgressBar/StepProgressBar";
 import Subheading from "@/src/components/textFields/Subheading";
 import { getCountries } from "@/src/services/static/countryService";
 
+interface address {
+    street: string;
+    postal_code: string;
+    city: string;
+    state: string;
+    country: string;
+}
+
 const SignUp: React.FC = () => {
     // Destructure i18n along with t to get the current language
     const { t, i18n } = useTranslation("auth");
@@ -53,6 +61,7 @@ const SignUp: React.FC = () => {
     const [city, setCity] = useState("");
     const [zip, setZip] = useState("");
     const [state, setState] = useState("");
+    const [address, setAddress] = useState<address | null>(null);
 
     // Step 4: Additional Details.
     const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -93,10 +102,10 @@ const SignUp: React.FC = () => {
                 const defaultCountry = data.countries.find(
                     (c: any) => c.name === "Germany"
                 );
-                if (defaultCountry) {
-                    setSelectedCountryKey(defaultCountry.iso2);
-                    setCountry(defaultCountry.name); // set default name for registration
-                }
+                //if (defaultCountry) {
+                //    setSelectedCountryKey(defaultCountry.iso2);
+                //    setCountry(defaultCountry.name); // set default name for registration
+                //}
             } catch (error) {
                 console.error("Error fetching countries", error);
             }
@@ -311,6 +320,20 @@ const SignUp: React.FC = () => {
             return;
         }
 
+        console.log(country)
+
+        if (!(country.trim() === "") && !(street.trim() === "") && !(city.trim() === "") && !(zip.trim() === "") && !(state.trim() === "")) {
+            setAddress({
+                street: street,
+                postal_code: zip,
+                city: city,
+                state: state,
+                country: country,
+            });
+        } else {
+            setAddress(null);
+        }
+
         try {
             // Use the country state which holds the default name required by the backend.
             const response = await register(
@@ -318,11 +341,7 @@ const SignUp: React.FC = () => {
                 email,
                 firstName,
                 lastName,
-                street,
-                zip,
-                city,
-                state,
-                country,
+                address,
                 password,
                 receiveNews
             );

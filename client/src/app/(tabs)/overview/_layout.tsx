@@ -169,6 +169,12 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
+        name="(billing)/BillingBooked"
+        options={{
+          headerTitle: t("billing_booked_header"),
+        }}
+      />
+      <Stack.Screen
         name="(admin)/AdminIdentityOverview"
         options={{
           headerTitle: t("admin_identity_overview_header"),
@@ -178,6 +184,18 @@ export default function OverviewLayout() {
         name="(admin)/AdminIdentityApprove"
         options={{
           headerTitle: t("admin_identity_approve_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubOverview"
+        options={{
+          headerTitle: t("clubs_overview_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubCreate"
+        options={{
+          headerTitle: t("clubs_create_header"),
         }}
       />
     </Stack>

@@ -15,6 +15,7 @@ import SecondaryButton from "@/src/components/buttons/SecondaryButton";
 import { asyncRemoveData, asyncLoadData } from "@/src/services/asyncStorageService";
 import { logout } from "@/src/services/auth/tokenService";
 import { secureRemoveData } from "@/src/services/secureStorageService";
+import { getUserData } from "@/src/services/user/userService";
 
 // ====================================================== //
 // ====================== Component ===================== //
@@ -26,6 +27,7 @@ const OverviewHome: React.FC = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   const handleLogoutPress = async () => {
     await logout().then(() => {
@@ -33,6 +35,7 @@ const OverviewHome: React.FC = () => {
       secureRemoveData("access_token");
       secureRemoveData("refresh_token");
       asyncRemoveData("isAdmin");
+      asyncRemoveData("isVerified");
       router.navigate("/(tabs)");
     });
   };
@@ -46,7 +49,7 @@ const OverviewHome: React.FC = () => {
           // Try loading the login status from async storage
           const loginStatus = await asyncLoadData("isLoggedIn");
           // If a truthy value is returned, user is logged in, otherwise not logged in.
-          setIsLoggedIn(!!loginStatus);
+          setIsLoggedIn(loginStatus === "true");
         } catch (error) {
           // In case of error, consider user not logged in.
           setIsLoggedIn(false);
@@ -55,13 +58,22 @@ const OverviewHome: React.FC = () => {
       async function checkAdminStatus() {
         try {
           const adminStatus = await asyncLoadData("isAdmin");
-          setIsAdmin(!!adminStatus);
+          setIsAdmin(adminStatus === "true");
         } catch (error) {
           setIsAdmin(false);
         }
       }
-      checkAdminStatus();
+      async function checkVerifiedStatus() {
+        try {
+          const response = await getUserData();
+          setIsVerified(response.identity_verified);
+        } catch (error) {
+          setIsVerified(false);
+        }
+      }
       checkLoginStatus();
+      checkVerifiedStatus();
+      checkAdminStatus();
     }, [])
   );
 
@@ -91,13 +103,17 @@ const OverviewHome: React.FC = () => {
     router.navigate("/(tabs)/overview/(billing)/BillingSubscription");
   };
 
+  const handleBookedPress = () => {
+    router.navigate("/(tabs)/overview/(billing)/BillingBooked");
+  };
+
   const billingTitle = t("pageNavigator_title3");
 
-  const onPressBillingFunctions = [handleSubscriptionPress, handleHistoryPress];
+  const onPressBillingFunctions = [handleSubscriptionPress, handleBookedPress, handleHistoryPress];
 
-  const billingTexts = [t("billing_subscription_btn"), t("billing_history_btn")];
+  const billingTexts = [t("billing_subscription_btn"), t("billing_booked_btn"), t("billing_history_btn")];
 
-  const billingIconNames = ["payments", "receipt-long"];
+  const billingIconNames = ["payments", "shopping-bag", "receipt-long"];
 
   // ====================================================== //
   // ==================== DevNavigator ==================== //
@@ -134,6 +150,21 @@ const OverviewHome: React.FC = () => {
   const adminIconNames = ["people"];
 
   // ====================================================== //
+  // =================== ClubNavigator ==================== //
+  // ====================================================== //
+  const handleClubOverviewPress = () => {
+    router.navigate("/(tabs)/overview/(clubs)/ClubOverview");
+  };
+
+  const clubTitle = t("pageNavigator_title5");
+
+  const onPressClubFunctions = [handleClubOverviewPress];
+
+  const clubTexts = [t("clubs_overview_btn")];
+
+  const clubIconNames = ["group"];
+
+  // ====================================================== //
   // ================== Return component ================== //
   // ====================================================== //
   // Returns the navigators and the current app version
@@ -146,6 +177,12 @@ const OverviewHome: React.FC = () => {
         texts={moduleTexts}
         iconNames={moduleIconNames}
       />
+      {isLoggedIn && (isAdmin || isVerified) && (<PageNavigator
+        title={clubTitle}
+        onPressFunctions={onPressClubFunctions}
+        texts={clubTexts}
+        iconNames={clubIconNames}
+      />)}
       {isLoggedIn && (<PageNavigator
         title={billingTitle}
         onPressFunctions={onPressBillingFunctions}
