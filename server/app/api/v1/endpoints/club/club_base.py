@@ -120,7 +120,7 @@ async def get_program_categories_v1(
 ###########################################################################
 ################################### User ##################################
 ###########################################################################
-@router.get("/me", tags=["User"], response_model=s_club.Club, response_model_exclude_none=True)
+@router.get("/me", tags=["User"], response_model=List[s_club.Club], response_model_exclude_none=True)
 async def get_my_clubs_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
