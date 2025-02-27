@@ -32,5 +32,7 @@
     "admin_identity_overview_header": "Identitätsübersicht",
     "admin_identity_approve_header": "Identität prüfen",
     "settings_submit_verification_header": "Verifikation einreichen",
-    "settings_verification_status_header": "Verifikationsstatus"
+    "settings_verification_status_header": "Verifikationsstatus",
+    "clubs_overview_header": "Clubs Übersicht",
+    "billing_booked_header": "Buchungsübersicht"
 }

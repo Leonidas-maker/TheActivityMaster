@@ -11,5 +11,8 @@
     "billing_subscription_btn": "Subscriptions",
     "billing_history_btn": "Billing History",
     "pageNavigator_title4": "Admin Pages",
-    "admin_identity_overview_btn": "User Verifications Overview"
+    "admin_identity_overview_btn": "User Verifications Overview",
+    "pageNavigator_title5": "Club Pages",
+    "clubs_overview_btn": "Clubs Overview",
+    "billing_booked_btn": "Booking Overview"
 }

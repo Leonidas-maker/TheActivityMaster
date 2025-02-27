@@ -32,5 +32,7 @@
     "admin_identity_overview_header": "Identity Overview",
     "admin_identity_approve_header": "Approve Identity",
     "settings_submit_verification_header": "Submit Verification",
-    "settings_verification_status_header": "Verification Status"
+    "settings_verification_status_header": "Verification Status",
+    "clubs_overview_header": "Clubs Overview",
+    "billing_booked_header": "Booking Overview"
 }
