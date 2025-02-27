@@ -1,23 +1,23 @@
 import { axiosInstance } from "../api";
 
+interface address {
+  street: string;
+  postal_code: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
 export const createClub = async (
   name: string,
   description: string,
-  street: string,
-  postal_code: string,
-  city: string,
-  state: string,
-  country: string
+  address: address
 ) => {
   try {
     const requestBody = {
       name,
       description,
-      street,
-      postal_code,
-      city,
-      state,
-      country,
+      address,
     };
 
     const response = await axiosInstance.post("/clubs", requestBody);

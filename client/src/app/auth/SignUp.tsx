@@ -320,8 +320,6 @@ const SignUp: React.FC = () => {
             return;
         }
 
-        console.log(country)
-
         if (!(country.trim() === "") && !(street.trim() === "") && !(city.trim() === "") && !(zip.trim() === "") && !(state.trim() === "")) {
             setAddress({
                 street: street,

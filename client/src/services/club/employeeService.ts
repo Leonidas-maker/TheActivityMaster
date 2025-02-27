@@ -77,3 +77,13 @@ export const deleteEmployee = async (club_id: string, user_id: string) => {
     throw error;
   }
 };
+
+export const getSelfClubRole = async (club_id: string) => {
+  try {
+    const response = await axiosInstance.get(`/clubs/${club_id}/me`);
+    return response.data;
+  } catch (error) {
+    console.error("Error during getSelfClubRole call:", error);
+    throw error;
+  }
+};

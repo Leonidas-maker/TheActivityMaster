@@ -1,3 +1,21 @@
 {
-    
+    "creation_step1_title": "Name and description",
+    "creation_step2_title": "Address details",
+    "club_name_placeholder": "Club name",
+    "club_description_placeholder": "Club description",
+    "next_button": "Next",
+    "inputError_text": "Input error",
+    "inputError_subtext": "Please fill out all fields",
+    "street_placeholder": "Street",
+    "city_placeholder": "City",
+    "zip_placeholder": "ZIP",
+    "country_placeholder": "Country",
+    "state_placeholder": "State",
+    "club_create_button": "Create club",
+    "back_button": "Back",
+    "clubError_text": "Club creation error",
+    "clubError_subtext": "Please try again later and check your input",
+    "myClubs_navigator_title": "My Clubs",
+    "createClub_navigator_title": "Create Club",
+    "createClub_btn": "Create Club"
 }

@@ -198,6 +198,72 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_create_header"),
         }}
       />
+      <Stack.Screen
+        name="(clubs)/ClubCreateProgramm"
+        options={{
+          headerTitle: t("clubs_create_programm_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubCreateSession"
+        options={{
+          headerTitle: t("clubs_create_session_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManageEmployee"
+        options={{
+          headerTitle: t("clubs_manage_employee_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManagement"
+        options={{
+          headerTitle: t("clubs_management_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManageRoles"
+        options={{
+          headerTitle: t("clubs_manage_roles_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManageTrainer"
+        options={{
+          headerTitle: t("clubs_manage_trainer_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManagePrograms"
+        options={{
+          headerTitle: t("clubs_manage_programs_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubDelete"
+        options={{
+          headerTitle: t("clubs_delete_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubUpdate"
+        options={{
+          headerTitle: t("clubs_update_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManageFinance"
+        options={{
+          headerTitle: t("clubs_manage_finance_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubManageSessions"
+        options={{
+          headerTitle: t("clubs_manage_sessions_header"),
+        }}
+      />
     </Stack>
   );
 }
