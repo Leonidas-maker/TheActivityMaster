@@ -57,7 +57,7 @@ async def create_program(
         raise HTTPException(status_code=400, detail="Program name already exists")
 
     if (
-        new_program.status == m_club.ProgramStatus.ACTIVE
+        new_program.status == m_club.ProgramStatusPublic.ACTIVE
         and await club_crud.has_club_stripe_account(db, club_id) is False
     ):
         raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
@@ -101,15 +101,12 @@ async def update_program(
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
-    if program.status in [m_club.ProgramStatus.DELETED, m_club.ProgramStatus.FORCE_DELETED]:
-        raise HTTPException(status_code=400, detail="Cannot update a deleted program")
-
-    if program_update.pricing_model and program.status == m_club.ProgramStatus.ACTIVE:
+    if program_update.pricing_model and program.status == m_club.ProgramStatusPublic.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot change pricing model of an active program")
 
     if (
         program_update.status
-        and program_update.status == m_club.ProgramStatus.ACTIVE
+        and program_update.status == m_club.ProgramStatusPublic.ACTIVE
         and program.club.stripe_account_id is None
     ):
         raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")

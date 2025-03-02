@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator
 class MessageResponse(BaseModel):
     message: str
 
+class PasswordForm(BaseModel):
+    password: str = Field(..., min_length=8, max_length=255)
 
 class Address(BaseModel):
     model_config = ConfigDict(from_attributes=True)

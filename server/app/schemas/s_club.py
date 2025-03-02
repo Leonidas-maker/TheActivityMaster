@@ -4,7 +4,7 @@ import uuid
 import datetime
 
 from schemas import s_generic
-from models.m_club import SessionType, Weekday, OccurrenceStatus, PriceType, ProgramStatus
+from models.m_club import SessionType, Weekday, OccurrenceStatus, PriceType, ProgramStatusPublic, ProgramStatus
 from models.m_payment import BookingStatus, BookingType, PaymentMethod, TransactionStatus
 
 from models import m_club
@@ -424,8 +424,8 @@ class ProgramBase(BaseModel):
 class ProgramCreate(ProgramBase):
     sessions: List[SessionBase] = Field(..., min_length=1)
     categories: List[int] = Field([], max_length=5)
-    status: ProgramStatus = Field(
-        ProgramStatus.DRAFT, description="The status of the program. Default for creation is 'draft'."
+    status: ProgramStatusPublic = Field(
+        ProgramStatusPublic.DRAFT, description="The status of the program. Default for creation is 'draft'."
     )
 
     @model_validator(mode="after")
@@ -474,7 +474,7 @@ class ProgramUpdate(BaseModel):
         None, description="Whether a membership is required to participate in the program."
     )
 
-    status: Optional[ProgramStatus] = Field(None, description="The new status of the program.")
+    status: Optional[ProgramStatusPublic] = Field(None, description="The new status of the program.")
 
     categories: Optional[List[int]] = Field(None, max_length=5, description="The new categories of the program.")
     session_data: Optional[Dict[uuid.UUID, Tuple[int, int]]] = Field(
@@ -518,17 +518,86 @@ class ProgramUpdate(BaseModel):
         if self.price is not None and (self.session_data is not None and len(self.session_data) > 0):
             raise ValueError("Only one price should be provided.")
 
-        if self.status == ProgramStatus.DRAFT:
+        if self.status == ProgramStatusPublic.DRAFT:
             raise ValueError("Status cannot be set to 'draft'. Please use 'inactive' instead.")
 
         return self
+    
+###########################################################################
+################################ Membership ###############################
+###########################################################################
+class MembershipProgramAccessBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    program_id: uuid.UUID
+    additional_fee: int = Field(0, ge=0, description="The additional fee for the program.")
+
+class MembershipProgramAccessCreate(MembershipProgramAccessBase):
+    pass
+
+class MembershipProgramAccess(MembershipProgramAccessBase):
+    membership_id: uuid.UUID
+
+class MembershipBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    name: str = Field(..., max_length=50, description="The name of the membership.")
+    description: str = Field(..., max_length=100, description="The description of the membership.")
+    price: int = Field(..., ge=0, description="The price of the membership.")
+    currency: str = Field(..., max_length=3, description="The currency of the membership.")
+    duration: int = Field(..., gt=0, description="The duration of the membership in days.")
+    duration_unit: m_club.DurationUnit = Field(m_club.DurationUnit.MONTH, description="The unit of the duration. Default is 'month'.")
+
+    @model_validator(mode="after")
+    def check(self) -> "MembershipBase":
+        if self.duration_unit == m_club.DurationUnit.DAY and self.duration < 5:
+            raise ValueError("Duration must be at least 5 days if the duration unit is 'day'.")
+        return self
+
+
+class MembershipCreate(MembershipBase):
+    status: m_club.MembershipStatusPublic = Field(m_club.MembershipStatusPublic.DRAFT, description="The status of the membership. Default is 'draft'.")
+
+class Membership(MembershipBase):
+    id: uuid.UUID = Field(..., description="The ID of the membership.")
+    club_id: uuid.UUID = Field(..., description="The ID of the club to which the membership belongs.")
+    status: m_club.MembershipStatus = Field(..., description="The status of the membership.")
+
+class MembershipDetails(Membership):
+    programs_access: List[MembershipProgramAccess] = Field(..., description="The IDs of the programs accessible with the membership.")
+
+class MembershipUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=50, description="The new name of the membership.")
+    description: Optional[str] = Field(None, max_length=100, description="The new description of the membership.")
+    price: Optional[int] = Field(None, ge=0, description="The new price of the membership.")
+    currency: Optional[str] = Field(None, max_length=3, description="The new currency of the membership.")
+    duration: Optional[int] = Field(None, gt=0, description="The new duration of the membership in days.")
+    duration_unit: Optional[m_club.DurationUnit] = Field(None, description="The new unit of the duration.")
+    status: Optional[m_club.MembershipStatusPublic] = Field(None, description="The new status of the membership.")
+
+
+    @model_validator(mode="after")
+    def check(self) -> "MembershipUpdate":
+        if (
+            self.name is None
+            and self.description is None
+            and self.price is None
+            and self.currency is None
+            and self.duration is None
+            and self.duration_unit is None
+        ):
+            raise ValueError(
+                "At least one of the fields 'name', 'description', 'price', 'currency', 'duration', 'duration_unit', or 'program_access' must be provided."
+            )
+
+        if self.status == m_club.MembershipStatusPublic.DRAFT:
+            raise ValueError("Status cannot be set to 'draft'. Please use 'not_bookable' instead.")
+
+        return self
+
 
 
 ###########################################################################
 ################################# Booking #################################
 ###########################################################################
-
-
 class TransactionData(BaseModel):
     stripe_account_id: str
     total_amount: int

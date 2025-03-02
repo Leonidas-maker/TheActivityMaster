@@ -783,7 +783,7 @@ async def program_exists(
     :param program_id: The ID of the program to check
     :return: True if a program with the given name exists, False otherwise
     """
-    conditions = [m_club.Program.club_id == club_id]
+    conditions = [m_club.Program.club_id == club_id, m_club.Program.deleted_at.is_(None)]
     if program_name:
         conditions.append(m_club.Program.name == program_name)
 
@@ -830,7 +830,7 @@ async def create_program(db: AsyncSession, club_id: uuid.UUID, program: s_club.P
         pricing_model=program.pricing_model,
         capacity=program.capacity,
         membership_required=program.membership_required,
-        status=program.status,
+        status=program.status.to_internal(),
         categories=categories or [],
     )
     db.add(db_program)
@@ -1060,6 +1060,16 @@ async def is_price_model_package(
     )
     return bool(res.scalar())
 
+async def get_club_program_ids(db: AsyncSession, club_id: uuid.UUID) -> set[uuid.UUID]:
+    """Get all program IDs of a club
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :return: A list of program IDs
+    """
+    res = await db.execute(select(m_club.Program.id).filter(m_club.Program.club_id == club_id))
+    return {row[0] for row in res.all()}
+
 
 async def update_program(
     db: AsyncSession,
@@ -1077,6 +1087,9 @@ async def update_program(
     price_model_changed = False
 
     if program_update.name and program.name != program_update.name:
+        if await program_exists(db, program.club_id, program_update.name):
+            raise ValueError("Program with the same name already exists")
+        
         details += f"Name: {program.name} -> {program_update.name}"
         program.name = program_update.name
 
@@ -1158,9 +1171,9 @@ async def update_program(
         if sessions_details:
             details += f"Session Prices: {';'.join(sessions_details)}"
 
-    if program_update.status and program.status != program_update.status:
+    if program_update.status and program.status != program_update.status.to_internal():
         details += f"Status: {program.status} -> {program_update.status}"
-        program.status = program_update.status
+        program.status = program_update.status.to_internal()
 
     if program_update.categories:
         new_categories = await get_program_categories(db, program_update.categories)

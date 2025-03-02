@@ -967,6 +967,130 @@ class AuditLogger:
         )
 
     # ======================================================== #
+    # ====================== Memberships ===================== #
+    # ======================================================== #
+    def membership_created(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID):
+        """Log a membership creation action.
+
+        :param user_id: The user ID creating the membership
+        :param membership_id: The ID of the created membership
+        """
+        self.log_to_audit(
+            user_id,
+            action="Membership Created",
+            category=AuditLogCategories.CLUB,
+            details=f"Created membership {membership_id} in club {club_id}",
+        )
+
+    def membership_updated(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID, details: str):
+        """Log a membership update action.
+
+        :param user_id: The user ID updating the membership
+        :param membership_id: The ID of the updated membership
+        """
+        self.log_to_audit(
+            user_id,
+            action="Membership Updated",
+            category=AuditLogCategories.CLUB,
+            details=f"Updated membership {membership_id} in club {club_id}: {details}",
+        )
+
+    def membership_deleted(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID, details: str):
+        """Log a membership deletion action.
+
+        :param user_id: The user ID deleting the membership
+        :param membership_id: The ID of the deleted membership
+        """
+        self.log_to_audit(
+            user_id,
+            action="Membership Deleted",
+            category=AuditLogCategories.CLUB,
+            details=f"Deleted membership {membership_id} in club {club_id}: {details}",
+        )
+
+    def membership_access_created(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID, access_ids: List[uuid.UUID]):
+        """Log a membership access creation action.
+
+        :param user_id: The user ID creating the membership access
+        :param membership_id: The ID of the created membership access
+        """
+        access_ids_str = " ".join([str(access_id) for access_id in access_ids])
+        self.log_to_audit(
+            user_id,
+            action="Membership Access Created",
+            category=AuditLogCategories.CLUB,
+            details=f"Created membership access for membership {membership_id} in club {club_id}: {access_ids_str} ",
+        )
+
+    def membership_access_updated(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID, access_id: uuid.UUID, new_fee: int):
+        """Log a membership access update action.
+
+        :param user_id: The user ID updating the membership access
+        :param membership_id: The ID of the updated membership access
+        """
+        self.log_to_audit(
+            user_id,
+            action="Membership Access Updated",
+            category=AuditLogCategories.CLUB,
+            details=f"Updated membership access for membership {membership_id} in club {club_id}: {access_id} with new fee {new_fee}",
+        )
+
+    def membership_access_deleted(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID, access_ids: List[uuid.UUID]):
+        """Log a membership access deletion action.
+
+        :param user_id: The user ID deleting the membership access
+        :param membership_id: The ID of the deleted membership access
+        """
+        access_ids_str = " ".join([str(access_id) for access_id in access_ids])
+        self.log_to_audit(
+            user_id,
+            action="Membership Access Deleted",
+            category=AuditLogCategories.CLUB,
+            details=f"Deleted membership access for membership {membership_id} in club {club_id}: {access_ids_str}",
+        )
+
+    def membership_supscription_created(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID):
+        """Log a membership subscription creation action.
+
+        :param user_id: The user ID creating the membership subscription
+        :param membership_id: The ID of the created membership subscription
+        """
+        self.log_to_audit(
+            user_id,
+            action="Membership Subscription Created",
+            category=AuditLogCategories.USER,
+            details=f"Created membership subscription {membership_id} in club {club_id}",
+        )
+
+    def membership_subscription_cancelled(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID):
+        """Log a membership subscription cancellation action.
+
+        :param user_id: The user ID cancelling the membership subscription
+        :param membership_id: The ID of the cancelled membership subscription
+        """
+        self.log_to_audit(
+            user_id,
+            action="Membership Subscription Cancelled",
+            category=AuditLogCategories.USER,
+            details=f"Cancelled membership subscription {membership_id} in club {club_id}",
+        )
+
+    def membership_subscriptions_cancelled(self, issuer: uuid.UUID, club_id: uuid.UUID, membership_ids: List[uuid.UUID], reason: str):
+        """Log the cancellation of multiple membership subscriptions.
+
+        :param user_id: The user ID cancelling the membership subscriptions
+        :param membership_ids: The IDs of the cancelled membership subscriptions
+        """
+        membership_ids_str = " ".join([str(membership_id) for membership_id in membership_ids])
+        self.log_to_audit(
+            issuer,
+            action="Membership Subscriptions Cancelled",
+            category=AuditLogCategories.CLUB,
+            details=f"Cancelled membership subscriptions {membership_ids_str} in club {club_id} for reason: {reason}",
+        )
+
+
+    # ======================================================== #
     # ======================== Booking ======================= #
     # ======================================================== #
     def bookings_created(self, user_id: uuid.UUID, details: str):

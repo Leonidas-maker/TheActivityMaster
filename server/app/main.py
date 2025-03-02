@@ -30,7 +30,13 @@ from core.security import (
 from crud.audit import anonymize_ip_addresses
 from crud.auth import clean_tokens, totp_key_rotation, clean_2fa_table
 from crud.verification import delete_expired_identity_verifications
-from crud.club import update_session_occurrences, refresh_bookings_status, set_programs_inactive, delete_marked_clubs
+from crud.club import (
+    update_session_occurrences,
+    refresh_bookings_status,
+    set_programs_inactive,
+    delete_marked_clubs,
+    cancel_bookings_for_cancelled_membership_subscriptions,
+)
 from crud.transactions import check_pending_transactions
 
 from utils.jwt_keyfile_manager import JWTKeyManager
@@ -161,7 +167,16 @@ async def lifespan(app: FastAPI):
         with_console=True,
         blocked_by=["delete_marked_clubs"],
     )
-    
+
+    # Cancel bookings for cancelled membership subscriptions
+    scheduler.add_task(
+        "cancel_bookings_for_cancelled_membership_subscriptions",
+        cancel_bookings_for_cancelled_membership_subscriptions,
+        cron="0 0 * * *",
+        on_startup=True,
+        with_console=True,
+    )
+
     # Refresh the bookings status every 15 minutes
     scheduler.add_task(
         "refresh_bookings_status",
@@ -169,6 +184,7 @@ async def lifespan(app: FastAPI):
         cron="*/15 * * * *",
         on_startup=True,
         with_console=True,
+        blocked_by=["cancel_bookings_for_cancelled_membership_subscriptions"],
     )
 
     # Check pending transactions every 5 minutes

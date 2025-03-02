@@ -19,6 +19,7 @@ from sqlalchemy import (
     DECIMAL,
     Time,
     Date,
+    Computed,
 )
 from decimal import Decimal
 import uuid
@@ -53,6 +54,21 @@ class ProgramStatus(enum.Enum):
     FORCE_DELETED = "force_deleted"
 
 
+class ProgramStatusPublic(enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DRAFT = "draft"
+
+    def to_internal(self) -> ProgramStatus:
+        if self == ProgramStatusPublic.ACTIVE:
+            return ProgramStatus.ACTIVE
+        if self == ProgramStatusPublic.INACTIVE:
+            return ProgramStatus.INACTIVE
+        if self == ProgramStatusPublic.DRAFT:
+            return ProgramStatus.DRAFT
+        raise ValueError(f"Invalid ProgramStatusPublic value: {self}")
+
+
 class Weekday(enum.Enum):
     MONDAY = "Monday"
     TUESDAY = "Tuesday"
@@ -68,6 +84,34 @@ class OccurrenceStatus(enum.Enum):
     CANCELLED = "cancelled"
     RESCHEDULED = "rescheduled"
 
+
+class DurationUnit(enum.Enum):
+    DAY = "day"
+    MONTH = "month"
+
+
+class MembershipStatus(enum.Enum):
+    DRAFT = "draft"
+    BOOKABLE = "bookable"
+    NOT_BOOKABLE = "not_bookable"
+    DELETED = "deleted"
+
+
+class MembershipStatusPublic(enum.Enum):
+    DRAFT = "draft"
+    BOOKABLE = "bookable"
+    NOT_BOOKABLE = "not_bookable"
+
+    def to_internal(self) -> MembershipStatus:
+        if self == MembershipStatusPublic.DRAFT:
+            return MembershipStatus.DRAFT
+        if self == MembershipStatusPublic.BOOKABLE:
+            return MembershipStatus.BOOKABLE
+        if self == MembershipStatusPublic.NOT_BOOKABLE:
+            return MembershipStatus.NOT_BOOKABLE
+        raise ValueError(f"Invalid MembershipStatusPublic value: {self}")
+
+
 ###########################################################################
 ############################# Database Models #############################
 ###########################################################################
@@ -76,6 +120,7 @@ from models.m_audit import *
 from models.m_verification import *
 from models.m_payment import *
 import datetime
+
 
 class Club(Base):
     __tablename__ = "clubs"
@@ -185,7 +230,7 @@ class Program(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
 
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = deferred(mapped_column(String(500), nullable=False))
 
     price: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -210,6 +255,10 @@ class Program(Base):
     )
     deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    active_program: Mapped[bool | None] = mapped_column(
+        Boolean, Computed("CASE WHEN status NOT IN ('deleted', 'force_deleted') THEN TRUE ELSE NULL END")
+    )
+
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="program")
     club: Mapped["Club"] = relationship("Club", back_populates="programs")
     memberships_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="program")
@@ -219,11 +268,12 @@ class Program(Base):
     trainers: Mapped[List["User"]] = relationship("User", secondary="user_trainers")  # type: ignore
 
     __table_args__ = (
-        UniqueConstraint("club_id", "name", "deleted_at", name="unique_program"),
+        UniqueConstraint("club_id", "name", "active_program", name="unique_program"),
         CheckConstraint("price >= 0", name="chk_price_non_negative"),
         CheckConstraint("capacity >= 0", name="chk_capacity_non_negative"),
         CheckConstraint(
-            "status NOT IN ('deleted', 'force_deleted') OR deleted_at IS NOT NULL", name="chk_deleted_status"
+            "status NOT IN ('deleted', 'force_deleted') AND deleted_at IS NULL OR status IN ('deleted', 'force_deleted') AND deleted_at IS NOT NULL",
+            name="chk_status_deleted",
         ),
         # Pricingmodell-Logic: Package-Pricing requires price and capacity, per_session requires none
         CheckConstraint(
@@ -342,10 +392,15 @@ class Membership(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
-    price: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
+    description: Mapped[str] = deferred(mapped_column(String(500), nullable=False))
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
-    duration: Mapped[int] = mapped_column(Integer, nullable=False)  # Duration in Days
+    duration: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration_unit: Mapped[DurationUnit] = mapped_column(Enum(DurationUnit), nullable=False, default=DurationUnit.MONTH)
+
+    status: Mapped[MembershipStatus] = mapped_column(
+        Enum(MembershipStatus), nullable=False, default=MembershipStatus.DRAFT
+    )
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
@@ -358,50 +413,45 @@ class Membership(Base):
     )
     deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    active_membership: Mapped[bool | None] = mapped_column(
+        Boolean, Computed("CASE WHEN status NOT IN ('deleted') THEN TRUE ELSE NULL END")
+    )
+
     club: Mapped["Club"] = relationship("Club", back_populates="memberships")
     programs_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="membership")
-    user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship(
+    user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship(  # type: ignore
         "MembershipSubscription", back_populates="membership"
     )
 
     __table_args__ = (
-        UniqueConstraint("club_id", "name", "deleted_at", name="unique_membership"),
+        UniqueConstraint("club_id", "name", "active_membership", name="unique_membership"),
         CheckConstraint("price >= 0", name="chk_price_non_negative"),
         CheckConstraint("duration > 0", name="chk_duration_positive"),
+        CheckConstraint(
+            "status NOT IN ('deleted') AND deleted_at IS NULL OR status IN ('deleted') AND deleted_at IS NOT NULL",
+            name="chk_status_deleted",
+        ),
     )
 
 
 class MembershipAccess(Base):
     __tablename__ = "membership_access"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
-    program_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False)
+    membership_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False, primary_key=True
+    )
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("programs.id"), nullable=False, primary_key=True
+    )
     additional_fee: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     membership: Mapped["Membership"] = relationship("Membership", back_populates="programs_access")
     program: Mapped["Program"] = relationship("Program", back_populates="memberships_access")
 
-    __table_args__ = (UniqueConstraint("membership_id", "program_id", name="unique_membership_access"),)
-
-
-class MembershipSubscription(Base):
-    __tablename__ = "membership_subscriptions"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    start_time: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
+    __table_args__ = (
+        UniqueConstraint("membership_id", "program_id", name="unique_membership_access"),
+        UniqueConstraint("program_id", "membership_id", name="unique_program_membership_access"),
     )
-    end_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")  # type: ignore
-    membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")
-    transactions: Mapped[List["Transaction"]] = relationship( # type: ignore
-        "Transaction", secondary="membership_transactions", back_populates="membership_subscription"
-    )
-    __table_args__ = (UniqueConstraint("membership_id", "user_id", name="unique_membership_subscription"),)
 
 
 ###########################################################################

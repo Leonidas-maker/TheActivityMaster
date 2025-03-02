@@ -4,7 +4,18 @@ from models.m_audit import *
 from models.m_generic import *
 from typing import List, Tuple, Optional, Dict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, UUID, Boolean, DateTime, Enum, Integer, UniqueConstraint, CheckConstraint
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    UUID,
+    Boolean,
+    DateTime,
+    Enum,
+    Integer,
+    UniqueConstraint,
+    CheckConstraint,
+    Computed,
+)
 from sqlalchemy.inspection import inspect
 import uuid
 import enum
@@ -58,6 +69,12 @@ class RefundType(enum.Enum):
     CANCELLED_BY_CLUB = "Cancelled by Club"
 
 
+class MembershipSubscriptionStatus(enum.Enum):
+    ACTIVE = "Active"
+    CANCELLED = "Cancelled"
+    CANCELLED_BY_CLUB = "Cancelled by Club"
+
+
 ###########################################################################
 ############################# Database Models #############################
 ###########################################################################
@@ -66,22 +83,15 @@ class RefundType(enum.Enum):
 class Booking(Base):
     __tablename__ = "bookings"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    booking_type: Mapped[BookingType] = mapped_column(
-        Enum(BookingType), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
+    booking_type: Mapped[BookingType] = mapped_column(Enum(BookingType), nullable=False)
     price_snapshot: Mapped[int] = mapped_column(Integer, nullable=False)
-    pricing_model_snapshot: Mapped[PriceType] = mapped_column(
-        Enum(PriceType), nullable=False)
+    pricing_model_snapshot: Mapped[PriceType] = mapped_column(Enum(PriceType), nullable=False)
 
-    status: Mapped[BookingStatus] = mapped_column(
-        Enum(BookingStatus), nullable=False)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)
+    status: Mapped[BookingStatus] = mapped_column(Enum(BookingStatus), nullable=False)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
@@ -92,12 +102,9 @@ class Booking(Base):
         onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
 
-    user: Mapped["User"] = relationship(  # type: ignore
-        "User", back_populates="bookings") 
-    session: Mapped["Session"] = relationship(
-        "Session", back_populates="bookings")  # type: ignore
-    transaction: Mapped["Transaction"] = relationship(
-        "Transaction", back_populates="bookings")
+    user: Mapped["User"] = relationship("User", back_populates="bookings")  # type: ignore
+    session: Mapped["Session"] = relationship("Session", back_populates="bookings")  # type: ignore
+    transaction: Mapped["Transaction"] = relationship("Transaction", back_populates="bookings")
 
     @property
     def program(self) -> Optional["Program"]:  # type: ignore
@@ -150,16 +157,57 @@ class Booking(Base):
     )
 
 
+class MembershipSubscription(Base):
+    __tablename__ = "membership_subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    start_time: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
+    )
+    end_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[MembershipSubscriptionStatus] = mapped_column(
+        Enum(MembershipSubscriptionStatus), nullable=False, default=MembershipSubscriptionStatus.ACTIVE
+    )
+    modified_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+        onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
+    )
+
+    active_subscription: Mapped[bool | None] = mapped_column(
+        Boolean,
+        Computed("CASE WHEN status = 'ACTIVE' THEN TRUE ELSE NULL END", persisted=True)
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")  # type: ignore
+    membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")  # type: ignore
+    transactions: Mapped[List["Transaction"]] = relationship(  # type: ignore
+        "Transaction", secondary="membership_transactions", back_populates="membership_subscription"
+    )
+    __table_args__ = (
+        UniqueConstraint(
+            "membership_id", "user_id", "active_subscription", name="unique_active_membership_subscription"
+        ),
+        CheckConstraint(
+            "status NOT IN ('Cancelled', 'Cancelled by Club') AND end_time IS NULL OR status IN ('Cancelled', 'Cancelled by Club') AND end_time IS NOT NULL",
+            name="chk_status_cancelled",
+        ),
+    )
+
+
 class MembershipTransaction(Base):
     __tablename__ = "membership_transactions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     membership_subscription_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False
     )
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
+    price_snapshot: Mapped[int] = mapped_column(Integer, nullable=False)
+
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
@@ -168,19 +216,14 @@ class MembershipTransaction(Base):
 class Transaction(Base):
     __tablename__ = "transactions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    external_charge_id: Mapped[str] = mapped_column(
-        String(255), nullable=False)  # e.g. Stripe charge ID
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    external_charge_id: Mapped[str] = mapped_column(String(255), nullable=False)  # e.g. Stripe charge ID
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    amount_refunded: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0)
+    amount_refunded: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
-    is_split_payment: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False)
+    is_split_payment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[TransactionStatus] = mapped_column(
         Enum(TransactionStatus), nullable=False, default=TransactionStatus.PENDING
     )
@@ -199,38 +242,33 @@ class Transaction(Base):
     )
 
     user: Mapped["User"] = relationship(  # type: ignore
-        "User", back_populates="transactions")  # type: ignore
-    bookings: Mapped[List["Booking"]] = relationship(
-        "Booking", back_populates="transaction")
+        "User", back_populates="transactions"
+    )  # type: ignore
+    bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="transaction")
     membership_subscription: Mapped[List["MembershipSubscription"]] = relationship(  # type: ignore
         "MembershipSubscription", secondary="membership_transactions", back_populates="transactions"
     )
 
     split_details: Mapped[List["SplitTransaction"]] = relationship(
-        "SplitTransaction", back_populates="transaction", lazy="joined")
+        "SplitTransaction", back_populates="transaction", lazy="joined"
+    )
 
 
 class SplitTransaction(Base):
     __tablename__ = "split_transactions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"))
-    external_transfer_id: Mapped[str] = mapped_column(
-        String(255), nullable=True)  # z.B. Stripe transfer ID
-    club_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("clubs.id"))
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"))
+    external_transfer_id: Mapped[str] = mapped_column(String(255), nullable=True)  # z.B. Stripe transfer ID
+    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"))
 
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    amount_refunded: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0)
+    amount_refunded: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[TransactionStatus] = mapped_column(
         Enum(TransactionStatus), nullable=False, default=TransactionStatus.PENDING
     )
 
-    transaction: Mapped["Transaction"] = relationship(
-        "Transaction", back_populates="split_details")
+    transaction: Mapped["Transaction"] = relationship("Transaction", back_populates="split_details")
     club: Mapped["Club"] = relationship("Club")  # type: ignore
 
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -247,28 +285,21 @@ class SplitTransaction(Base):
         UniqueConstraint("transaction_id", "club_id"),
         CheckConstraint("amount >= 0"),
         CheckConstraint("amount_refunded >= 0"),
-        CheckConstraint(
-            "status = 'Success' AND external_transfer_id IS NOT NULL"),
+        CheckConstraint("status = 'Success' AND external_transfer_id IS NOT NULL"),
     )
 
 
 class Refund(Base):
     __tablename__ = "refunds"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id"))
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"))
-    club_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=True)
 
-    refund_type: Mapped[RefundType] = mapped_column(
-        Enum(RefundType), nullable=False)
+    refund_type: Mapped[RefundType] = mapped_column(Enum(RefundType), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[TransactionStatus] = mapped_column(
-        Enum(TransactionStatus), nullable=False)
+    status: Mapped[TransactionStatus] = mapped_column(Enum(TransactionStatus), nullable=False)
     reason: Mapped[str] = mapped_column(String(500), nullable=True)
     external_refund_id: Mapped[str] = mapped_column(String(255), nullable=True)
 

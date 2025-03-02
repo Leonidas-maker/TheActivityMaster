@@ -111,7 +111,7 @@ async def create_bookings(
         raise HTTPException(status_code=400, detail="User has already booked some of the sessions")
 
     # Step 2: Check which is bookable or free for the user
-    user_memberships = await club_crud.get_user_memberships(db, user_id)
+    user_memberships = await club_crud.get_user_active_membership_subscriptions(db, user_id)
     user_memberships_dict = {membership.membership_id: membership for membership in user_memberships}
 
     transaction_data: Dict[uuid.UUID, s_club.TransactionData] = {}
