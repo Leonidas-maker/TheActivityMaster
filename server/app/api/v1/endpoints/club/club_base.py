@@ -35,13 +35,13 @@ router.include_router(club_id_router.router, prefix="/{club_id}")
 # ======================================================== #
 @router.get("/search", response_model=List[s_club.Club], tags=["Club"])
 async def search_clubs_v1(
-    query: str = Query(..., min_length=1, max_length=50, description="The search query"),
+    query_search: str = Query(..., min_length=1, max_length=50, description="The search query"),
     page: int = Query(1, ge=1, description="The page number"),
     page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
-        clubs = await club_crud.search_clubs(ep_context.db, query, page, page_size)
+        clubs = await club_crud.search_clubs(ep_context.db, query_search, page, page_size)
         return [s_club.Club.model_validate(club) for club in clubs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to search clubs")
@@ -51,7 +51,7 @@ async def search_clubs_v1(
     "/programs/search", response_model=List[s_club.Program], tags=["Club - Program"], response_model_exclude_none=True
 )
 async def search_programs_v1(
-    query: Optional[str] = Query(None, min_length=1, max_length=50, description="Free text search (Name, Description)"),
+    query_search: Optional[str] = Query(None, min_length=1, max_length=50, description="Free text search (Name, Description)"),
     category_id: Optional[int] = Query(None, description="Category ID"),
     min_price: Optional[Decimal] = Query(None, description="Minimum price"),
     max_price: Optional[Decimal] = Query(None, description="Maximum price"),
@@ -63,11 +63,11 @@ async def search_programs_v1(
     try:
         filters: List[ColumnElement] = []
 
-        if query:
+        if query_search:
             filters.append(
                 or_(
-                    m_club.Program.name.ilike(f"%{query}%"),
-                    m_club.Program.description.ilike(f"%{query}%"),
+                    m_club.Program.name.ilike(f"%{query_search}%"),
+                    m_club.Program.description.ilike(f"%{query_search}%"),
                 )
             )
         if category_id:

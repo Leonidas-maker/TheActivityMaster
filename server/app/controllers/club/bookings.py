@@ -228,6 +228,7 @@ async def user_cancel_bookings(
                 detail="Booking not yet confirmed and payment not yet processed. Please wait a few minutes and try again",
             )
 
+
         if booking.session.program.pricing_model == m_club.PriceType.PACKAGE:
             booked_sessions_ids = {session.id for session in booking.session.program.sessions}
             for session in booking.session.program.sessions:

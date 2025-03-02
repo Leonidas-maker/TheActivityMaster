@@ -39,7 +39,8 @@ router = APIRouter()
 async def get_programs_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     page: int = Query(1, ge=1, description="The page number"),
-    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of items per page"),
+    query_search: Optional[str] = Query(None, description="Search query"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
 ):
@@ -50,7 +51,7 @@ async def get_programs_v1(
     """
     try:
         user_id = token_details.user_id if token_details else None
-        programs = await club_crud.get_authorized_programs(ep_context.db, club_id, page, page_size, user_id)
+        programs = await club_crud.get_authorized_programs(ep_context.db, club_id, page, page_size, user_id, query_search)
         return [s_club.Program.model_validate(program) for program in programs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get programs")

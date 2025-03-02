@@ -373,6 +373,7 @@ async def session_exists_course(
     )
     return bool(res.scalar())
 
+
 async def get_session(
     db: AsyncSession, program_id: uuid.UUID, session_id: uuid.UUID, query_options: list = []
 ) -> m_club.Session:
@@ -829,6 +830,7 @@ async def get_authorized_programs(
     page: int,
     page_size: int,
     user_id: Optional[uuid.UUID] = None,
+    search: Optional[str] = None,
 ) -> List[m_club.Program]:
     """Get programs that the user is authorized to view
 
@@ -843,23 +845,31 @@ async def get_authorized_programs(
         joinedload(m_club.Program.categories),
         undefer(m_club.Program.description),
     ]
+    conditions = [m_club.Program.club_id == club_id]
 
     if user_id:
-        query = select(m_club.Program).filter(
-            m_club.Program.club_id == club_id,
+        conditions.append(
             or_(
                 # Public programs
                 m_club.Program.status == m_club.ProgramStatus.ACTIVE,
                 # Authorized programs for the user
                 authorized_read_program_db_condition(user_id, club_id),
-            ),
-        )
-    else:
-        query = select(m_club.Program).filter(
-            m_club.Program.club_id == club_id, m_club.Program.status == m_club.ProgramStatus.ACTIVE
+            )
         )
 
-    res = await db.execute(query.options(*query_options).offset((page - 1) * page_size).limit(page_size))
+    else:
+        conditions.append(m_club.Program.status == m_club.ProgramStatus.ACTIVE)
+
+    if search:
+        conditions.append(m_club.Program.name.ilike(f"%{search}%"))
+
+    res = await db.execute(
+        select(m_club.Program)
+        .options(*query_options)
+        .filter(and_(*conditions))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
     return list(res.unique().scalars().all())
 
 
@@ -998,7 +1008,10 @@ async def search_programs(
     res = await db.execute(query.offset((page - 1) * page_size).limit(page_size).options(*query_options))
     return list(res.unique().scalars().all())
 
-async def is_price_model_package(db: AsyncSession, program_id: Optional[uuid.UUID] = None, session_id: Optional[uuid.UUID] = None) -> bool:
+
+async def is_price_model_package(
+    db: AsyncSession, program_id: Optional[uuid.UUID] = None, session_id: Optional[uuid.UUID] = None
+) -> bool:
     """Check if the price model of a program or session is PACKAGE
 
     :param db: The database session
@@ -1025,6 +1038,7 @@ async def is_price_model_package(db: AsyncSession, program_id: Optional[uuid.UUI
         )
     )
     return bool(res.scalar())
+
 
 async def update_program(
     db: AsyncSession,
@@ -1234,8 +1248,8 @@ async def set_programs_inactive(db: AsyncSession, console: Console) -> bool:
 
         # Subquery: Check if there are any sessions that have not yet ended
         session_active = exists().where(
-            (m_club.Session.program_id == m_club.Program.id) &
-            or_(
+            (m_club.Session.program_id == m_club.Program.id)
+            & or_(
                 m_club.Session.end_date >= now,
                 m_club.Session.end_datetime >= now,
             )
@@ -1246,10 +1260,7 @@ async def set_programs_inactive(db: AsyncSession, console: Console) -> bool:
         # - there are no future sessions
         stmt = (
             update(m_club.Program)
-            .where(
-                m_club.Program.status == m_club.ProgramStatus.ACTIVE,
-                ~session_active
-            )
+            .where(m_club.Program.status == m_club.ProgramStatus.ACTIVE, ~session_active)
             .values(status=m_club.ProgramStatus.INACTIVE)
         )
 
