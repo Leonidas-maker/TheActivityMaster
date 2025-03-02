@@ -34,5 +34,12 @@
     "settings_submit_verification_header": "Verifikation einreichen",
     "settings_verification_status_header": "Verifikationsstatus",
     "clubs_overview_header": "Clubs Übersicht",
-    "billing_booked_header": "Buchungsübersicht"
+    "billing_booked_header": "Buchungsübersicht",
+    "clubs_delete_header": "Club löschen",
+    "clubs_management_header": "Club verwalten",
+    "clubs_update_header": "Clubdetails aktualisieren",
+    "clubs_update_name_header": "Clubdetails bearbeiten",
+    "clubs_update_address_header": "Clubadresse bearbeiten",
+    "clubs_add_employee_header": "Mitarbeiter hinzufügen",
+    "clubs_manage_employee_header": "Mitarbeiter Übersicht"
 }

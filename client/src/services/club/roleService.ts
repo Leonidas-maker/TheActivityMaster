@@ -24,7 +24,7 @@ export const createClubRole = async (club_id: string, role: ClubRole) => {
   }
 };
 
-export const getClubRoles = async (club_id: string) => {
+export const getClubRoles = async (club_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(`/clubs/${club_id}/roles/all`);
     return response.data;

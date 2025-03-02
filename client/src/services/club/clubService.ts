@@ -28,7 +28,7 @@ export const createClub = async (
   }
 };
 
-export const getClub = async (club_id: string) => {
+export const getClub = async (club_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(`/clubs/${club_id}`);
     return response.data;
@@ -70,36 +70,43 @@ export const searchClubs = async (
   }
 };
 
-export const updateClub = async (
-  club_id: string,
+export const updateClubName = async (
+  club_id: string | string[],
   name: string,
   description: string,
-  street: string,
-  postal_code: string,
-  city: string,
-  state: string,
-  country: string
 ) => {
   try {
     const requestBody = {
       name,
       description,
-      street,
-      postal_code,
-      city,
-      state,
-      country,
     };
 
     const response = await axiosInstance.put(`/clubs/${club_id}`, requestBody);
     return response.data;
   } catch (error) {
-    console.error("Error during updateClub call:", error);
+    console.error("Error during updateClubName call:", error);
     throw error;
   }
 };
 
-export const deleteClub = async (club_id: string) => {
+export const updateClubAddress = async (
+  club_id: string | string[],
+  address: address,
+) => {
+  try {
+    const requestBody = {
+      address,
+    };
+
+    const response = await axiosInstance.put(`/clubs/${club_id}`, requestBody);
+    return response.data;
+  } catch (error) {
+    console.error("Error during updateClubAddress call:", error);
+    throw error;
+  }
+};
+
+export const deleteClub = async (club_id: string | string[]) => {
   try {
     const response = await axiosInstance.delete(`/clubs/${club_id}`);
     return response.data;

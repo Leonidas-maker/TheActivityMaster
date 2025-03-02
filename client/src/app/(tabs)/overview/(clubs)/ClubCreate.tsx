@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     View,
     ScrollView,
@@ -7,9 +7,11 @@ import {
     Keyboard,
     TouchableWithoutFeedback,
     Animated,
+    Pressable,
+    useColorScheme
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useRouter, useNavigation, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import { register } from "@/src/services/user/userService";
@@ -26,6 +28,7 @@ import StepProgressBar from "@/src/components/stepProgressBar/StepProgressBar";
 import Subheading from "@/src/components/textFields/Subheading";
 import { getCountries } from "@/src/services/static/countryService";
 import { createClub } from "@/src/services/club/clubService";
+import Icon from "react-native-vector-icons/MaterialIcons";
 
 interface address {
     street: string;
@@ -39,6 +42,7 @@ const ClubCreate = () => {
     // Destructure i18n along with t to get the current language
     const { t, i18n } = useTranslation("clubs");
     const router = useRouter();
+    const navigation = useNavigation();
 
     // Step state and field states.
     const [currentStep, setCurrentStep] = useState(0);
@@ -73,6 +77,33 @@ const ClubCreate = () => {
     const [fetchedCountries, setFetchedCountries] = useState<any[]>([]);
     // State to track the selected country's ISO2 code from the dropdown
     const [selectedCountryKey, setSelectedCountryKey] = useState("");
+
+    // State to track if the theme is light
+    const [isLight, setIsLight] = useState(false);
+    const colorScheme = useColorScheme();
+    useEffect(() => {
+        setIsLight(colorScheme === "light");
+    }, [colorScheme]);
+    const iconColor = isLight ? "#000000" : "#FFFFFF";
+
+    const handleDismissPress = () => {
+        router.dismiss();
+    };
+
+    useEffect(() => {
+        navigation.setOptions({
+            headerLeft: () => (
+                <Pressable onPress={handleDismissPress}>
+                    <Icon
+                        name="close"
+                        size={30}
+                        color={iconColor}
+                        style={{ marginLeft: "auto", marginRight: 15 }}
+                    />
+                </Pressable>
+            ),
+        });
+        }, [navigation, iconColor]);
 
     // Fetch the countries and store the full response in state
     useEffect(() => {
@@ -232,10 +263,7 @@ const ClubCreate = () => {
                 address
             );
 
-            while (router.canGoBack()) {
-                router.back();
-            }
-            router.navigate("/(tabs)/overview")
+            router.dismiss();
         } catch (error: any) {
             console.error("Club creation error:", error);
             Toast.show({

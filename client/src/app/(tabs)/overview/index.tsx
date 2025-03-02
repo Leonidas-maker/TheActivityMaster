@@ -46,12 +46,14 @@ const OverviewHome: React.FC = () => {
       // Async function to check if user is logged in
       async function checkLoginStatus() {
         try {
-          // Try loading the login status from async storage
           const loginStatus = await asyncLoadData("isLoggedIn");
-          // If a truthy value is returned, user is logged in, otherwise not logged in.
-          setIsLoggedIn(loginStatus === "true");
+          const loggedIn = loginStatus === "true";
+          setIsLoggedIn(loggedIn);
+          // Once login status is updated, immediately check verification
+          if (loggedIn) {
+            await checkVerifiedStatus();
+          }
         } catch (error) {
-          // In case of error, consider user not logged in.
           setIsLoggedIn(false);
         }
       }
@@ -72,7 +74,6 @@ const OverviewHome: React.FC = () => {
         }
       }
       checkLoginStatus();
-      checkVerifiedStatus();
       checkAdminStatus();
     }, [])
   );
@@ -189,7 +190,7 @@ const OverviewHome: React.FC = () => {
         texts={billingTexts}
         iconNames={billingIconNames}
       />)}
-      {isAdmin && (<PageNavigator
+      {isAdmin && isLoggedIn && (<PageNavigator
         title={adminTitle}
         onPressFunctions={onPressAdminFunctions}
         texts={adminTexts}
