@@ -1,6 +1,6 @@
 import { axiosInstance } from "../api";
 
-export const getEmployees = async (club_id: string) => {
+export const getEmployees = async (club_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(`/clubs/${club_id}/employees/all`);
     return response.data;
@@ -10,7 +10,7 @@ export const getEmployees = async (club_id: string) => {
   }
 };
 
-export const getEmployee = async (club_id: string, user_id: string) => {
+export const getEmployee = async (club_id: string | string[], user_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/employees?user_id=${user_id}`
@@ -23,7 +23,7 @@ export const getEmployee = async (club_id: string, user_id: string) => {
 };
 
 export const addEmployee = async (
-  club_id: string,
+  club_id: string | string[],
   user_ident: string,
   level: number
 ) => {
@@ -45,8 +45,8 @@ export const addEmployee = async (
 };
 
 export const updateEmployee = async (
-  club_id: string,
-  user_id: string,
+  club_id: string | string[],
+  user_id: string | string[],
   level: number
 ) => {
   try {
@@ -66,7 +66,7 @@ export const updateEmployee = async (
   }
 };
 
-export const deleteEmployee = async (club_id: string, user_id: string) => {
+export const deleteEmployee = async (club_id: string | string[], user_id: string | string[]) => {
   try {
     const response = await axiosInstance.delete(
       `/clubs/${club_id}/employees?user_id=${user_id}`

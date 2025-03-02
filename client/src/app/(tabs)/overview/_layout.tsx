@@ -195,6 +195,7 @@ export default function OverviewLayout() {
       <Stack.Screen
         name="(clubs)/ClubCreate"
         options={{
+          presentation: "modal",
           headerTitle: t("clubs_create_header"),
         }}
       />
@@ -262,6 +263,32 @@ export default function OverviewLayout() {
         name="(clubs)/ClubManageSessions"
         options={{
           headerTitle: t("clubs_manage_sessions_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubUpdateName"
+        options={{
+          headerTitle: t("clubs_update_name_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ClubUpdateAddress"
+        options={{
+          headerTitle: t("clubs_update_address_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ManageEmployee"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_employee_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/AddEmployee"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_add_employee_header"),
         }}
       />
     </Stack>

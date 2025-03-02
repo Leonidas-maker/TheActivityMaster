@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 
-const ClubManagementEmployees = () => {
+const ClubManagement = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");
     const { club_id } = useLocalSearchParams();
@@ -50,4 +50,4 @@ const ClubManagementEmployees = () => {
     );
 };
 
-export default ClubManagementEmployees;
+export default ClubManagement;
