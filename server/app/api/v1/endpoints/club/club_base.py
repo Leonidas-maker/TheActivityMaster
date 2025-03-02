@@ -35,13 +35,15 @@ router.include_router(club_id_router.router, prefix="/{club_id}")
 # ======================================================== #
 @router.get("/search", response_model=List[s_club.Club], tags=["Club"])
 async def search_clubs_v1(
-    query_search: str = Query(..., min_length=1, max_length=50, description="The search query"),
+    search_query: str = Query(..., min_length=1,
+                              max_length=50, description="The search query"),
     page: int = Query(1, ge=1, description="The page number"),
-    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    page_size: int = Query(
+        10, ge=1, le=50, description="The number of clubs per page"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
-        clubs = await club_crud.search_clubs(ep_context.db, query_search, page, page_size)
+        clubs = await club_crud.search_clubs(ep_context.db, search_query, page, page_size)
         return [s_club.Club.model_validate(club) for club in clubs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to search clubs")
@@ -51,36 +53,42 @@ async def search_clubs_v1(
     "/programs/search", response_model=List[s_club.Program], tags=["Club - Program"], response_model_exclude_none=True
 )
 async def search_programs_v1(
-    query_search: Optional[str] = Query(None, min_length=1, max_length=50, description="Free text search (Name, Description)"),
+    search_query: Optional[str] = Query(
+        None, min_length=1, max_length=50, description="Free text search (Name, Description)"),
     category_id: Optional[int] = Query(None, description="Category ID"),
     min_price: Optional[Decimal] = Query(None, description="Minimum price"),
     max_price: Optional[Decimal] = Query(None, description="Maximum price"),
-    session_type: Optional[m_club.SessionType] = Query(None, description="Filter by session type"),
+    session_type: Optional[m_club.SessionType] = Query(
+        None, description="Filter by session type"),
     page: int = Query(1, ge=1, description="The page number"),
-    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
+    page_size: int = Query(
+        10, ge=1, le=50, description="The number of clubs per page"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
         filters: List[ColumnElement] = []
 
-        if query_search:
+        if search_query:
             filters.append(
                 or_(
-                    m_club.Program.name.ilike(f"%{query_search}%"),
-                    m_club.Program.description.ilike(f"%{query_search}%"),
+                    m_club.Program.name.ilike(f"%{search_query}%"),
+                    m_club.Program.description.ilike(f"%{search_query}%"),
                 )
             )
         if category_id:
-            filters.append(m_club.Program.categories.any(m_club.ProgramCategory.id == category_id))
+            filters.append(m_club.Program.categories.any(
+                m_club.ProgramCategory.id == category_id))
         if min_price is not None:
             filters.append(m_club.Program.price >= min_price)
         if max_price is not None:
             filters.append(m_club.Program.price <= max_price)
         if session_type:
-            filters.append(m_club.Program.sessions.any(m_club.Session.session_type == session_type))
+            filters.append(m_club.Program.sessions.any(
+                m_club.Session.session_type == session_type))
 
         if not filters:
-            raise HTTPException(status_code=400, detail="At least one filter is required")
+            raise HTTPException(
+                status_code=400, detail="At least one filter is required")
 
         filters.append(m_club.Program.status == m_club.ProgramStatus.ACTIVE)
 
@@ -123,7 +131,8 @@ async def get_program_categories_v1(
 @router.get("/me", tags=["User"], response_model=List[s_club.Club], response_model_exclude_none=True)
 async def get_my_clubs_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
 ):
     try:
         user_id = token_details.user_id
@@ -141,7 +150,8 @@ async def get_my_memberships_v1():
 @router.get("/me/booked", tags=["User"], response_model=List[s_club.Booking], response_model_exclude_none=True)
 async def get_my_booked_sessions_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
 ):
     try:
         user_id = token_details.user_id
@@ -163,7 +173,8 @@ async def get_my_booked_sessions_v1(
 @router.get("/me/attended", tags=["User"], response_model=List[s_club.Booking], response_model_exclude_none=True)
 async def get_my_attended_sessions_v1(
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
 ):
     try:
         user_id = token_details.user_id
@@ -186,7 +197,8 @@ async def get_my_attended_sessions_v1(
 async def create_booking_v1(
     booking_create: List[s_club.BookingCreateRequest],
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
 ):
     try:
         bookings, intent = await club_controller.create_bookings(ep_context, token_details, booking_create)
@@ -204,7 +216,8 @@ async def create_booking_v1(
 async def get_booking_v1(
     booking_id: uuid.UUID,
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
 ):
     try:
         booking = await club_crud.get_bookings_by_user_id_and_id(ep_context.db, booking_id, token_details.user_id)
@@ -215,9 +228,11 @@ async def get_booking_v1(
 
 @router.delete("/bookings", response_model=s_club.Transaction, tags=["Club - Booking"])
 async def delete_booking_v1(
-    bookings: List[uuid.UUID] = Body(..., description="The IDs of the bookings to delete"),
+    bookings: List[uuid.UUID] = Body(...,
+                                     description="The IDs of the bookings to delete"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
 ):
     try:
         transaction = await club_controller.user_cancel_bookings(ep_context, token_details, bookings)
@@ -226,27 +241,33 @@ async def delete_booking_v1(
         await handle_exception(e, ep_context, "Failed to cancel booking")
 
 
-@router.get("/{club_id}/bookings", response_model=List[s_club.ClubBooking], tags=["Club - Booking"]) 
+@router.get("/{club_id}/bookings", response_model=List[s_club.ClubBooking], tags=["Club - Booking"])
 async def get_bookings_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    program_id: Optional[uuid.UUID] = Query(None, description="The ID of the program"),
-    session_id: Optional[uuid.UUID] = Query(None, description="The ID of the session"),
+    program_id: Optional[uuid.UUID] = Query(
+        None, description="The ID of the program"),
+    session_id: Optional[uuid.UUID] = Query(
+        None, description="The ID of the session"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_BOOKINGS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.READ_BOOKINGS])
     ),
 ):
     try:
         if program_id and session_id:
-            raise HTTPException(status_code=400, detail="Provide either program_id or session_id, not both")
+            raise HTTPException(
+                status_code=400, detail="Provide either program_id or session_id, not both")
 
         if session_id:
             bookings = await club_crud.get_bookings_by_club_id(
-                ep_context.db, club_id, additional_filters=[m_payment.Booking.session_id == session_id]
+                ep_context.db, club_id, additional_filters=[
+                    m_payment.Booking.session_id == session_id]
             )
         elif program_id:
             bookings = await club_crud.get_bookings_by_club_id(
-                ep_context.db, club_id, additional_filters=[m_club.Booking.session.has(m_club.Session.program_id == program_id)]
+                ep_context.db, club_id, additional_filters=[
+                    m_payment.Booking.session.has(m_club.Session.program_id == program_id)]
             )
         else:
             bookings = await club_crud.get_bookings_by_club_id(ep_context.db, club_id)
@@ -261,8 +282,10 @@ async def get_bookings_v1(
 @router.get("", response_model=List[s_club.Club], tags=["Club", "Access: Public"])
 async def get_clubs_v1(
     page: int = Query(1, ge=1, description="The page number"),
-    page_size: int = Query(10, ge=1, le=50, description="The number of clubs per page"),
-    city: str = Query(default="", min_length=0, max_length=20, description="The city name to filter by"),
+    page_size: int = Query(
+        10, ge=1, le=50, description="The number of clubs per page"),
+    city: str = Query(default="", min_length=0, max_length=20,
+                      description="The city name to filter by"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
@@ -274,8 +297,10 @@ async def get_clubs_v1(
 
 @router.post("", response_model=s_club.Club, tags=["Club"])
 async def create_club_v1(
-    club_create: s_club.ClubCreate = Body(..., description="The club data to create"),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    club_create: s_club.ClubCreate = Body(...,
+                                          description="The club data to create"),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     try:
@@ -300,10 +325,12 @@ async def get_club_v1(
 @router.put("/{club_id}", response_model=s_club.Club, tags=["Club"])
 async def update_club_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    club_update: s_club.ClubUpdate = Body(..., description="The updated club data"),
+    club_update: s_club.ClubUpdate = Body(...,
+                                          description="The updated club data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_CLUB_DATA])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_CLUB_DATA])
     ),
 ):
     try:
@@ -317,7 +344,8 @@ async def delete_club_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.DELETE_CLUB_DATA])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.DELETE_CLUB_DATA])
     ),
 ):
     try:
@@ -336,9 +364,11 @@ async def delete_club_v1(
 async def get_program_sessions_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     page: int = Query(1, ge=1, description="The page number"),
-    page_size: int = Query(10, ge=1, le=50, description="The number of sessions per page"),
+    page_size: int = Query(
+        10, ge=1, le=50, description="The number of sessions per page"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenCheckerHybrid()),
 ):
     """Get sessions of a club
 
@@ -352,6 +382,7 @@ async def get_program_sessions_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get program sessions")
 
+
 @router.get(
     "/{club_id}/me",
     response_model=s_role.ClubRole,
@@ -362,13 +393,14 @@ async def get_my_club_permissions_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()
-)):
+                                                        )):
     """Get the user's role in a club"""
     try:
         user_id = token_details.user_id
         role = await club_crud.get_club_employee_by_id(ep_context.db, club_id, user_id, with_details=True)
         if not role:
-            raise HTTPException(status_code=404, detail="You are not an employee of this club")
+            raise HTTPException(
+                status_code=404, detail="You are not an employee of this club")
         return s_role.ClubRole.model_validate(role.club_role)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user club permissions")

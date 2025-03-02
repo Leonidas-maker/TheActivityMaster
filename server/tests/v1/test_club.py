@@ -58,7 +58,7 @@ def test_get_clubs(test_user):
 def test_search_clubs(client):
     response = client.get(
         "/api/v1/clubs/search",
-        params={"query": pytest.club_data["name"]},
+        params={"search_query": pytest.club_data["name"]},
     )
     assert len(response.json()) > 0, "No clubs found"
 

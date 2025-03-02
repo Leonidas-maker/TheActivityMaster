@@ -39,10 +39,12 @@ router = APIRouter()
 async def get_programs_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     page: int = Query(1, ge=1, description="The page number"),
-    page_size: int = Query(10, ge=1, le=50, description="The number of items per page"),
-    query_search: Optional[str] = Query(None, description="Search query"),
+    page_size: int = Query(
+        10, ge=1, le=50, description="The number of items per page"),
+    search_query: Optional[str] = Query(None, description="Search query"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenCheckerHybrid()),
 ):
     """Get programs of a club
 
@@ -51,7 +53,7 @@ async def get_programs_v1(
     """
     try:
         user_id = token_details.user_id if token_details else None
-        programs = await club_crud.get_authorized_programs(ep_context.db, club_id, page, page_size, user_id, query_search)
+        programs = await club_crud.get_authorized_programs(ep_context.db, club_id, page, page_size, user_id, search_query)
         return [s_club.Program.model_validate(program) for program in programs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get programs")
@@ -67,7 +69,8 @@ async def get_program_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenCheckerHybrid()),
 ):
     """Get a program
 
@@ -92,10 +95,12 @@ async def get_program_v1(
 @router.post("", response_model=s_club.Program, tags=["Club - Program"], response_model_exclude_none=True)
 async def create_program_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    new_program: s_club.ProgramCreate = Body(..., description="The program values for creation"),
+    new_program: s_club.ProgramCreate = Body(
+        ..., description="The program values for creation"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.CREATE_PROGRAMS])
     ),
 ):
     try:
@@ -108,10 +113,12 @@ async def create_program_v1(
 async def update_program_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
-    program_update: s_club.ProgramUpdate = Body(..., description="The update values"),
+    program_update: s_club.ProgramUpdate = Body(
+        ..., description="The update values"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -141,7 +148,8 @@ async def get_sessions_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenCheckerHybrid()),
 ):
     """Get sessions of a program
 
@@ -171,10 +179,12 @@ async def get_sessions_v1(
 async def create_session_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
-    new_session: s_club.SessionCreate = Body(..., description="The session values for creation"),
+    new_session: s_club.SessionCreate = Body(
+        ..., description="The session values for creation"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -193,10 +203,12 @@ async def update_session_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    session_update: s_club.SessionUpdate = Body(..., description="The update values"),
+    session_update: s_club.SessionUpdate = Body(
+        ..., description="The update values"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     """Update a session"""
@@ -217,7 +229,8 @@ async def delete_session_v1(
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -239,10 +252,12 @@ async def reschedule_occurrences_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    reschedule_data: List[s_club.SessionReschedule] = Body(..., description="The reschedule data"),
+    reschedule_data: List[s_club.SessionReschedule] = Body(
+        ..., description="The reschedule data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -262,10 +277,12 @@ async def reinstate_occurrences_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    occurrences_reinstate: List[s_club.SessionReinstate] = Body(..., description="The reinstate data"),
+    occurrences_reinstate: List[s_club.SessionReinstate] = Body(
+        ..., description="The reinstate data"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -285,11 +302,13 @@ async def cancel_occurrence_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    occurrence_id: uuid.UUID = Path(..., description="The ID of the occurrence"),
+    occurrence_id: uuid.UUID = Path(...,
+                                    description="The ID of the occurrence"),
     note: Optional[str] = Body(None, description="The reason for deletion"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -315,7 +334,8 @@ async def get_trainers_v1(
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.READ_PROGRAMS])
     ),
 ):
     try:
@@ -334,10 +354,12 @@ async def get_trainers_v1(
 async def add_trainer_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
-    user_id: uuid.UUID = Query(..., description="The ID of the user to add as a trainer"),
+    user_id: uuid.UUID = Query(...,
+                               description="The ID of the user to add as a trainer"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
@@ -358,7 +380,8 @@ async def remove_trainer_v1(
     trainer_id: uuid.UUID = Path(..., description="The ID of the trainer"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
-        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
+        auth_middleware.AccessTokenChecker(
+            club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
     ),
 ):
     try:
