@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback } from "react";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
-import { ScrollView, Pressable, useColorScheme } from "react-native";
+import { ScrollView, Pressable, useColorScheme, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter, useNavigation, useFocusEffect } from "expo-router";
 import { getUserClubs } from "@/src/services/user/userService";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import Heading from "@/src/components/textFields/Heading";
 
 // Updated Club interface to match the service response
 interface Club {
@@ -102,6 +103,11 @@ const ClubOverview = () => {
           onPressFunctions={onPressFunctions}
           iconNames={iconNames}
         />
+      )}
+      {clubs.length === 0 && (
+        <View className="py-4">
+          <Heading text={t("no_clubs_available")} />
+        </View>
       )}
       {/* <PageNavigator
         title={createClubTitle}

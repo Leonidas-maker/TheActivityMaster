@@ -53,7 +53,6 @@ interface Role {
     }[];
 }
 
-//TODO: Add translations
 const ManageEmployee = () => {
     const { t } = useTranslation("clubs");
     const router = useRouter();
@@ -202,12 +201,13 @@ const ManageEmployee = () => {
                                         value: employee?.role_name || "",
                                     }}
                                 />
-                                <DefaultButton text={t("employee_change_role")} onPress={handleRoleChangePress} />
+                                <DefaultButton text={t("employee_change_role_btn")} onPress={handleRoleChangePress} />
                             </>
                         )}
                     </View>
                 </ScrollView>
             </TouchableWithoutFeedback>
+            <DefaultToast />
         </KeyboardAvoidingView>
     );
 };

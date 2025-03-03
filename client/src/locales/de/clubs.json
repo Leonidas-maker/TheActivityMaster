@@ -49,5 +49,16 @@
     "add_employee_empty_toast_error": "Eingabefehler",
     "add_employee_empty_toast_error_description": "Bitte fülle alle Felder aus",
     "add_employee_toast_error_description": "Entweder die Person ist schon ein Mitarbeiter des Clubs, oder die Person existiert nicht.",
-    "club_employee_overview_navigator": "Mitarbeiter Übersicht"
+    "club_employee_overview_navigator": "Mitarbeiter Übersicht",
+    "manage_employee_heading": "Mitarbeiter verwalten",
+    "employee_info_subheading": "Mitarbeiterinformationen",
+    "employee_role_level_subheading": "Mitarbeiterrolle",
+    "employee_change_role_btn": "Rolle ändern",
+    "delete_employee_alert_title": "Mitarbeiter löschen",
+    "delete_employee_alert_text": "Sind Sie sicher, dass Sie diesen Mitarbeiter löschen möchten?",
+    "employee_same_role_toast_error": "Rollenänderungsfehler",
+    "employee_same_role_toast_error_description": "Der Mitarbeiter hat bereits diese Rolle",
+    "change_employee_toast_error": "Rollenänderungsfehler",
+    "change_employee_toast_error_description": "Bitte versuche es später erneut",
+    "no_clubs_available": "Du bist noch kein Teil eines Clubs. Erstelle jetzt einen!"
 }

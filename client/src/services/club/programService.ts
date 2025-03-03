@@ -23,7 +23,7 @@ interface address {
 }
 
 export const getPrograms = async (
-  club_id: string,
+  club_id: string | string[],
   page: number,
   page_size: number
 ) => {

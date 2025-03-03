@@ -21,6 +21,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   skipAuth?: boolean; // Flag to skip attaching the access token
 }
 
+//! For Android testing replace localhost with your local IP address
 const BASE_URL = "http://localhost:8001/api/v1";
 axios.defaults.baseURL = BASE_URL;
 

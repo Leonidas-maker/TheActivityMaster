@@ -291,6 +291,41 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_add_employee_header"),
         }}
       />
+      <Stack.Screen
+        name="(clubs)/AddProgram"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_add_program_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ManageProgram"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_program_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/AddRole"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_add_role_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/ManageRole"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_role_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(clubs)/InfoRole"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_info_role_header"),
+        }}
+      />
     </Stack>
   );
 }

@@ -53,5 +53,16 @@
     "add_employee_empty_toast_error_description": "Please fill out all fields",
     "add_employee_toast_error": "There was a problem",
     "add_employee_toast_error_description": "Either the Person is already an Employee or the Person does not exists",
-    "club_employee_overview_navigator": "Employee Overview"
+    "club_employee_overview_navigator": "Employee Overview",
+    "manage_employee_heading": "Manage Employee",
+    "employee_info_subheading": "Employee Information",
+    "employee_role_level_subheading": "Employee Role",
+    "employee_change_role_btn": "Change Role",
+    "delete_employee_alert_title": "Delete Employee",
+    "delete_employee_alert_text": "Are you sure you want to delete this employee?",
+    "employee_same_role_toast_error": "Role Change Error",
+    "employee_same_role_toast_error_description": "The Employee already has this role",
+    "change_employee_toast_error": "Role Change Error",
+    "change_employee_toast_error_description": "Please try again later",
+    "no_clubs_available": "You are not part of any clubs yet. Create one now!"
 }
