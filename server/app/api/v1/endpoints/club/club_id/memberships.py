@@ -4,7 +4,7 @@ from typing import Union, List, Dict
 
 
 from controllers import club as club_controller
-from schemas import s_club, s_generic
+from schemas import s_club, s_generic, s_payment
 
 from core.generic import EndpointContext
 import core.security as core_security
@@ -181,19 +181,28 @@ async def delete_membership_access_v1(
 # ###########################################################################
 
 
-# @router.get("/subscriptions", tags=["Club - Membership Subscription"])
-# async def get_subscriptions_v1(
-#     club_id: uuid.UUID,
-#     ep_context: EndpointContext = Depends(get_endpoint_context),
-#     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_MEMBERSHIPS])),
-# ):
-#     try:
-#         subscriptions = await club_crud.get_club_subscriptions(ep_context.db, club_id)
-#         return [s_club.MembershipSubscription.model_validate(subscription) for subscription in subscriptions]
-#     except Exception as e:
-#         await handle_exception(e, ep_context, "Failed to get subscriptions")
+@router.post("/{membership_id}/buy", response_model=s_payment.MemberShipsubscriptionResponse, tags=["Club - Membership"])
+async def buy_membership_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership belongs"),
+    membership_id: uuid.UUID = Path(..., description="The ID of the membership to be updated"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        return await club_controller.buy_membership(ep_context, token_details, club_id, membership_id)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to buy membership")
 
 
-# @router.get("/{membership_id}/subscriptions", tags=["Club - Membership Subscription"])
-# async def get_subscription_v1(club_id: uuid.UUID, membership_id: uuid.UUID):
-#     pass
+@router.delete("/{membership_id}/cancel", response_model=s_generic.MessageResponse, tags=["Club - Membership"])
+async def cancel_membership_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership belongs"),
+    membership_id: uuid.UUID = Path(..., description="The ID of the membership to be updated"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        await club_controller.cancel_membership(ep_context, token_details, club_id, membership_id)
+        return s_generic.MessageResponse(message="Membership cancelled")
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to cancel membership")

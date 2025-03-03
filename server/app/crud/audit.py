@@ -1059,7 +1059,7 @@ class AuditLogger:
             user_id,
             action="Membership Subscription Created",
             category=AuditLogCategories.USER,
-            details=f"Created membership subscription {membership_id} in club {club_id}",
+            details=f"Bought membership subscription {membership_id} in club {club_id}",
         )
 
     def membership_subscription_cancelled(self, user_id: uuid.UUID, club_id: uuid.UUID, membership_id: uuid.UUID):

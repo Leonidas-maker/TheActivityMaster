@@ -17,8 +17,8 @@ from crud import role as role_crud, generic as generic_crud, audit as audit_crud
 async def create_bookings(
     db: AsyncSession,
     user_id: uuid.UUID,
-    transaction_id: uuid.UUID,
     booking_creates: List[Tuple[m_club.Session, int, m_payment.BookingType]],
+     transaction_id: Optional[uuid.UUID] = None,
 ) -> Tuple[List[m_payment.Booking], str]:
     """Create bookings for a user
 

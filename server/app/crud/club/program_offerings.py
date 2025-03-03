@@ -563,7 +563,7 @@ async def create_session(db: AsyncSession, program_id: uuid.UUID, session: s_clu
 
 async def create_sessions_for_program(
     db: AsyncSession,
-    sessions: List[s_club.SessionBase],
+    sessions: List[s_club.SessionCreate],
     program_id: Optional[uuid.UUID] = None,
     program: Optional[m_club.Program] = None,
 ) -> List[m_club.Session]:

@@ -181,7 +181,7 @@ def modify_membership_name_description(
     )
     return product
 
-def modify_membership_price(
+def modify_membership_price_duration(
     stripe_club_account_id: str,
     amount: int,
     currency: str,
@@ -200,15 +200,10 @@ def modify_membership_price(
 def create_customer(
     email: str,
     name: str,
-    payment_method_id: str,
-    stripe_club_account_id: str,
 ) -> stripe.Customer:
     customer = stripe.Customer.create(
         email=email,
         name=name,
-        payment_method=payment_method_id,
-        invoice_settings={"default_payment_method": payment_method_id},
-        stripe_account=stripe_club_account_id,
     )
     return customer
 
@@ -216,14 +211,12 @@ def create_subscription(
     stripe_club_account_id: str,
     customer_id: str,
     price_id: str,
-    payment_method_id: str,
 ) -> stripe.Subscription:
     subscription = stripe.Subscription.create(
         customer=customer_id,
         items=[{"price": price_id}],
-        default_payment_method=payment_method_id,
         expand=["latest_invoice.payment_intent"],
-        stripe_account=stripe_club_account_id,
+        transfer_data={"destination": stripe_club_account_id},
     )
     return subscription
 

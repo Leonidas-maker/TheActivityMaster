@@ -142,11 +142,11 @@ async def delete_user(ep_context: EndpointContext, user_id: uuid.UUID, applicati
             .where(
                 m_club.MembershipSubscription.user_id == user.id,
                 or_(
-                    m_club.MembershipSubscription.end_time == None,
-                    m_club.MembershipSubscription.end_time > datetime.datetime.now(),
+                    m_club.MembershipSubscription.end_datetime == None,
+                    m_club.MembershipSubscription.end_datetime > datetime.datetime.now(),
                 ),
             )
-            .values(end_time=datetime.datetime.now())
+            .values(end_datetime=datetime.datetime.now())
         )
 
         audit_logger.user_self_deletion_cancelled_memberships(init_audit_log.id, user_id=user.id, count=res.rowcount)

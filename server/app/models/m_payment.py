@@ -78,8 +78,6 @@ class MembershipSubscriptionStatus(enum.Enum):
 ###########################################################################
 ############################# Database Models #############################
 ###########################################################################
-
-
 class Booking(Base):
     __tablename__ = "bookings"
 
@@ -163,13 +161,15 @@ class MembershipSubscription(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-
+    
     stripe_subscription_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
 
-    start_time: Mapped[datetime.datetime] = mapped_column(
+    price_snapshot: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    start_datetime: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )
-    end_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
+    end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[MembershipSubscriptionStatus] = mapped_column(
         Enum(MembershipSubscriptionStatus), nullable=False, default=MembershipSubscriptionStatus.ACTIVE
     )
@@ -185,36 +185,15 @@ class MembershipSubscription(Base):
         Computed("CASE WHEN status = 'ACTIVE' THEN TRUE ELSE NULL END", persisted=True)
     )
 
-    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions")  # type: ignore
-    membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions")  # type: ignore
-    transactions: Mapped[List["Transaction"]] = relationship(  # type: ignore
-        "Transaction", secondary="membership_transactions", back_populates="membership_subscription"
-    )
+    user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions", viewonly=True)  # type: ignore
+    membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions", viewonly=True)  # type: ignore
+    club: Mapped["Club"] = relationship("Club", secondary="memberships", viewonly=True)  # type: ignore
+    
     __table_args__ = (
         UniqueConstraint(
             "membership_id", "user_id", "active_subscription", name="unique_active_membership_subscription"
         ),
-        CheckConstraint(
-            "status NOT IN ('Cancelled', 'Cancelled by Club') AND end_time IS NULL OR status IN ('Cancelled', 'Cancelled by Club') AND end_time IS NOT NULL",
-            name="chk_status_cancelled",
-        ),
     )
-
-
-class MembershipTransaction(Base):
-    __tablename__ = "membership_transactions"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    membership_subscription_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("membership_subscriptions.id"), nullable=False
-    )
-    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
-    price_snapshot: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
-    )
-
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -248,9 +227,6 @@ class Transaction(Base):
         "User", back_populates="transactions"
     )  # type: ignore
     bookings: Mapped[List["Booking"]] = relationship("Booking", back_populates="transaction")
-    membership_subscription: Mapped[List["MembershipSubscription"]] = relationship(  # type: ignore
-        "MembershipSubscription", secondary="membership_transactions", back_populates="transactions"
-    )
 
     split_details: Mapped[List["SplitTransaction"]] = relationship(
         "SplitTransaction", back_populates="transaction", lazy="joined"

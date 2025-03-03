@@ -421,7 +421,7 @@ class Membership(Base):
         Boolean, Computed("CASE WHEN status NOT IN ('deleted') THEN TRUE ELSE NULL END")
     )
 
-    club: Mapped["Club"] = relationship("Club", back_populates="memberships")
+    club: Mapped["Club"] = relationship("Club", back_populates="memberships", viewonly=True)
     programs_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="membership")
     user_subscriptions: Mapped[List["MembershipSubscription"]] = relationship(  # type: ignore
         "MembershipSubscription", back_populates="membership"

@@ -7,7 +7,7 @@ import uuid
 from rich.console import Console
 import traceback
 
-from schemas import s_club, s_payment
+from schemas import s_payment
 
 from models import m_club, m_payment
 
@@ -16,8 +16,11 @@ from crud import audit as audit_crud, club as club_crud
 from core import transactions as core_transactions
 
 
+###########################################################################
+##################### Transaction for Program Booking #####################
+###########################################################################
 async def create_transaction(
-    db: AsyncSession, user_id: uuid.UUID, transaction_data: Dict[uuid.UUID, s_club.TransactionData]
+    db: AsyncSession, user_id: uuid.UUID, transaction_data: Dict[uuid.UUID, s_payment.TransactionData]
 ) -> Tuple[m_payment.Transaction, stripe.PaymentIntent]:
     """Create a transaction
 
@@ -176,7 +179,9 @@ async def get_transaction_by_id(
     transaction = await db.execute(select(m_payment.Transaction).filter(m_payment.Transaction.id == transaction_id))
     return transaction.unique().scalar()
 
-
+###########################################################################
+################################## Refund #################################
+###########################################################################
 async def create_refund(
     db: AsyncSession,
     bookings: List[m_payment.Booking],
