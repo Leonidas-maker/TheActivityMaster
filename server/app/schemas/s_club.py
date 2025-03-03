@@ -422,8 +422,8 @@ class ProgramBase(BaseModel):
 
 
 class ProgramCreate(ProgramBase):
-    sessions: List[SessionBase] = Field(..., min_length=1)
-    categories: List[int] = Field([], max_length=5)
+    sessions: List[SessionBase] = Field([], description="The sessions of the program.")
+    categories: List[int] = Field([], max_length=5, description="The categories of the program.")
     status: ProgramStatusPublic = Field(
         ProgramStatusPublic.DRAFT, description="The status of the program. Default for creation is 'draft'."
     )

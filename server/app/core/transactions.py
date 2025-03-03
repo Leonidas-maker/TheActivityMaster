@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Literal
 import os
 import stripe
 import random
@@ -140,3 +140,99 @@ def create_reversal(transfer_id: str, amount: int) -> stripe.Reversal:
     """
     reversal = stripe.Transfer.create_reversal(transfer_id, amount=amount)
     return reversal
+
+
+###########################################################################
+############################## Subscriptions ##############################
+###########################################################################
+def create_membership(
+    stripe_club_account_id: str,
+    name: str,
+    description: str,
+    amount: int,
+    currency: str,
+    interval: Literal["day", "month", "week", "year"],
+    interval_count: int,
+) -> Tuple[stripe.Product, stripe.Price]:
+    product = stripe.Product.create(
+        name=name,
+        description=description,
+        stripe_account=stripe_club_account_id,
+    )
+
+    initial_price = stripe.Price.create(
+        unit_amount=amount,
+        currency=currency,
+        recurring={"interval": interval, "interval_count": interval_count},
+        product=product.id,
+        stripe_account=stripe_club_account_id,
+    )
+
+    return product, initial_price
+
+def modify_membership_name_description(
+    stripe_club_account_id: str, product_id: str, name: str, description: str
+) -> stripe.Product:
+    product = stripe.Product.modify(
+        product_id,
+        name=name,
+        description=description,
+        stripe_account=stripe_club_account_id,
+    )
+    return product
+
+def modify_membership_price(
+    stripe_club_account_id: str,
+    amount: int,
+    currency: str,
+    interval: Literal["day", "month", "week", "year"],
+    interval_count: int,
+) -> stripe.Price:
+    price = stripe.Price.create(
+        unit_amount=amount,
+        currency=currency,
+        recurring={"interval": interval, "interval_count": interval_count},
+        stripe_account=stripe_club_account_id,
+    )
+    return price
+
+
+def create_customer(
+    email: str,
+    name: str,
+    payment_method_id: str,
+    stripe_club_account_id: str,
+) -> stripe.Customer:
+    customer = stripe.Customer.create(
+        email=email,
+        name=name,
+        payment_method=payment_method_id,
+        invoice_settings={"default_payment_method": payment_method_id},
+        stripe_account=stripe_club_account_id,
+    )
+    return customer
+
+def create_subscription(
+    stripe_club_account_id: str,
+    customer_id: str,
+    price_id: str,
+    payment_method_id: str,
+) -> stripe.Subscription:
+    subscription = stripe.Subscription.create(
+        customer=customer_id,
+        items=[{"price": price_id}],
+        default_payment_method=payment_method_id,
+        expand=["latest_invoice.payment_intent"],
+        stripe_account=stripe_club_account_id,
+    )
+    return subscription
+
+def cancel_subscription(
+    stripe_club_account_id: str, subscription_id: str
+) -> stripe.Subscription:
+    updated_subscription = stripe.Subscription.modify(
+        subscription_id,
+        cancel_at_period_end=True,
+        stripe_account=stripe_club_account_id,
+    )
+    return updated_subscription

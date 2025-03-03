@@ -163,6 +163,9 @@ class MembershipSubscription(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     membership_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("memberships.id"), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    stripe_subscription_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
+
     start_time: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE)
     )

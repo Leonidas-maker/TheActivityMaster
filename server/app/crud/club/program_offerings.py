@@ -574,6 +574,9 @@ async def create_sessions_for_program(
     :param sessions: The sessions to create
     :return: The created sessions
     """
+    if len (sessions) == 0:
+        raise ValueError("No sessions provided")
+
     if not program and not program_id:
         raise ValueError("Program or program_id is required")
 
@@ -812,9 +815,6 @@ async def create_program(db: AsyncSession, club_id: uuid.UUID, program: s_club.P
     :param program: The program to create
     :return: The created program
     """
-    if len(program.sessions) == 0:
-        raise ValueError("At least one session is required")
-
     categories = None
     if program.categories:
         categories = await get_program_categories(db, program.categories)
@@ -835,11 +835,11 @@ async def create_program(db: AsyncSession, club_id: uuid.UUID, program: s_club.P
     )
     db.add(db_program)
 
-    sessions = await create_sessions_for_program(db, program.sessions, program=db_program)
-
+    if program.sessions:
+        await create_sessions_for_program(db, program.sessions, program=db_program)
     await db.flush()
-    db_program.sessions = sessions
-
+    await db.refresh(db_program, ["sessions"])
+   
     return db_program
 
 

@@ -391,6 +391,10 @@ class Membership(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     club_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clubs.id"), nullable=False)
+
+    stripe_product_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
+    stripe_price_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
+
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = deferred(mapped_column(String(500), nullable=False))
     price: Mapped[int] = mapped_column(Integer, nullable=False)

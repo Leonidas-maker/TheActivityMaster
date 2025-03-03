@@ -311,9 +311,6 @@ async def delete_session(
     if not session_to_delete:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if len(session_to_delete.program.sessions) == 1:
-        raise HTTPException(status_code=400, detail="Cannot delete the last session in a program")
-
     if len(session_to_delete.bookings) > 0 and session_to_delete.membership_required == False:
         if session_to_delete.program.pricing_model == m_club.PriceType.PACKAGE:
             raise HTTPException(
