@@ -14,22 +14,22 @@ const ClubManagement = () => {
         console.log("View page");
     };
     const handleManageEmployeePress = () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ClubManageEmployee?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ClubManageEmployee?club_id=${club_id}`);
     };
     const handleManageProgramsPress = () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ClubManagePrograms?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ClubManagePrograms?club_id=${club_id}`);
     };
     const handleManageRolesPress = () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ClubManageRoles?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ClubManageRoles?club_id=${club_id}`);
     };
     const handleManageBookingSubscriptionPress = () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ClubManageFinance?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ClubManageFinance?club_id=${club_id}`);
     };
     const handleUpdatePress = () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ClubUpdate?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ClubUpdate?club_id=${club_id}`);
     };
     const handleDeletePress = () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ClubDelete?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ClubDelete?club_id=${club_id}`);
     };
 
     const manageClubTitle = t("manageClub_navigator_title");

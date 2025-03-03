@@ -12,6 +12,7 @@ import TwoFactorInput from "@/src/components/textInputs/TwoFactorInput";
 import { useRouter } from "expo-router";
 import { asyncRemoveData, asyncSaveData } from "@/src/services/asyncStorageService";
 import { getUserData, getUserRoles } from "@/src/services/user/userService";
+import { useAuth } from "@/src/provider/AuthContextProvider";
 
 interface GenericRole {
     name: string;
@@ -24,6 +25,10 @@ const SignInVerify: React.FC = () => {
     const [code, setCode] = useState("");
     const [error, setError] = useState(true);
     const [isEmail, setIsEmail] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
+    const { authState } = useAuth();
+    const authContext = useAuth();
 
     const { securityToken, methods } = useLocalSearchParams();
 
@@ -36,70 +41,67 @@ const SignInVerify: React.FC = () => {
     // Handle the verification button press event
     const handleVerifyPress = async () => {
         if (error) {
-            Toast.show({
-                type: "error",
-                text1: t("toastErrorSignInVerify_emptyText"),
-                text2: t("toastErrorSignInVerify_emptySubtext"),
-            });
-            return;
+          Toast.show({
+            type: "error",
+            text1: t("toastErrorSignInVerify_emptyText"),
+            text2: t("toastErrorSignInVerify_emptySubtext"),
+          });
+          return;
         }
-
+      
         const token = Array.isArray(securityToken) ? securityToken[0] : securityToken;
         const method = Array.isArray(methods) ? methods[0] : methods;
-
+      
         try {
-            const response = await verify2fa(token, code, [method]);
-            const { access_token, refresh_token } = response;
-
-            // Save the tokens to secure storage
-            await secureSaveData("access_token", access_token);
-            await secureSaveData("refresh_token", refresh_token);
-            await asyncSaveData("wasLoggedIn", "true");
-            await asyncSaveData("isLoggedIn", "true");
-
-            await checkRole();
-            await checkVerifiedStatus();
-
-            router.navigate("/(tabs)");
+          const response = await verify2fa(token, code, [method]);
+          const { access_token, refresh_token } = response;
+      
+          // Save tokens and login state
+          await secureSaveData("access_token", access_token);
+          await secureSaveData("refresh_token", refresh_token);
+          await asyncSaveData("wasLoggedIn", "true");
+          await asyncSaveData("isLoggedIn", "true");
+      
+          // Get the user's roles and verified status immediately
+          const roleResponse = await getUserRoles();
+          const userData = await getUserData();
+      
+          // Determine values directly from API responses
+          const adminFlag = (roleResponse.generic_roles as GenericRole[]).some(
+            (role: GenericRole) => role.name === "Admin"
+          );
+          const verifiedFlag = userData.identity_verified === true;
+      
+          // Optionally, update async storage as needed:
+          if (adminFlag) {
+            await asyncSaveData("isAdmin", "true");
+          } else {
+            await asyncRemoveData("isAdmin");
+          }
+      
+          if (verifiedFlag) {
+            await asyncSaveData("isVerified", "true");
+          } else {
+            await asyncRemoveData("isVerified");
+          }
+      
+          // Now update the global auth state immediately using the API values
+          authContext.login({
+            isVerified: verifiedFlag,
+            isAdmin: adminFlag,
+          });
+      
+          // Navigate to the tab layout
+          router.navigate("/(tabs)");
         } catch (error: any) {
-            console.error("2FA error:", error);
-            Toast.show({
-                type: "error",
-                text1: t("toastErrorSignInVerify_errorText"),
-                text2: t("toastErrorSignInVerify_errorSubtext"),
-            });
+          console.error("2FA error:", error);
+          Toast.show({
+            type: "error",
+            text1: t("toastErrorSignInVerify_errorText"),
+            text2: t("toastErrorSignInVerify_errorSubtext"),
+          });
         }
-    };
-
-    const checkRole = async () => {
-        try {
-            const response = await getUserRoles();
-
-            // Check if the user has the Admin role
-            if ((response.generic_roles as GenericRole[]).some(
-                (role: GenericRole) => role.name === "Admin")) {
-                await asyncSaveData("isAdmin", "true");
-            } else {
-                await asyncRemoveData("isAdmin");
-            }
-
-        } catch (error) {
-            console.log("Error during fetchUserRoles call:", error);
-        }
-    };
-
-    const checkVerifiedStatus = async () => {
-        try {
-            const response = await getUserData();
-            if (response.identity_verified === true) {
-                await asyncSaveData("isVerified", "true");
-            } else {
-                await asyncRemoveData("isVerified");
-            }
-        } catch (error) {
-            console.error("Error during fetchUserData call:", error);
-        }
-    };
+      };      
 
     return (
         <KeyboardAvoidingView

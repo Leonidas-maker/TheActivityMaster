@@ -7,6 +7,7 @@ import { ThemeProvider } from "../provider/ThemeProvider";
 import { useState, useEffect } from "react";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
+import { AuthProvider } from "../provider/AuthContextProvider";
 
 import "../custom_logger/custom_logger";
 import "../locales/i18n";
@@ -37,27 +38,29 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <GestureHandlerRootView>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-          <Stack
-            initialRouteName="(tabs)"
-            screenOptions={{
-              headerShown: true,
-              headerStyle: {
-                backgroundColor: backgroundColor,
-              },
-              headerTintColor: headerTintColor,
-            }}
-          >
-            {/* Tabs-Navigation */}
-            <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
-            
-            {/* Zusätzliche Screens */}
-            <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
-          </Stack>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+      <AuthProvider>
+        <GestureHandlerRootView>
+          <SafeAreaProvider>
+            <StatusBar style="auto" />
+            <Stack
+              initialRouteName="(tabs)"
+              screenOptions={{
+                headerShown: true,
+                headerStyle: {
+                  backgroundColor: backgroundColor,
+                },
+                headerTintColor: headerTintColor,
+              }}
+            >
+              {/* Tabs-Navigation */}
+              <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
+
+              {/* Zusätzliche Screens */}
+              <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
+            </Stack>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

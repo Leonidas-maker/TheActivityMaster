@@ -51,14 +51,14 @@ const ClubOverview = () => {
 
   // Navigate to club details using the club id
   const handleClubDetails = (club_id: string) => {
-    router.navigate(`/(tabs)/overview/(clubs)/ClubManagement?club_id=${club_id}`);
+    router.navigate(`/(tabs)/clubs?club_id=${club_id}`);
   };
 
   // ====================================================== //
   // ================= CreateClubNavigator ================ //
   // ====================================================== //
   const handleCreateClub = () => {
-    router.push("/(tabs)/overview/(clubs)/ClubCreate");
+    router.push("/(tabs)/clubs/ClubCreate");
   };
 
   const createClubTitle = t("createClub_navigator_title");

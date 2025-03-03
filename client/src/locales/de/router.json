@@ -41,5 +41,6 @@
     "clubs_update_name_header": "Clubdetails bearbeiten",
     "clubs_update_address_header": "Clubadresse bearbeiten",
     "clubs_add_employee_header": "Mitarbeiter hinzufügen",
-    "clubs_manage_employee_header": "Mitarbeiter Übersicht"
+    "clubs_manage_employee_header": "Mitarbeiter Übersicht",
+    "clubs_tab": "Clubs"
 }

@@ -4,9 +4,11 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { asyncLoadData, asyncSaveData } from "@/src/services/asyncStorageService";
 import { useFocusEffect, useRouter } from 'expo-router';
 import { getUserData } from "@/src/services/user/userService";
+import { useAuth } from "@/src/provider/AuthContextProvider";
 
 const ProfileView = () => {
     const router = useRouter();
+    const { updateVerified } = useAuth();
 
     const [isLight, setIsLight] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -27,7 +29,6 @@ const ProfileView = () => {
     }, []);
 
     // Function to check the login status and fetch the user data if user is logged in
-    // So we can make sure that Username
     useFocusEffect(
         useCallback(() => {
             async function checkLoginStatus() {
@@ -42,7 +43,7 @@ const ProfileView = () => {
                         setFirstName(data.first_name);
                         setLastName(data.last_name);
                         setIsVerified(data.identity_verified);
-                        // Save verified status directly from data to avoid stale state issues
+                        updateVerified(data.identity_verified);
                         await asyncSaveData("isVerified", data.identity_verified.toString());
                     } catch (error) {
                         console.error("Error fetching user data:", error);

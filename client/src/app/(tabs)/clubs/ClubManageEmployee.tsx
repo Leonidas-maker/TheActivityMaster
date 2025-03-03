@@ -50,7 +50,7 @@ const ClubManagementEmployees = () => {
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
     const handleAddPress = () => {
-        router.push(`/(tabs)/overview/(clubs)/AddEmployee?club_id=${club_id}`);
+        router.push(`/(tabs)/clubs/AddEmployee?club_id=${club_id}`);
     };
 
     useEffect(() => {
@@ -82,7 +82,7 @@ const ClubManagementEmployees = () => {
     );
 
     const employeeOnPress = allEmployees.map((emp) => () => {
-        router.navigate(`/(tabs)/overview/(clubs)/ManageEmployee?user_id=${emp.id}&club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/ManageEmployee?user_id=${emp.id}&club_id=${club_id}`);
     });
 
     const employeeIconNames = allEmployees.map(() => "person");

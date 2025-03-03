@@ -16,6 +16,7 @@ import { asyncRemoveData, asyncLoadData } from "@/src/services/asyncStorageServi
 import { logout } from "@/src/services/auth/tokenService";
 import { secureRemoveData } from "@/src/services/secureStorageService";
 import { getUserData } from "@/src/services/user/userService";
+import { useAuth } from "@/src/provider/AuthContextProvider";
 
 // ====================================================== //
 // ====================== Component ===================== //
@@ -24,6 +25,7 @@ const OverviewHome: React.FC = () => {
   // ~~~~~~~~~~~ Define navigator ~~~~~~~~~~ //
   const router = useRouter();
   const { t } = useTranslation("overview");
+  const authContex = useAuth();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -36,6 +38,7 @@ const OverviewHome: React.FC = () => {
       secureRemoveData("refresh_token");
       asyncRemoveData("isAdmin");
       asyncRemoveData("isVerified");
+      authContex.logout();
       router.navigate("/(tabs)");
     });
   };
@@ -151,21 +154,6 @@ const OverviewHome: React.FC = () => {
   const adminIconNames = ["people"];
 
   // ====================================================== //
-  // =================== ClubNavigator ==================== //
-  // ====================================================== //
-  const handleClubOverviewPress = () => {
-    router.navigate("/(tabs)/overview/(clubs)/ClubOverview");
-  };
-
-  const clubTitle = t("pageNavigator_title5");
-
-  const onPressClubFunctions = [handleClubOverviewPress];
-
-  const clubTexts = [t("clubs_overview_btn")];
-
-  const clubIconNames = ["group"];
-
-  // ====================================================== //
   // ================== Return component ================== //
   // ====================================================== //
   // Returns the navigators and the current app version
@@ -178,12 +166,6 @@ const OverviewHome: React.FC = () => {
         texts={moduleTexts}
         iconNames={moduleIconNames}
       />
-      {isLoggedIn && (isAdmin || isVerified) && (<PageNavigator
-        title={clubTitle}
-        onPressFunctions={onPressClubFunctions}
-        texts={clubTexts}
-        iconNames={clubIconNames}
-      />)}
       {isLoggedIn && (<PageNavigator
         title={billingTitle}
         onPressFunctions={onPressBillingFunctions}

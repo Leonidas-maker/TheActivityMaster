@@ -9,10 +9,17 @@ import OverviewSVG from "../../../public/images/navigatorIcons/inactive/Overview
 import ActiveCalendarSVG from "../../../public/images/navigatorIcons/active/ActiveCalendarSVG";
 import CalendarSVG from "../../../public/images/navigatorIcons/inactive/CalendarSVG";
 import { ThemeProvider } from "@/src/provider/ThemeProvider";
+import { asyncLoadData } from '@/src/services/asyncStorageService';
+import { useAuth } from '@/src/provider/AuthContextProvider';
+import ActiveClubSVG from '@/public/images/navigatorIcons/active/ActiveClubSVG';
+import ClubSVG from '@/public/images/navigatorIcons/inactive/ClubSVG';
 
 export default function TabLayout() {
     const [isLight, setIsLight] = useState(false);
     const { t } = useTranslation("router");
+
+    const { authState } = useAuth();
+    const { isLoggedIn, isVerified, isAdmin } = authState;
 
     // ~~~~~~~~~~~ Use color scheme ~~~~~~~~~~ //
     // Get the current color scheme
@@ -28,7 +35,6 @@ export default function TabLayout() {
         }
     }, [colorScheme]);
 
-
     // Set the colors based on the color scheme
     const backgroundColor = isLight ? "#E8EBF7" : "#1E1E24";
     const headerTintColor = isLight ? "#171717" : "#E0E2DB";
@@ -38,6 +44,7 @@ export default function TabLayout() {
     return (
         <ThemeProvider>
             <Tabs
+                key={`${isLoggedIn}-${isVerified}-${isAdmin}`} // This forces a remount when auth state changes
                 backBehavior='history'
                 screenOptions={{
                     headerShown: true,
@@ -51,19 +58,16 @@ export default function TabLayout() {
                 }}
             >
                 <Tabs.Screen
-                    name="index" // aka DiscoverHome
+                    name="index"
                     options={{
                         headerTitle: "TheActivityMaster",
                         tabBarLabel: t("discover_tab"),
-                        tabBarIcon: ({ color, size, focused }) => {
-                            if (focused) {
-                                return (
-                                    <ActiveDiscoverSGV width={size} height={size} fill={color} />
-                                );
-                            } else {
-                                return <DiscoverSVG width={size} height={size} fill={color} />;
-                            }
-                        },
+                        tabBarIcon: ({ color, size, focused }) =>
+                            focused ? (
+                                <ActiveDiscoverSGV width={size} height={size} fill={color} />
+                            ) : (
+                                <DiscoverSVG width={size} height={size} fill={color} />
+                            ),
                     }}
                 />
                 <Tabs.Screen
@@ -72,15 +76,29 @@ export default function TabLayout() {
                         headerTitle: "TheActivityMaster",
                         tabBarLabel: t("calendar_tab"),
                         headerShown: true,
-                        tabBarIcon: ({ color, size, focused }) => {
-                            if (focused) {
-                                return (
-                                    <ActiveCalendarSVG width={size} height={size} fill={color} />
-                                );
-                            } else {
-                                return <CalendarSVG width={size} height={size} fill={color} />;
-                            }
+                        tabBarIcon: ({ color, size, focused }) =>
+                            focused ? (
+                                <ActiveCalendarSVG width={size} height={size} fill={color} />
+                            ) : (
+                                <CalendarSVG width={size} height={size} fill={color} />
+                            ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="clubs"
+                    options={{
+                        headerTitle: t("clubs_tab"),
+                        tabBarLabel: t("clubs_tab"),
+                        headerShown: false,
+                        tabBarItemStyle: {
+                            display: isLoggedIn && (isVerified || isAdmin) ? "flex" : "none",
                         },
+                        tabBarIcon: ({ color, size, focused }) =>
+                            focused ? (
+                                <ActiveClubSVG width={size} height={size} fill={color} />
+                            ) : (
+                                <ClubSVG width={size} height={size} fill={color} />
+                            ),
                     }}
                 />
                 <Tabs.Screen
@@ -89,15 +107,12 @@ export default function TabLayout() {
                         headerTitle: t("more_tab"),
                         tabBarLabel: t("more_tab"),
                         headerShown: false,
-                        tabBarIcon: ({ color, size, focused }) => {
-                            if (focused) {
-                                return (
-                                    <ActiveOverviewSVG width={size} height={size} fill={color} />
-                                );
-                            } else {
-                                return <OverviewSVG width={size} height={size} fill={color} />;
-                            }
-                        },
+                        tabBarIcon: ({ color, size, focused }) =>
+                            focused ? (
+                                <ActiveOverviewSVG width={size} height={size} fill={color} />
+                            ) : (
+                                <OverviewSVG width={size} height={size} fill={color} />
+                            ),
                     }}
                 />
             </Tabs>

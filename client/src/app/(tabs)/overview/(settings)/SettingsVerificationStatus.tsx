@@ -7,10 +7,12 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { getSelfStatus, deleteSelfVerification } from "@/src/services/verificiation/identityService";
 import dayjs from "dayjs";
+import { useAuth } from "@/src/provider/AuthContextProvider";
 
 const SettingsVerificationStatus = () => {
     const { t } = useTranslation("settings");
     const router = useRouter();
+    const { updateVerified } = useAuth();
     const [status, setStatus] = useState("");
     const [verifiedAt, setVerifiedAt] = useState("");
     const [expiresAt, setExpiresAt] = useState("");
@@ -50,6 +52,8 @@ const SettingsVerificationStatus = () => {
 
     const handleDelete = async () => {
         await deleteSelfVerification();
+
+        updateVerified(false);
 
         while (router.canGoBack()) {
             router.back();
