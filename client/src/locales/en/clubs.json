@@ -66,5 +66,21 @@
     "change_employee_toast_error_description": "Please try again later",
     "no_clubs_available": "You are not part of any clubs yet. Create one now!",
     "club_role_permissions_heading": "Role Permissions",
-    "club_role_permission_subheading": "Here you can see all the available permissions with the description."
+    "club_role_permission_subheading": "Here you can see all the available permissions with the description.",
+    "club_role_level_info": "A Role Level is a number which represents the permission level of a role. The lower the number, the more permissions the role has. The Owner of the club has the lowest permission level of 0. Only one Level can have the same number. The range is from 0 to 10, so there can be 11 different roles.",
+    "create_role_heading": "Create Role",
+    "role_name_placeholder": "Role Name",
+    "role_description_placeholder": "Role Description",
+    "role_level_subheading": "Role Level",
+    "selectRoleLevel_placeholder": "Select Role Level",
+    "role_permissions_subheading": "Role Permissions",
+    "selectPermissions_placeholder": "Select Permissions",
+    "add_role_btn": "Create Role",
+    "selectPermissions_searchPlaceholder": "Search for permission...",
+    "selectPermissions_confirmButton": "Confirm",
+    "selectPermissions_notFound": "Please check your internet connection",
+    "roleCreationError": "Role creation error",
+    "roleCreationErrorDescription": "Please try again later and check your input",
+    "roleCreationErrorEmpty": "Input Error",
+    "roleCreationErrorEmptyDescription": "Please fill out all fields and select permissions"
 }

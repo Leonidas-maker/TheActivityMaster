@@ -70,7 +70,9 @@ const InfoRole = () => {
             <View className="px-4 py-6">
                 <Heading text={t("club_role_permissions_heading")} />
                 <Subheading text={t("club_role_permission_subheading")} />
-
+                <View className="justify-center items-center">
+                    <DefaultText text={t("club_role_level_info")} />
+                </View>
                 {/* List container with spacing between cards */}
                 <View className="mt-4 space-y-4">
                     {permissions.map((permission) => (

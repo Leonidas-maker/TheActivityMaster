@@ -62,5 +62,21 @@
     "change_employee_toast_error_description": "Bitte versuche es später erneut",
     "no_clubs_available": "Du bist noch kein Teil eines Clubs. Erstelle jetzt einen!",
     "club_role_permissions_heading": "Rollenberechtigungen",
-    "club_role_permission_subheading": "Hier kannst du alle Rollen und deren Berechtigungen sehen."
+    "club_role_permission_subheading": "Hier kannst du alle Rollen und deren Berechtigungen sehen.",
+    "club_role_level_info": "Eine Rollenstufe ist eine Zahl, die das Berechtigungsniveau einer Rolle darstellt. Je niedriger die Zahl, desto mehr Berechtigungen hat die Rolle. Der Eigentümer des Clubs hat das niedrigste Berechtigungsniveau von 0. Nur eine Stufe kann dieselbe Zahl haben. Der Bereich liegt von 0 bis 10, sodass es 11 verschiedene Rollen geben kann.",
+    "create_role_heading": "Rolle erstellen",
+    "role_name_placeholder": "Rollenname",
+    "role_description_placeholder": "Rollenbeschreibung",
+    "role_level_subheading": "Rollenstufe",
+    "selectRoleLevel_placeholder": "Rollenstufe auswählen",
+    "role_permissions_subheading": "Rollenberechtigungen",
+    "selectPermissions_placeholder": "Berechtigungen auswählen",
+    "add_role_btn": "Rolle erstellen",
+    "selectPermissions_searchPlaceholder": "Nach Berechtigung suchen...",
+    "selectPermissions_confirmButton": "Bestätigen",
+    "selectPermissions_notFound": "Bitte überprüfe deine Internetverbindung",
+    "roleCreationError": "Fehler beim erstellen der Rolle",
+    "roleCreationErrorDescription": "Bitte versuchen Sie es später erneut und überprüfen Sie Ihre Eingabe",
+    "roleCreationErrorEmpty": "Eingabefehler",
+    "roleCreationErrorEmptyDescription": "Bitte fülle alle Felder aus und wähle Berechtigungen"
 }

@@ -132,7 +132,7 @@ const MultiDropdown: React.FC<MultiDropdownProps> = ({
   };
 
   return (
-    <View className="w-full px-4">
+    <View className="w-3/4">
       <SectionedMultiSelect
         IconRenderer={Icon as any}
         items={items}

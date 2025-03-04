@@ -7,10 +7,10 @@ interface ClubRole {
   permissions: string[];
 }
 
-export const createClubRole = async (club_id: string, role: ClubRole) => {
+export const createClubRole = async (club_id: string | string[], role: ClubRole) => {
   try {
     const requestBody = {
-      role,
+      ...role,
     };
 
     const response = await axiosInstance.post(

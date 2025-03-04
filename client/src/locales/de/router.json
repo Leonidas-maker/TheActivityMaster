@@ -44,5 +44,6 @@
     "clubs_manage_employee_header": "Mitarbeiter Übersicht",
     "clubs_tab": "Clubs",
     "clubs_create_header": "Club erstellen",
-    "clubs_info_role_header": "Rollenberechtigungen Übersicht"
+    "clubs_info_role_header": "Rollenberechtigungen Übersicht",
+    "clubs_add_role_header": "Rolle hinzufügen"
 }

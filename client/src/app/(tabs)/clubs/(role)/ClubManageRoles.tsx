@@ -9,6 +9,7 @@ import { useRouter, useNavigation, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { getClubPermissions } from "@/src/services/club/roleService";
 
 const ClubManageRoles = () => {
     const router = useRouter();
