@@ -39,9 +39,9 @@ export default function OverviewLayout() {
       />
 
       <Stack.Screen
-        name="ClubOverview"
+        name="ClubManagement"
         options={{
-          headerTitle: t("clubs_overview_header"),
+          headerTitle: t("clubs_management_header"),
         }}
       />
       <Stack.Screen

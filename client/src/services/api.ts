@@ -14,6 +14,7 @@ import {
 // Do not use the useRouter hook here because this file is not a React component.
 import { router } from "expo-router";
 import { asyncRemoveData } from "./asyncStorageService";
+import { getGlobalLogout } from "../provider/AuthContextProvider";
 
 // Extended request configuration interface with custom flags
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -111,6 +112,11 @@ axiosInstance.interceptors.response.use(
 
       // If there is no refresh token, redirect to login.
       if (!refresh_token) {
+        const globalLogout = getGlobalLogout();
+        if (globalLogout) {
+          globalLogout();
+        }
+
         router.replace("/auth");
         return Promise.reject(error);
       }
@@ -150,6 +156,11 @@ axiosInstance.interceptors.response.use(
             await secureRemoveData("access_token");
             await secureRemoveData("refresh_token");
             await asyncRemoveData("isLoggedIn");
+            // Logout globally
+            const globalLogout = getGlobalLogout();
+            if (globalLogout) {
+              globalLogout();
+            }
             // Redirect to the login page
             router.replace("/auth");
             reject(err);

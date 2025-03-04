@@ -29,7 +29,9 @@ export default function AuthLayout() {
 
     const handleBackPress = () => {
         if (navigation.canGoBack()) {
-            navigation.goBack();
+            while (navigation.canGoBack()) {
+                navigation.goBack();
+            }
         } else {
             router.push("/(tabs)");
         }

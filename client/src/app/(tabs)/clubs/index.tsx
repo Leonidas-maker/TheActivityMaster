@@ -1,53 +1,122 @@
-import React from "react";
-import { ScrollView, View } from "react-native";
-import { useTranslation } from "react-i18next";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState, useCallback } from "react";
+import DefaultButton from "@/src/components/buttons/DefaultButton";
+import DefaultText from "@/src/components/textFields/DefaultText";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { ScrollView, Pressable, useColorScheme, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { useRouter, useNavigation, useFocusEffect } from "expo-router";
+import { getUserClubs } from "@/src/services/user/userService";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import Heading from "@/src/components/textFields/Heading";
 
-const ClubManagement = () => {
-    const router = useRouter();
-    const { t } = useTranslation("clubs");
-    const { club_id } = useLocalSearchParams();
+// Updated Club interface to match the service response
+interface Club {
+  id: string;
+  name: string;
+  description: string;
+  address: {
+    street: string;
+    postal_code: string;
+    city: string;
+    state: string;
+    country: string;
+  };
+  is_deleted: boolean;
+}
 
-    const handleViewPagePress = () => {
-        //TODO: Implement
-        console.log("View page");
-    };
-    const handleManageEmployeePress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManageEmployee?club_id=${club_id}`);
-    };
-    const handleManageProgramsPress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManagePrograms?club_id=${club_id}`);
-    };
-    const handleManageRolesPress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManageRoles?club_id=${club_id}`);
-    };
-    const handleManageBookingSubscriptionPress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManageFinance?club_id=${club_id}`);
-    };
-    const handleUpdatePress = () => {
-        router.navigate(`/(tabs)/clubs/ClubUpdate?club_id=${club_id}`);
-    };
-    const handleDeletePress = () => {
-        router.navigate(`/(tabs)/clubs/ClubDelete?club_id=${club_id}`);
-    };
+const ClubOverview = () => {
+  const router = useRouter();
+  const navigation = useNavigation();
+  const { t } = useTranslation("clubs");
+  // State to store clubs
+  const [clubs, setClubs] = useState<Club[]>([]);
 
-    const manageClubTitle = t("manageClub_navigator_title");
-    
-    const createClubTexts = [t("club_view_page"), t("club_manage_employee_btn"), t("club_manage_programs_btn"), t("club_manage_roles_btn"), t("club_manage_booking_subscription"), t("club_update_btn"), t("club_delete_btn")];
-    const createClubIcons = ["home", "badge", "category", "manage-accounts", "account-balance-wallet", "edit", "delete"];
-    const onPressCreateClubFunctions = [handleViewPagePress, handleManageEmployeePress, handleManageProgramsPress, handleManageRolesPress, handleManageBookingSubscriptionPress, handleUpdatePress, handleDeletePress];
+  // useFocusEffect to fetch clubs when the screen is active
+  useFocusEffect(
+    useCallback(() => {
+      const fetchClubs = async () => {
+        try {
+          const data: Club[] = await getUserClubs();
+          // Filter out clubs that are marked as deleted
+          const activeClubs = data.filter((club) => !club.is_deleted);
+          setClubs(activeClubs);
+        } catch (error) {
+          console.error("Failed to fetch clubs:", error);
+        }
+      };
 
-    return (
-        <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-            <PageNavigator
-                title={manageClubTitle}
-                texts={createClubTexts}
-                iconNames={createClubIcons}
-                onPressFunctions={onPressCreateClubFunctions}
-            />
-        </ScrollView>
-    );
+      fetchClubs();
+    }, [])
+  );
+
+  // Navigate to club details using the club id
+  const handleClubDetails = (club_id: string) => {
+    router.navigate(`/(tabs)/clubs/ClubManagement?club_id=${club_id}`);
+  };
+
+  // ====================================================== //
+  // ================= CreateClubNavigator ================ //
+  // ====================================================== //
+  const handleCreateClub = () => {
+    router.push("/(tabs)/clubs/ClubCreate");
+  };
+
+  const createClubTitle = t("createClub_navigator_title");
+  const onPressCreateClubFunctions = [handleCreateClub];
+  const createClubTexts = [t("createClub_btn")];
+  const createClubIcons = ["add"];
+
+  // Map the clubs to arrays expected by PageNavigator
+  const texts = clubs.map((club) => club.name);
+  const onPressFunctions = clubs.map((club) => () => handleClubDetails(club.id));
+  // Using a default icon name for each club; adjust as needed
+  const iconNames = clubs.map(() => "group");
+
+  const [isLight, setIsLight] = useState(false);
+  const colorScheme = useColorScheme();
+  useEffect(() => {
+    setIsLight(colorScheme === "light");
+  }, [colorScheme]);
+  const iconColor = isLight ? "#000000" : "#FFFFFF";
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable onPress={handleCreateClub}>
+          <Icon
+            name="add"
+            size={30}
+            color={iconColor}
+            style={{ marginLeft: "auto", marginRight: 15 }}
+          />
+        </Pressable>
+      ),
+    });
+  }, [navigation, iconColor]);
+
+  return (
+    <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
+      {clubs.length > 0 && (
+        <PageNavigator
+          title={t("myClubs_navigator_title")}
+          texts={texts}
+          onPressFunctions={onPressFunctions}
+          iconNames={iconNames}
+        />
+      )}
+      {clubs.length === 0 && (
+        <View className="py-4">
+          <Heading text={t("no_clubs_available")} />
+        </View>
+      )}
+      {/* <PageNavigator
+        title={createClubTitle}
+        texts={createClubTexts}
+        iconNames={createClubIcons}
+        onPressFunctions={onPressCreateClubFunctions}
+      /> */}
+    </ScrollView>
+  );
 };
 
-export default ClubManagement;
+export default ClubOverview;

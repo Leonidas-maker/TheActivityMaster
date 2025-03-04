@@ -37,8 +37,8 @@ export default function RootLayout() {
   const headerTintColor = isLight ? "#171717" : "#E0E2DB";
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <GestureHandlerRootView>
           <SafeAreaProvider>
             <StatusBar style="auto" />
@@ -60,8 +60,8 @@ export default function RootLayout() {
             </Stack>
           </SafeAreaProvider>
         </GestureHandlerRootView>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
