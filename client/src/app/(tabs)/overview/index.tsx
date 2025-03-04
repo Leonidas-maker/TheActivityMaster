@@ -186,12 +186,12 @@ const OverviewHome: React.FC = () => {
         texts={devTexts}
         iconNames={devIconNames}
       /> */}
-      <View className="justify-center items-center my-2">
-        {/* <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} /> */}
-        {isLoggedIn && (
+      {/* <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} /> */}
+      {isLoggedIn && (
+        <View className="justify-center items-center my-2">
           <SecondaryButton text={t("logout_btn")} onPress={handleLogoutPress} />
-        )}
-      </View>
+        </View>
+      )}
       <View className="justify-center items-center my-2">
         <DefaultText text={t("app_version") + `: ${expo.version} ❤️`} />
       </View>

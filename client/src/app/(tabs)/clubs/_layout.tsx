@@ -52,37 +52,37 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="ClubCreateProgramm"
+        name="(program)/ClubCreateProgramm"
         options={{
           headerTitle: t("clubs_create_programm_header"),
         }}
       />
       <Stack.Screen
-        name="ClubCreateSession"
+        name="(session)/ClubCreateSession"
         options={{
           headerTitle: t("clubs_create_session_header"),
         }}
       />
       <Stack.Screen
-        name="ClubManageEmployee"
+        name="(employee)/ClubManageEmployee"
         options={{
           headerTitle: t("clubs_manage_employee_header"),
         }}
       />
       <Stack.Screen
-        name="ClubManageRoles"
+        name="(role)/ClubManageRoles"
         options={{
           headerTitle: t("clubs_manage_roles_header"),
         }}
       />
       <Stack.Screen
-        name="ClubManageTrainer"
+        name="(session)/ClubManageTrainer"
         options={{
           headerTitle: t("clubs_manage_trainer_header"),
         }}
       />
       <Stack.Screen
-        name="ClubManagePrograms"
+        name="(program)/ClubManagePrograms"
         options={{
           headerTitle: t("clubs_manage_programs_header"),
         }}
@@ -100,13 +100,13 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="ClubManageFinance"
+        name="(finance)/ClubManageFinance"
         options={{
           headerTitle: t("clubs_manage_finance_header"),
         }}
       />
       <Stack.Screen
-        name="ClubManageSessions"
+        name="(session)/ClubManageSessions"
         options={{
           headerTitle: t("clubs_manage_sessions_header"),
         }}
@@ -124,49 +124,49 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="ManageEmployee"
+        name="(employee)/ManageEmployee"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_manage_employee_header"),
         }}
       />
       <Stack.Screen
-        name="AddEmployee"
+        name="(employee)/AddEmployee"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_add_employee_header"),
         }}
       />
       <Stack.Screen
-        name="AddProgram"
+        name="(program)/AddProgram"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_add_program_header"),
         }}
       />
       <Stack.Screen
-        name="ManageProgram"
+        name="(program)/ManageProgram"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_manage_program_header"),
         }}
       />
       <Stack.Screen
-        name="AddRole"
+        name="(role)/AddRole"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_add_role_header"),
         }}
       />
       <Stack.Screen
-        name="ManageRole"
+        name="(role)/ManageRole"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_manage_role_header"),
         }}
       />
       <Stack.Screen
-        name="InfoRole"
+        name="(role)/InfoRole"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_info_role_header"),

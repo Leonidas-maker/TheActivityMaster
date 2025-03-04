@@ -37,7 +37,7 @@ const ClubManagePrograms = () => {
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
     const handleAddPress = () => {
-        router.push(`/(tabs)/clubs/AddProgram?club_id=${club_id}`);
+        router.push(`/(tabs)/clubs/(program)/AddProgram?club_id=${club_id}`);
     };
 
     useEffect(() => {

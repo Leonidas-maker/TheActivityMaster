@@ -29,7 +29,7 @@ const AddRole = () => {
     };
 
     const handleInfoPress = () => {
-        router.navigate("/(tabs)/clubs/InfoRole");
+        router.navigate("/(tabs)/clubs/(role)/InfoRole");
     };
 
     useEffect(() => {

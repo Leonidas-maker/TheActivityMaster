@@ -25,7 +25,7 @@ const ClubManageRoles = () => {
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
     const handleAddPress = () => {
-        router.push(`/(tabs)/clubs/AddRole?club_id=${club_id}`);
+        router.push(`/(tabs)/clubs/(role)/AddRole?club_id=${club_id}`);
     };
 
     useEffect(() => {

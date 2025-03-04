@@ -14,16 +14,16 @@ const ClubManagement = () => {
         console.log("View page");
     };
     const handleManageEmployeePress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManageEmployee?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(employee)/ClubManageEmployee?club_id=${club_id}`);
     };
     const handleManageProgramsPress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManagePrograms?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(program)/ClubManagePrograms?club_id=${club_id}`);
     };
     const handleManageRolesPress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManageRoles?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(role)/ClubManageRoles?club_id=${club_id}`);
     };
     const handleManageBookingSubscriptionPress = () => {
-        router.navigate(`/(tabs)/clubs/ClubManageFinance?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(finance)/ClubManageFinance?club_id=${club_id}`);
     };
     const handleUpdatePress = () => {
         router.navigate(`/(tabs)/clubs/ClubUpdate?club_id=${club_id}`);
