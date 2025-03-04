@@ -60,5 +60,7 @@
     "employee_same_role_toast_error_description": "Der Mitarbeiter hat bereits diese Rolle",
     "change_employee_toast_error": "Rollenänderungsfehler",
     "change_employee_toast_error_description": "Bitte versuche es später erneut",
-    "no_clubs_available": "Du bist noch kein Teil eines Clubs. Erstelle jetzt einen!"
+    "no_clubs_available": "Du bist noch kein Teil eines Clubs. Erstelle jetzt einen!",
+    "club_role_permissions_heading": "Rollenberechtigungen",
+    "club_role_permission_subheading": "Hier kannst du alle Rollen und deren Berechtigungen sehen."
 }

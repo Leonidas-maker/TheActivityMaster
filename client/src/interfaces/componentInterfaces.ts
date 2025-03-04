@@ -154,6 +154,16 @@ interface DropdownProps {
   defaultOption?: { key: any; value: any };
 }
 
+interface MultiDropdownProps {
+  setSelected: (value: string[]) => void;
+  values: { key: string; value: string }[];
+  placeholder?: string;
+  notFound?: string;
+  useSections?: boolean;
+  searchPlaceholderText?: string;
+  confirmButtonText?: string;
+}
+
 interface WeekSelectProps {
   onBackPress: () => void;
   onForwardPress: () => void;
@@ -180,4 +190,5 @@ export {
   DropdownProps,
   WeekSelectProps,
   TextButtonProps,
+  MultiDropdownProps,
 };

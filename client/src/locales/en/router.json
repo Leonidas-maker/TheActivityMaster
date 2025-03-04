@@ -43,5 +43,6 @@
     "clubs_add_employee_header": "Add Employee",
     "clubs_manage_employee_header": "Employee Overview",
     "clubs_tab": "Clubs",
-    "clubs_create_header": "Create Club"
+    "clubs_create_header": "Create Club",
+    "clubs_info_role_header": "Role Permissions Overview"
 }

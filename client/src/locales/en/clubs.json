@@ -64,5 +64,7 @@
     "employee_same_role_toast_error_description": "The Employee already has this role",
     "change_employee_toast_error": "Role Change Error",
     "change_employee_toast_error_description": "Please try again later",
-    "no_clubs_available": "You are not part of any clubs yet. Create one now!"
+    "no_clubs_available": "You are not part of any clubs yet. Create one now!",
+    "club_role_permissions_heading": "Role Permissions",
+    "club_role_permission_subheading": "Here you can see all the available permissions with the description."
 }
