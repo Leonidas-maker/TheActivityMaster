@@ -45,5 +45,6 @@
     "clubs_tab": "Clubs",
     "clubs_create_header": "Create Club",
     "clubs_info_role_header": "Role Permissions Overview",
-    "clubs_add_role_header": "Add Role"
+    "clubs_add_role_header": "Add Role",
+    "clubs_manage_roles_header": "Manage Roles"
 }

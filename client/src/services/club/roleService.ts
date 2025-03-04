@@ -67,7 +67,7 @@ export const updateClubRole = async (
   }
 };
 
-export const deleteClubRole = async (club_id: string, role_id: string) => {
+export const deleteClubRole = async (club_id: string | string[], role_id: string | string[]) => {
   try {
     const response = await axiosInstance.delete(
       `/clubs/${club_id}/roles/${role_id}`

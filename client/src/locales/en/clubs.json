@@ -82,5 +82,6 @@
     "roleCreationError": "Role creation error",
     "roleCreationErrorDescription": "Please try again later and check your input",
     "roleCreationErrorEmpty": "Input Error",
-    "roleCreationErrorEmptyDescription": "Please fill out all fields and select permissions"
+    "roleCreationErrorEmptyDescription": "Please fill out all fields and select permissions",
+    "manageRoles_navigator_title": "Manage Roles"
 }

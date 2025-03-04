@@ -78,5 +78,6 @@
     "roleCreationError": "Fehler beim erstellen der Rolle",
     "roleCreationErrorDescription": "Bitte versuchen Sie es später erneut und überprüfen Sie Ihre Eingabe",
     "roleCreationErrorEmpty": "Eingabefehler",
-    "roleCreationErrorEmptyDescription": "Bitte fülle alle Felder aus und wähle Berechtigungen"
+    "roleCreationErrorEmptyDescription": "Bitte fülle alle Felder aus und wähle Berechtigungen",
+    "manageRoles_navigator_title": "Rollen verwalten"
 }

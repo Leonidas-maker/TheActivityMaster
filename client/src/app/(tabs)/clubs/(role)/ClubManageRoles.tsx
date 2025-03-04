@@ -1,21 +1,36 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ScrollView, View, useColorScheme, Pressable, Keyboard, KeyboardAvoidingView, TouchableWithoutFeedback, Platform } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import Heading from "@/src/components/textFields/Heading";
 import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
 import { useTranslation } from "react-i18next";
-import { useRouter, useNavigation, useLocalSearchParams } from "expo-router";
+import { useRouter, useNavigation, useLocalSearchParams, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { getClubPermissions } from "@/src/services/club/roleService";
+import { getClubRoles } from "@/src/services/club/roleService";
+import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+
+interface Role {
+    id: number;
+    level: number;
+    name: string;
+    description: string;
+    permissions: {
+        name: string;
+        description: string;
+    }[];
+}
 
 const ClubManageRoles = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");
     const navigation = useNavigation();
     const { club_id } = useLocalSearchParams();
+
+    const [roles, setRoles] = useState<Role[]>([]);
 
     // State to track if the theme is light
     const [isLight, setIsLight] = useState(false);
@@ -44,16 +59,39 @@ const ClubManageRoles = () => {
         });
     }, [navigation, iconColor]);
 
+    useFocusEffect(
+        useCallback(() => {
+            const fetchRoles = async () => {
+                try {
+                    const rolesData = await getClubRoles(club_id);
+                    const filteredRoles = rolesData.filter((role: Role) => role.level !== 0);
+                    setRoles(filteredRoles);
+                } catch (error) {
+                    console.error("Error during fetchRoles call:", error);
+                }
+            };
+            fetchRoles();
+        }, [club_id]));
+
+    const texts = roles.map((role) => role.name);
+    const onPressFunctions = roles.map(
+        (role) => () =>
+            router.push(
+                `/(tabs)/clubs/(role)/ManageRole?club_id=${club_id}&role_id=${role.id}`
+            )
+    );
+    const iconNames = roles.map(() => "person-search");
+
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-                    <View className="items-center">
-                        <Heading text={t("createClub")} />
-                        <DefaultTextFieldInput placeholder={t("clubName")} />
-                        <DefaultTextFieldInput placeholder={t("clubDescription")} />
-                        <DefaultButton text={t("create")} />
-                    </View>
+                    <PageNavigator
+                        title={t("manageRoles_navigator_title")}
+                        texts={texts}
+                        onPressFunctions={onPressFunctions}
+                        iconNames={iconNames}
+                    />
                 </ScrollView>
             </TouchableWithoutFeedback>
             <DefaultToast />
