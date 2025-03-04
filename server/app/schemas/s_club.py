@@ -245,10 +245,7 @@ class SessionCreate(SessionBase):
                 raise ValueError("Time must be in the future.")
             return new_value
         elif isinstance(value, datetime.time) and value.tzinfo is None:
-            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
-            if new_value < today.time():
-                raise ValueError("Time must be in the future.")
-            return new_value
+            return value.replace(tzinfo=DEFAULT_TIMEZONE)
         return value
 
 
@@ -305,10 +302,7 @@ class SessionUpdate(BaseModel):
                 raise ValueError("Time must be in the future.")
             return new_value
         elif isinstance(value, datetime.time) and value.tzinfo is None:
-            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
-            if new_value < today.time():
-                raise ValueError("Time must be in the future.")
-            return new_value
+            return value.replace(tzinfo=DEFAULT_TIMEZONE)
         return value
 
     @model_validator(mode="after")
@@ -521,7 +515,8 @@ class ProgramUpdate(BaseModel):
             raise ValueError("Status cannot be set to 'draft'. Please use 'inactive' instead.")
 
         return self
-    
+
+
 ###########################################################################
 ################################ Membership ###############################
 ###########################################################################
@@ -530,11 +525,14 @@ class MembershipProgramAccessBase(BaseModel):
     program_id: uuid.UUID
     additional_fee: int = Field(0, ge=0, description="The additional fee for the program.")
 
+
 class MembershipProgramAccessCreate(MembershipProgramAccessBase):
     pass
 
+
 class MembershipProgramAccess(MembershipProgramAccessBase):
     membership_id: uuid.UUID
+
 
 class MembershipBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -543,7 +541,9 @@ class MembershipBase(BaseModel):
     price: int = Field(..., ge=0, description="The price of the membership.")
     currency: str = Field(..., max_length=3, description="The currency of the membership.")
     duration: int = Field(..., gt=0, description="The duration of the membership in days.")
-    duration_unit: m_club.DurationUnit = Field(m_club.DurationUnit.MONTH, description="The unit of the duration. Default is 'month'.")
+    duration_unit: m_club.DurationUnit = Field(
+        m_club.DurationUnit.MONTH, description="The unit of the duration. Default is 'month'."
+    )
 
     @model_validator(mode="after")
     def check(self) -> "MembershipBase":
@@ -553,15 +553,22 @@ class MembershipBase(BaseModel):
 
 
 class MembershipCreate(MembershipBase):
-    status: m_club.MembershipStatusPublic = Field(m_club.MembershipStatusPublic.DRAFT, description="The status of the membership. Default is 'draft'.")
+    status: m_club.MembershipStatusPublic = Field(
+        m_club.MembershipStatusPublic.DRAFT, description="The status of the membership. Default is 'draft'."
+    )
+
 
 class Membership(MembershipBase):
     id: uuid.UUID = Field(..., description="The ID of the membership.")
     club_id: uuid.UUID = Field(..., description="The ID of the club to which the membership belongs.")
     status: m_club.MembershipStatus = Field(..., description="The status of the membership.")
 
+
 class MembershipDetails(Membership):
-    programs_access: List[MembershipProgramAccess] = Field(..., description="The IDs of the programs accessible with the membership.")
+    programs_access: List[MembershipProgramAccess] = Field(
+        ..., description="The IDs of the programs accessible with the membership."
+    )
+
 
 class MembershipUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=50, description="The new name of the membership.")
@@ -571,7 +578,6 @@ class MembershipUpdate(BaseModel):
     duration: Optional[int] = Field(None, gt=0, description="The new duration of the membership in days.")
     duration_unit: Optional[m_club.DurationUnit] = Field(None, description="The new unit of the duration.")
     status: Optional[m_club.MembershipStatusPublic] = Field(None, description="The new status of the membership.")
-
 
     @model_validator(mode="after")
     def check(self) -> "MembershipUpdate":
@@ -591,6 +597,3 @@ class MembershipUpdate(BaseModel):
             raise ValueError("Status cannot be set to 'draft'. Please use 'not_bookable' instead.")
 
         return self
-
-
-

@@ -106,7 +106,9 @@ async def create_program_v1(
         await handle_exception(e, ep_context, "Failed to create program")
 
 
-@router.put("/{program_id}", tags=["Club - Program"], response_model_exclude_none=True)
+@router.put(
+    "/{program_id}", response_model=s_club.ProgramDetails, tags=["Club - Program"], response_model_exclude_none=True
+)
 async def update_program_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
@@ -123,9 +125,20 @@ async def update_program_v1(
 
 
 @router.delete("/{program_id}", tags=["Club - Program"])
-async def delete_program_v1(club_id: uuid.UUID, program_id: uuid.UUID):
-    # TODO: Implement delete program
-    pass
+async def delete_program_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    force: Optional[bool] = Query(False, description="Force delete the program"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.DELETE_PROGRAMS])
+    ),
+):
+    try:
+        await club_controller.delete_program(ep_context, token_details, club_id, program_id, force)
+        return {"message": "Program deleted successfully."}
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to delete program")
 
 
 ###########################################################################

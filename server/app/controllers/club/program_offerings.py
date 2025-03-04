@@ -82,7 +82,7 @@ async def update_program(
     club_id: uuid.UUID,
     program_id: uuid.UUID,
     program_update: s_club.ProgramUpdate,
-) -> s_club.Program:
+) -> s_club.ProgramDetails:
     """Update a program
 
     :param ep_context: The endpoint context containing database and logger
@@ -118,7 +118,7 @@ async def update_program(
 
     audit_log.program_updated(issuer_id, program.club_id, program.id, details)
 
-    s_program = s_club.Program.model_validate(program)
+    s_program = s_club.ProgramDetails.model_validate(program)
 
     await db.commit()
     return s_program
@@ -129,6 +129,7 @@ async def delete_program(
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
     program_id: uuid.UUID,
+    force_delete: Optional[bool] = False,
 ) -> None:
     """Delete a program
 
@@ -146,6 +147,14 @@ async def delete_program(
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
+
+    if program.status != m_club.ProgramStatusPublic.ACTIVE:
+        await club_crud.delete_program(db, program)
+        audit_log.program_deleted(issuer_id, club_id, program_id)
+        await db.commit()
+        return
+    elif force_delete:
+        raise HTTPException(status_code=501, detail="Force delete not implemented yet. Please contact support.")
 
     # TODO: Check if program sessions are booked
     # * We need a param to force delete the program and cancel all bookings -> init refund process
@@ -311,39 +320,55 @@ async def delete_session(
     if not session_to_delete:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if len(session_to_delete.bookings) > 0 and session_to_delete.membership_required == False:
-        if session_to_delete.program.pricing_model == m_club.PriceType.PACKAGE:
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot delete a session that is not membership required and pricing model is package. Please delete the program instead",
-            )
-        elif session_to_delete.program.pricing_model == m_club.PriceType.PER_SESSION:
-            bookings = await club_crud.get_bookings_by_session_id(db, session_id)
-
-            # * This only works for per session pricing model
-            for booking in bookings:
-                refunds = await transactions_crud.create_refund(
-                    db, [booking], f"Club {club_id} cancelled session", is_user_refund=False, check_pricing_model=False
+    if len(session_to_delete.bookings) > 0:
+        if session_to_delete.membership_required == False:
+            if session_to_delete.program.pricing_model == m_club.PriceType.PACKAGE:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot delete a session that is not membership required and pricing model is package. Please delete the program instead",
                 )
-                refund_details = f"Club {club_id} cancelled session refund for booking: {booking.id}"
-                audit_log.refunds_created(
-                    issuer_id,
-                    booking.transaction_id,
-                    [refund.id for refund in refunds],
-                    refund_details,
-                    is_initiated_by_user=False,
+            elif session_to_delete.program.pricing_model == m_club.PriceType.PER_SESSION:
+
+                bookings = await club_crud.get_bookings_by_session_id(db, session_id)
+
+                # * This only works for per session pricing model
+                for booking in bookings:
+                    refunds = await transactions_crud.create_refund(
+                        db,
+                        [booking],
+                        f"Club {club_id} cancelled session",
+                        is_user_refund=False,
+                        check_pricing_model=False,
+                    )
+                    refund_details = f"Club {club_id} cancelled session refund for booking: {booking.id}"
+                    audit_log.refunds_created(
+                        issuer_id,
+                        booking.transaction_id,
+                        [refund.id for refund in refunds],
+                        refund_details,
+                        is_initiated_by_user=False,
+                    )
+
+                    booking.status = m_payment.BookingStatus.CANCELLED_BY_CLUB
+
+                details = f"Club {club_id} cancelled session with bookings: {', '.join([str(booking.id) for booking in bookings])}"
+                audit_log.bookings_cancelled(issuer_id, details)
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot delete a session that is not membership required and pricing model is "
+                    f"{session_to_delete.program.pricing_model}. Please try to delete the program instead",
                 )
-
-                booking.status = m_payment.BookingStatus.CANCELLED_BY_CLUB
-
-            details = f"Club {club_id} cancelled session with bookings: {', '.join([str(booking.id) for booking in bookings])}"
-            audit_log.bookings_cancelled(issuer_id, details)
-
         else:
-            raise HTTPException(status_code=400, detail="The handling of this program pricing model is not supported")
+            for booking in session_to_delete.bookings:
+                booking.status = m_payment.BookingStatus.CANCELLED_BY_CLUB
+            details = f"Club {club_id} cancelled session with bookings: {', '.join([str(booking.id) for booking in session_to_delete.bookings])}"
+            audit_log.bookings_cancelled(issuer_id, details)
+            await club_crud.delete_session(db, session_to_delete)
+    else:
+        await db.delete(session_to_delete)
 
     # TODO EMAIL - Notify users that have booked the session
-    await db.delete(session_to_delete)
     audit_log.session_deleted(issuer_id, club_id, session_id)
     await db.commit()
 
@@ -468,7 +493,7 @@ async def reinstate_session_occurrences(
         if occurrence.status == m_club.OccurrenceStatus.SCHEDULED:
             raise HTTPException(status_code=400, detail="Cannot reinstate a scheduled occurrence")
 
-        await club_crud.session_occurrence_reinstate(db, occurrence)
+        await club_crud.session_occurrence_reinstate(db, occurrence, occurrence_reinstate.note)
 
         details = f"Reinstated from {occurrence.status}"
         audit_log.occurrence_rescheduled(issuer_id, club_id, session_id, occurrence.id, details)

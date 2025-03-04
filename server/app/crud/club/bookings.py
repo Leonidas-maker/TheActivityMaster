@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, update
-from sqlalchemy.orm import undefer, joinedload
+from sqlalchemy.orm import undefer, joinedload, with_loader_criteria
 from typing import List, Tuple, Optional, Dict
 import uuid
 from rich.console import Console
@@ -18,7 +18,7 @@ async def create_bookings(
     db: AsyncSession,
     user_id: uuid.UUID,
     booking_creates: List[Tuple[m_club.Session, int, m_payment.BookingType]],
-     transaction_id: Optional[uuid.UUID] = None,
+    transaction_id: Optional[uuid.UUID] = None,
 ) -> Tuple[List[m_payment.Booking], str]:
     """Create bookings for a user
 
@@ -71,7 +71,7 @@ async def get_booking_by_id(db: AsyncSession, booking_id: uuid.UUID) -> m_paymen
 
 
 async def get_bookings_by_ids(
-    db: AsyncSession, booking_ids: List[uuid.UUID], with_ids: bool = False, additional_query_options = []
+    db: AsyncSession, booking_ids: List[uuid.UUID], with_ids: bool = False, additional_query_options=[]
 ) -> List[m_payment.Booking]:
     """Get bookings by their IDs
 
@@ -108,8 +108,12 @@ async def get_bookings_by_session_id(db: AsyncSession, session_id: uuid.UUID) ->
     bookings = await db.execute(select(m_payment.Booking).filter(m_payment.Booking.session_id == session_id))
     return list(bookings.unique().scalars().all())
 
+
 async def get_bookings_by_club_id(
-    db: AsyncSession, club_id: uuid.UUID, status: m_payment.BookingStatus = m_payment.BookingStatus.CONFIRMED, additional_filters = []
+    db: AsyncSession,
+    club_id: uuid.UUID,
+    status: m_payment.BookingStatus = m_payment.BookingStatus.CONFIRMED,
+    additional_filters=[],
 ) -> List[m_payment.Booking]:
     """Get bookings by club ID
 
@@ -119,7 +123,8 @@ async def get_bookings_by_club_id(
     :return: The bookings associated with the club
     """
     bookings = await db.execute(
-        select(m_payment.Booking).options(
+        select(m_payment.Booking)
+        .options(
             joinedload(m_payment.Booking.session).load_only(m_club.Session.program_id),
             joinedload(m_payment.Booking.session).joinedload(m_club.Session.program).load_only(m_club.Program.club_id),
             joinedload(m_payment.Booking.user).load_only(m_user.User.id, m_user.User.first_name, m_user.User.last_name),
@@ -131,10 +136,11 @@ async def get_bookings_by_club_id(
         .filter(
             m_club.Session.program.has(m_club.Program.club_id == club_id),
             m_payment.Booking.status == status,
-            and_(*additional_filters)
+            and_(*additional_filters),
         )
     )
     return list(bookings.unique().scalars().all())
+
 
 async def get_bookings_by_user_id(
     db: AsyncSession, user_id: uuid.UUID, stats: List[m_payment.BookingStatus] = []
@@ -184,6 +190,22 @@ async def get_bookings_by_user_id_and_id(
         .filter(m_payment.Booking.id == booking_id, m_payment.Booking.user_id == user_id)
     )
     return booking.unique().scalar()
+
+
+async def get_user_booked_sessions(db: AsyncSession, user_id: uuid.UUID):
+    query_options = [
+        joinedload(m_club.Program.categories),
+        undefer(m_club.Program.description),
+        joinedload(m_club.Program.sessions),
+         joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences),
+        with_loader_criteria(m_club.Session, lambda s: s.bookings.any(m_payment.Booking.user_id == user_id), include_aliases=True),
+    ]
+
+    res = await db.execute(
+        select(m_club.Program)
+        .options(*query_options)
+    )
+    return list(res.unique().scalars().all())
 
 
 async def has_user_booked(db: AsyncSession, user_id: uuid.UUID, session_ids: List[uuid.UUID]) -> bool:

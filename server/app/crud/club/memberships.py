@@ -466,6 +466,9 @@ async def create_membership_subscription(
     :param membership: The membership to subscribe to
     :return: The created membership subscription
     """
+    if membership.status in [m_club.MembershipStatus.DELETED, m_club.MembershipStatus.DRAFT]:
+        raise ValueError("Cannot create subscription for deleted or draft memberships")
+
     state = inspect(membership)
     if "club" in state.unloaded:
         await db.refresh(membership, attribute_names=["club"])
@@ -745,7 +748,7 @@ async def cancel_bookings_for_cancelled_membership_subscriptions(db: AsyncSessio
         audit_logger.sys_info(f"{total_cancelled} bookings cancelled for cancelled membership subscriptions")
         await db.commit()
         console.log(
-            f"[green][INFO][/green]\t\t{total_cancelled} bookings cancelled for cancelled membership subscriptions"
+            f"[blue][INFO][/blue]\t\t{total_cancelled} bookings cancelled for cancelled membership subscriptions"
         )
         return True
 

@@ -443,6 +443,7 @@ async def get_bookable_sessions(db: AsyncSession, session_ids: List[uuid.UUID]) 
         .filter(
             m_club.Program.status == m_club.ProgramStatus.ACTIVE,
             m_club.Program.pricing_model == m_club.PriceType.PER_SESSION,
+            m_club.Session.deleted_at.is_(None),
             m_club.Session.id.in_(session_ids),
             active_sessions_db_condition(),
             m_club.Session.capacity > bookings_count_subquery,
@@ -554,10 +555,13 @@ async def create_session(db: AsyncSession, program_id: uuid.UUID, session: s_clu
     )
 
     db.add(db_session)
-    occurrences, _ = refresh_occurrences_for_session(db_session)
-    db.add_all(occurrences)
+    if session.session_type == m_club.SessionType.COURSE:
+        occurrences, _ = refresh_occurrences_for_session(db_session)
+        db.add_all(occurrences)
+    
 
     await db.flush()
+    await db.refresh(db_session, ["occurrences"])
     return db_session
 
 
@@ -771,6 +775,16 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
     await db.flush()
     return details
 
+async def delete_session(db: AsyncSession, session: m_club.Session) -> None:
+    """Delete a session
+
+    :param db: The database session
+    :param session: The session to delete
+    """
+    session.deleted_at = datetime.datetime.now(tz=datetime.timezone.utc)
+    if session.session_type == m_club.SessionType.COURSE:
+        await clear_occurrences_for_session(db, session.id)
+    await db.flush()
 
 ###########################################################################
 ################################# Program #################################
@@ -916,6 +930,10 @@ async def get_program(
 
     if with_details:
         query_options.append(joinedload(m_club.Program.sessions))
+        query_options.append(joinedload(
+            m_club.Program.sessions, m_club.Session.address))
+        query_options.append(joinedload(
+            m_club.Program.sessions, m_club.Session.occurrences))
 
     if with_club:
         query_options.append(joinedload(m_club.Program.club))
@@ -1121,13 +1139,14 @@ async def update_program(
         # Reset all session prices to 0 if the pricing model is PACKAGE
         if program.pricing_model == m_club.PriceType.PACKAGE:
             for session in program.sessions:
-                session.price = 0
+                session.price = None
+                session.capacity = None
 
         # Reset program price and capacity if the pricing model is PER_SESSION
         if program_update.pricing_model == m_club.PriceType.PER_SESSION:
             program.price = None
             program.capacity = None
-
+        
     if program_update.session_data:
         if program.pricing_model == m_club.PriceType.PACKAGE:
             raise ValueError(
@@ -1189,6 +1208,16 @@ async def update_program(
     await db.flush()
     return details
 
+async def delete_program(db: AsyncSession, program: m_club.Program) -> None:
+    """Delete a program
+
+    :param db: The database session
+    :param program: The program to delete
+    """
+    program.status = m_club.ProgramStatus.DELETED
+    program.deleted_at = datetime.datetime.now(tz=datetime.timezone.utc)
+    db.add(program)
+    await db.flush()
 
 ###########################################################################
 ################################# Sonstiges ###############################
@@ -1219,16 +1248,6 @@ async def update_session_occurrences(db: AsyncSession, console: Console) -> bool
     audit_logger.sys_info("Updating session occurrences")
 
     try:
-        weekday_mapping = {
-            m_club.Weekday.MONDAY.value: 0,
-            m_club.Weekday.TUESDAY.value: 1,
-            m_club.Weekday.WEDNESDAY.value: 2,
-            m_club.Weekday.THURSDAY.value: 3,
-            m_club.Weekday.FRIDAY.value: 4,
-            m_club.Weekday.SATURDAY.value: 5,
-            m_club.Weekday.SUNDAY.value: 6,
-        }
-
         # Get all sessions with recurring sessions
         res = await db.execute(
             select(m_club.Session)
@@ -1237,6 +1256,7 @@ async def update_session_occurrences(db: AsyncSession, console: Console) -> bool
                 m_club.Session.session_type == m_club.SessionType.COURSE,
                 m_club.Session.start_date.isnot(None),
                 m_club.Session.end_date.isnot(None),
+                m_club.Session.deleted_at.is_(None),
             )
         )
 

@@ -96,7 +96,7 @@ async def add_employee_v1(
         await handle_exception(e, ep_context, "Failed to add employee")
 
 
-@router.put("", tags=["Club - Employee"])
+@router.put("", tags=["Club - Employee"], response_model=s_generic.MessageResponse)
 async def update_employee_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     role_change: s_club.UserClubRoleChange = Body(..., description="The role change data"),

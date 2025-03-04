@@ -134,6 +134,18 @@ async def get_my_clubs_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user clubs")
 
+@router.get("/me/sessions", tags=["User"], response_model=List[s_club.ProgramDetails], response_model_exclude_none=True)
+async def get_my_sessions_v1(
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    try:
+        user_id = token_details.user_id
+        sessions = await club_crud.get_user_booked_sessions(ep_context.db, user_id)
+        return [s_club.ProgramDetails.model_validate(session) for session in sessions]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user sessions")
+
 
 @router.get("/me/memberships", tags=["User"])
 async def get_my_memberships_v1():

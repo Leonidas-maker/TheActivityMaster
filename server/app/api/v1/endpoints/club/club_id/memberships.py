@@ -179,8 +179,6 @@ async def delete_membership_access_v1(
 # ###########################################################################
 # ############################## Subscriptions ##############################
 # ###########################################################################
-
-
 @router.post("/{membership_id}/buy", response_model=s_payment.MemberShipsubscriptionResponse, tags=["Club - Membership"])
 async def buy_membership_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership belongs"),

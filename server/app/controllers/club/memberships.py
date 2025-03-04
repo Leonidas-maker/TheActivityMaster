@@ -246,7 +246,7 @@ async def update_membership_access(
     # Retrieve the membership access
     access = await club_crud.get_membership_access(db, club_id, membership_id, program_id)
 
-    if access is None:
+    if not access:
         raise HTTPException(status_code=404, detail="Membership access not found")
 
     # Update the membership access
@@ -312,9 +312,12 @@ async def buy_membership(
 
     if not membership:
         raise HTTPException(status_code=404, detail="Membership not found")
+    
+    if membership.status != m_club.MembershipStatusPublic.BOOKABLE:
+        raise HTTPException(status_code=404, detail="Membership not found")
 
     user = await user_crud.get_user_by_id(db, token_details.user_id)
-    if user is None:
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     try:

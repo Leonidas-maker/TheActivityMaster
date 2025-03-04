@@ -7,10 +7,19 @@ from fastapi.testclient import TestClient
 from pathlib import Path
 import pyotp
 import time
-from typing import Optional
+from typing import Optional, List, Tuple
 import os
+import random
+import warnings
+from abc import abstractmethod
+
+from config.permissions import DEFAULT_CLUB_ROLES, ClubPermissions  # type: ignore
+from .enums import PriceType, SessionType, ProgramStatusPublic, Weekday, OccurrenceStatus
 
 
+###########################################################################
+################################### User ##################################
+###########################################################################
 class TestUser:
     __test__ = False
 
@@ -320,3 +329,1005 @@ class AdminUser(TestUser):
                 json={"identity_verification_id": identity_verification_id, "reason": "YourMomStinks"},
             )
             assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+###########################################################################
+################################### Club ##################################
+###########################################################################
+class Club:
+    def __init__(self, user: TestUser):
+        self.user = user
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") + os.urandom(4).hex()
+
+        self.name = f"Test Club {timestamp} {os.urandom(4).hex()}"
+        self.description = f"Test Club {timestamp} Description"
+        self.address = {
+            "street": "123 Test St",
+            "city": "Test City",
+            "state": "TS",
+            "postal_code": "12345",
+            "country": "Germany",
+        }
+
+        self.club_id = None
+        self.employees: List[Employee] = []
+        self.roles: List[ClubRole] = []
+        self.programs: List[Program] = []
+
+    def create(self, check_default_roles=False, check: bool = True):
+        response = self.user.post(
+            "/api/v1/clubs",
+            json={"name": self.name, "description": self.description, "address": self.address},
+        )
+        if check:
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["address"] == self.address
+
+        self.club_id = response.json()["id"]
+
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        if check_default_roles:
+            self.check_default_roles()
+
+    def get(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club_id}",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        assert response.json()["id"] == self.club_id, "Club ID mismatch"
+        return response.json()
+
+    def update(self, name: Optional[str] = None, description: Optional[str] = None):
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") + os.urandom(4).hex()
+        if not name:
+            name = f"Updated Club {timestamp}"
+        if not description:
+            description = f"Updated Club {timestamp} Description"
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.club_id}",
+            json={"name": name, "description": description},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        assert response.json()["id"] == self.club_id
+        assert response.json()["name"] == name
+        assert response.json()["description"] == description
+
+        self.name = name
+        self.description = description
+
+    def delete(self):
+        response = self.user.delete(
+            f"/api/v1/clubs/{self.club_id}",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        self.club_id = None
+
+    # ======================================================== #
+    # ========================= Roles ======================== #
+    # ======================================================== #
+    def check_default_roles(self):
+        self.refresh_roles()
+        role_dict = {role.name: role for role in self.roles}
+        for role_name, role_data in DEFAULT_CLUB_ROLES.items():
+            role = role_dict.get(role_name)
+            assert role, f"Default Role {role_name} not found"
+            assert role_data["level"] == role.level, f"Default Role {role_name} level mismatch"
+            assert role_data["description"] == role.description, f"Default Role {role_name} description mismatch"
+            for permission in role_data["permissions"]:
+                if "*" in permission:
+                    permission_start = permission.split("*")[0]
+                    needed_permissions = [p.value for p in ClubPermissions if p.value.startswith(permission_start)]
+                    for needed_permission in needed_permissions:
+                        assert (
+                            needed_permission in role.permissions
+                        ), f"Default Role {role_name} permissions mismatch {needed_permission}"
+                else:
+                    assert permission in role.permissions, f"Default Role {role_name} permissions mismatch {permission}"
+
+            # assert all(
+            # permission in role.permissions for permission in role_data["permissions"]
+            # ), f"Default Role {role_name} permissions mismatch"
+
+    def refresh_roles(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club_id}/roles/all",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        self.roles.clear()
+        for role in response.json():
+            permission_names = [permission["name"] for permission in role["permissions"]]
+            role_obj = ClubRole(self, role["name"], permission_names, role["level"], role["description"])
+            role_obj.role_id = role["id"]
+            self.roles.append(role_obj)
+
+    # ======================================================== #
+    # ======================= Employees ====================== #
+    # ======================================================== #
+    def refresh_employees(self, users: Optional[List[TestUser]] = None):
+        self.refresh_roles()
+        role_dict = {role.name: role for role in self.roles}
+        user_dict = {user.email: user for user in users} if users else {}
+
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club_id}/employees/all",
+        )
+        self.employees.clear()
+        for role_name, employees in response.json().items():
+            role = role_dict.get(role_name)
+            assert role, f"Role with name {role_name} not found"
+            for employee in employees:
+                employee_obj = Employee(employee["email"], self, role, user_dict.get(employee["email"]))
+                self.employees.append(employee_obj)
+
+    # ======================================================== #
+    # =================== Program Offerings ================== #
+    # ======================================================== #
+    def refresh_programs(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club_id}/programs",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        self.programs.clear()
+        for program in response.json():
+            program_obj = Program(
+                self,
+                program["name"],
+                program["description"],
+                PriceType(program["pricing_model"]),
+                program.get("price"),
+                program.get("capacity"),
+                session_count=len(program["sessions"]),
+            )
+            program_obj.programm_id = program["id"]
+            self.programs.append(program_obj)
+
+
+class ClubRole:
+    def __init__(self, club: Club, name: str, permissions: List[str], level: int, description: Optional[str] = None):
+        self.user = club.user
+        self.club = club
+
+        self.name = name
+        self.description = description if description else f"{name} Description"
+        self.permissions = permissions
+        self.level = level
+        self.role_id = None
+
+    def create(self, check_status=True):
+        response = self.user.post(
+            f"/api/v1/clubs/{self.club.club_id}/roles",
+            json={
+                "name": self.name,
+                "description": self.description,
+                "permissions": self.permissions,
+                "level": self.level,
+            },
+        )
+        if check_status:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert all(
+                permission["name"] in self.permissions for permission in response.json()["permissions"]
+            ), "Permissions not found"
+            assert response.json()["level"] == self.level
+            self.role_id = response.json()["id"]
+
+        return response
+
+    def get(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/roles/{self.role_id}",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        assert response.json()["id"] == self.role_id
+
+        return response
+
+    def update(
+        self,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        permissions: Optional[List[str]] = None,
+        level: Optional[int] = None,
+        check=True,
+    ):
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") + os.urandom(4).hex()
+        if not any([name, description, permissions, level]):
+            if not name:
+                name = f"Updated Role {timestamp}"
+            if not description:
+                description = f"Updated Role {timestamp} Description"
+            if not permissions:
+                permissions = random.sample(self.permissions, 2)
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.club.club_id}/roles/{self.role_id}",
+            json={"name": name, "description": description, "permissions": permissions},
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["id"] == self.role_id
+            assert response.json()["name"] == name
+            assert response.json()["description"] == description
+            assert all(
+                permission["name"] in permissions for permission in response.json()["permissions"]
+            ), "Permissions not found"
+            self.name = response.json()["name"]
+            self.description = response.json()["description"]
+            self.permissions = [permission["name"] for permission in response.json()["permissions"]]
+            self.level = response.json()["level"]
+        return response
+
+    def delete(self, check_deletion=True):
+        response = self.user.delete(
+            f"/api/v1/clubs/{self.club.club_id}/roles/{self.role_id}",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+        if check_deletion:
+            response = self.user.get(
+                f"/api/v1/roles/{self.role_id}",
+                check_status=False,
+            )
+            assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
+        self.role_id = None
+
+    def override_user(self, user: TestUser):
+        self.user = user
+
+    def assign_role(self, user_ident: str, user: Optional[TestUser] = None):
+        if not user:
+            user = self.user
+
+        response = user.post(
+            f"/api/v1/clubs/{self.club.club_id}/employees",
+            json={"user_ident": user_ident, "level": self.level},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+    def unassign_role(self, user_ident: str, user: Optional[TestUser] = None):
+        if not user:
+            user = self.user
+
+        response = user.delete(
+            f"/api/v1/clubs/{self.club.club_id}/employees/{user_ident}",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+class Employee:
+    def __init__(self, employee_ident: str, club: Club, role: ClubRole, employee: Optional[TestUser] = None):
+        self.issuer = club.user
+        self.employee = employee
+        self.club = club
+        self.role = role
+
+        self.ident = employee_ident
+        if employee:
+            self.employee_id = employee.user_id
+        else:
+            self.employee_id = None
+
+    def create(self, check: bool = True):
+        response = self.issuer.post(
+            f"/api/v1/clubs/{self.club.club_id}/employees",
+            json={"user_ident": self.ident, "level": self.role.level},
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+
+    def get(self, check: bool = True):
+        if not self.employee_id:
+            raise Exception("Employee ID not set")
+
+        response = self.issuer.get(
+            f"/api/v1/clubs/{self.club.club_id}/employees",
+            params={"user_id": self.employee_id},
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["id"] == self.employee_id
+        return response
+
+    def update(self, role: ClubRole, check: bool = True):
+        if not self.employee_id:
+            raise Exception("Employee ID not set")
+
+        response = self.issuer.put(
+            f"/api/v1/clubs/{self.club.club_id}/employees",
+            json={"user_id": self.employee_id, "level": role.level},
+            check_status=False,
+        )
+        if check:
+            response = self.get(check=False)
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["role_level"] == role.level
+
+            self.role = role
+        return response
+
+    def delete(self, check_deletion: bool = True):
+        if not self.employee_id:
+            raise Exception("Employee ID not set")
+
+        response = self.issuer.delete(
+            f"/api/v1/clubs/{self.club.club_id}/employees",
+            params={"user_id": self.employee_id},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        if check_deletion:
+            response = self.get(check=False)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
+
+        self.employee_id = None
+
+
+class Program:
+    def __init__(
+        self,
+        club: Club,
+        name: str,
+        description: str,
+        price_model: PriceType,
+        price: Optional[int] = None,
+        capacity: Optional[int] = None,
+        session_count: Optional[int] = None,
+        currency: str = "EUR",
+    ):
+        self.user = club.user
+        self.club = club
+
+        self.name = name
+        self.description = description
+        self.price_model = price_model
+
+        if price_model == PriceType.PACKAGE and (not price or not capacity):
+            warnings.warn("Price and capacity required for package programm")
+        elif price_model == PriceType.PER_SESSION and (price or capacity):
+            warnings.warn("Setting price or capacity should be None for per session programm")
+
+        self.price = price
+        self.currency = currency
+        self.capacity = capacity
+
+        self.session_events: List[SessionEvent] = []
+        self.session_courses: List[SessionCourse] = []
+        if session_count:
+            self.session_events = get_random_session_events(self, session_count // 2)
+            self.session_courses = get_random_session_courses(self, session_count // 2 + session_count % 2)
+
+        self.programm_id = None
+
+    def create(self, check=True):
+        if not self.club.club_id:
+            raise Exception("Club ID not set")
+        sessions = [events.to_dict() for events in self.session_events] + [
+            courses.to_dict() for courses in self.session_courses
+        ]
+
+        response = self.user.post(
+            f"/api/v1/clubs/{self.club.club_id}/programs",
+            json={
+                "name": self.name,
+                "description": self.description,
+                "pricing_model": self.price_model.value,
+                "price": self.price,
+                "currency": self.currency,
+                "capacity": self.capacity,
+                "sessions": sessions,
+            },
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["pricing_model"] == self.price_model.value
+            assert response.json().get("price") == self.price
+            assert response.json()["currency"] == self.currency
+            assert response.json().get("capacity") == self.capacity
+            self.programm_id = response.json()["id"]
+            self.check_sessions()
+
+        self.club.programs.append(self)
+
+    def get(self, check=True):
+        if not self.programm_id:
+            raise Exception("Program ID not set")
+
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["id"] == self.programm_id
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["pricing_model"] == self.price_model.value
+            assert response.json().get("price") == self.price
+            assert response.json()["currency"] == self.currency
+            assert response.json().get("capacity") == self.capacity
+            self.check_sessions(response.json()["sessions"])
+        return response
+
+    def update(self, check=True):
+        if not self.programm_id:
+            raise Exception("Program ID not set")
+        new_name = f"Updated {self.name}"
+        new_description = f"Updated {self.description}"
+        session_data = {}
+
+        if self.price_model == PriceType.PACKAGE:
+
+            for session in self.session_events + self.session_courses:
+                if not session.session_id:
+                    raise Exception("Session ID not set")
+
+                new_price = random.randint(0, 100)
+                new_capacity = random.randint(1, 100)
+                session_data[session.session_id] = (new_price, new_capacity)
+                session.price = new_price
+                session.capacity = new_capacity
+
+            new_pricing_model = PriceType.PER_SESSION
+
+            new_price = None
+            new_capacity = None
+            new_currency = "USD"
+        else:
+            for session in self.session_events + self.session_courses:
+                session.price = None
+                session.capacity = None
+
+            new_pricing_model = PriceType.PACKAGE
+            new_price = random.randint(0, 100)
+            new_capacity = random.randint(1, 100)
+            new_currency = "EUR"
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+            json={
+                "name": new_name,
+                "description": new_description,
+                "pricing_model": new_pricing_model.value,
+                "price": new_price,
+                "currency": new_currency,
+                "capacity": new_capacity,
+                "session_data": session_data if self.price_model == PriceType.PACKAGE else None,
+            },
+            check_status=False,
+        )
+
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["id"] == self.programm_id
+            assert response.json()["name"] == new_name
+            assert response.json()["description"] == new_description
+            assert response.json()["pricing_model"] == new_pricing_model.value
+            assert response.json().get("price") == new_price
+            assert response.json()["currency"] == new_currency
+            assert response.json().get("capacity") == new_capacity
+            self.name = new_name
+            self.description = new_description
+            self.price_model = new_pricing_model
+            self.price = new_price
+            self.currency = new_currency
+            self.capacity = new_capacity
+            self.check_sessions()
+
+    def update_status(self, program_status: ProgramStatusPublic, check=True):
+        if not self.programm_id:
+            raise Exception("Program ID not set")
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}/status",
+            json={"status": program_status.value},
+            check_status=False,
+        )
+
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["status"] == program_status.value
+
+    def delete(self, force_delete=False, check_deletion=True):
+        if not self.programm_id:
+            raise Exception("Program ID not set")
+
+        response = self.user.delete(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+            params={"force": force_delete},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+        if check_deletion:
+            response = self.user.get(
+                f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+                check_status=False,
+            )
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["status"] == "deleted"
+        self.programm_id = None
+
+    # ======================================================== #
+    # ======================= Sessions ======================= #
+    # ======================================================== #
+    def get_sessions(self) -> List[dict]:
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}/sessions",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        return response.json()
+
+    def check_sessions(self, sessions_to_check: Optional[List[dict]] = None):
+        if not sessions_to_check:
+            sessions_to_check = self.get_sessions()
+        assert len(sessions_to_check) == len(self.session_events) + len(self.session_courses)
+
+        for res_session in sessions_to_check:
+            session = None
+            if res_session["session_type"] == SessionType.EVENT.value:
+                for event in self.session_events:
+                    if event.start_datetime == datetime.datetime.strptime(
+                        res_session["start_datetime"], "%Y-%m-%dT%H:%M:%S"
+                    ) and event.end_datetime == datetime.datetime.strptime(
+                        res_session["end_datetime"], "%Y-%m-%dT%H:%M:%S"
+                    ):
+                        session = event
+                        break
+            else:
+                for course in self.session_courses:
+                    if (
+                        course.start_date == datetime.datetime.strptime(res_session["start_date"], "%Y-%m-%d").date()
+                        and course.end_date == datetime.datetime.strptime(res_session["end_date"], "%Y-%m-%d").date()
+                        and course.start_time
+                        == datetime.datetime.strptime(res_session["start_time"], "%H:%M:%S").time()
+                        and course.end_time == datetime.datetime.strptime(res_session["end_time"], "%H:%M:%S").time()
+                        and course.day_of_week.value == res_session["day_of_week"]
+                    ):
+                        session = course
+                        break
+
+            assert session, "Session not found"
+
+            assert res_session.get("price") == session.price
+            assert res_session.get("capacity") == session.capacity
+            assert res_session.get("address") == session.address
+            session.session_id = res_session["id"]
+
+    def refresh_sessions(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}/sessions",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        self.session_events.clear()
+        self.session_courses.clear()
+        for session in response.json():
+            if session["session_type"] == SessionType.EVENT.value:
+                session_obj = SessionEvent(
+                    self,
+                    datetime.datetime.strptime(session["start_datetime"], "%Y-%m-%dT%H:%M:%S"),
+                    datetime.datetime.strptime(session["end_datetime"], "%Y-%m-%dT%H:%M:%S"),
+                    address=session["address"],
+                    price=session["price"],
+                    capacity=session["capacity"],
+                )
+                session_obj.session_id = session["id"]
+                self.session_events.append(session_obj)
+            else:
+                session_obj = SessionCourse(
+                    self,
+                    Weekday(session["day_of_week"]),
+                    datetime.datetime.strptime(session["start_time"], "%H:%M:%S").time(),
+                    datetime.datetime.strptime(session["end_time"], "%H:%M:%S").time(),
+                    datetime.datetime.strptime(session["start_date"], "%Y-%m-%d").date(),
+                    datetime.datetime.strptime(session["end_date"], "%Y-%m-%d").date(),
+                    address=session["address"],
+                    price=session["price"],
+                    capacity=session["capacity"],
+                )
+                session_obj.session_id = session["id"]
+                self.session_courses.append(session_obj)
+
+
+class Session:
+    def __init__(self, program: Program):
+        self.user = program.club.user
+        self.program = program
+        self.session_id = None
+        self.price = None
+        self.capacity = None
+        self.address = None
+
+    @abstractmethod
+    def randomize(self):
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
+
+    def create(self, check=True):
+        if not self.program.programm_id:
+            raise Exception("Program ID not set")
+
+        response = self.user.post(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions",
+            json=self.to_dict(),
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+        self.session_id = response.json()["id"]
+
+    def get(self, check=True) -> bool:
+        if not self.session_id:
+            raise Exception("Session ID not set")
+
+        response = self.user.get(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions",
+            check_status=False,
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        session_found = False
+        for session in response.json():
+            if session["id"] == self.session_id:
+                assert session.get("price") == self.price
+                assert session.get("capacity") == self.capacity
+                assert session.get("address") == self.address
+                session_found = True
+                break
+        if check:
+            assert session_found, "Session not found"
+        return session_found
+
+    def update(self, check=True):
+        if not self.session_id:
+            raise Exception("Session ID not set")
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}",
+            json=self.to_dict(),
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+        return response
+
+    def delete(self, check_deletion=True):
+        if not self.session_id:
+            raise Exception("Session ID not set")
+
+        response = self.user.delete(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+        if check_deletion:
+            session_found = self.get(check=False)
+            assert session_found is False, "Session not deleted"
+        self.session_id = None
+
+
+def random_times() -> Tuple[datetime.time, datetime.time]:
+    start_time = datetime.time(random.randint(0, 22), random.randint(0, 59))
+    end_time = datetime.time(random.randint(start_time.hour + 1, 23), random.randint(0, 59))
+    return start_time, end_time
+
+
+def random_dates() -> Tuple[datetime.date, datetime.date]:
+    start_date = datetime.date.today() + datetime.timedelta(days=random.randint(1, 30))
+    end_date = start_date + datetime.timedelta(days=random.randint(1, 30))
+    return start_date, end_date
+
+
+class SessionEvent(Session):
+    def __init__(
+        self,
+        program: Program,
+        start_datetime: datetime.datetime,
+        end_datetime: datetime.datetime,
+        address: Optional[dict] = None,
+        price: Optional[int] = None,
+        capacity: Optional[int] = None,
+    ):
+        super().__init__(program)
+
+        self.start_datetime = start_datetime
+        self.end_datetime = end_datetime
+        self.address = address
+
+        if program.price_model == PriceType.PACKAGE and (price or capacity):
+            warnings.warn("Setting price or capacity should be None for package programm")
+        elif program.price_model == PriceType.PER_SESSION and (not price or not capacity):
+            warnings.warn("Price and capacity required for per session programm")
+
+        self.price = price
+        self.capacity = capacity
+
+        self.session_id = None
+
+    def to_dict(self) -> dict:
+        return {
+            "start_datetime": self.start_datetime.isoformat(),
+            "end_datetime": self.end_datetime.isoformat(),
+            "session_type": SessionType.EVENT.value,
+            "address": self.address,
+            "price": self.price,
+            "capacity": self.capacity,
+        }
+
+    def randomize(self):
+        start_time, end_time = random_times()
+        start_date, end_date = random_dates()
+        self.start_datetime = datetime.datetime.combine(start_date, start_time)
+        self.end_datetime = datetime.datetime.combine(end_date, end_time)
+
+        if self.program.price_model == PriceType.PER_SESSION:
+            self.price = random.randint(100, 1000)
+            self.capacity = random.randint(1, 100)
+
+    def to_course(self) -> "SessionCourse":
+        start_date = self.start_datetime.date()
+        end_date = self.end_datetime.date()
+        start_time = self.start_datetime.time()
+        end_time = self.end_datetime.time()
+        weekday = random.choice(list(Weekday.__members__.values()))
+        return SessionCourse(
+            self.program,
+            day_of_week=weekday,
+            start_time=start_time,
+            end_time=end_time,
+            start_date=start_date,
+            end_date=end_date,
+            address=self.address,
+            price=self.price,
+            capacity=self.capacity,
+        )
+
+
+class SessionCourse(Session):
+    def __init__(
+        self,
+        program: Program,
+        day_of_week: Weekday,
+        start_time: datetime.time,
+        end_time: datetime.time,
+        start_date: datetime.date,
+        end_date: datetime.date,
+        address: Optional[dict] = None,
+        price: Optional[int] = None,
+        capacity: Optional[int] = None,
+    ):
+        super().__init__(program)
+
+        self.day_of_week = day_of_week
+        self.start_time = start_time
+        self.end_time = end_time
+        self.start_date = start_date
+        self.end_date = end_date
+        self.address = address
+
+        if program.price_model == PriceType.PACKAGE and (price or capacity):
+            warnings.warn("Setting price or capacity should be None for package programm")
+        elif program.price_model == PriceType.PER_SESSION and (not price or not capacity):
+            warnings.warn("Price and capacity required for per session programm")
+
+        self.price = price
+        self.capacity = capacity
+
+        self.session_id = None
+
+        self.occurences = {}
+
+    def to_dict(self) -> dict:
+        return {
+            "day_of_week": self.day_of_week.value,
+            "session_type": SessionType.COURSE.value,
+            "start_time": self.start_time.isoformat(),
+            "end_time": self.end_time.isoformat(),
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
+            "address": self.address,
+            "price": self.price,
+            "capacity": self.capacity,
+        }
+
+    def randomize(self):
+        start_time, end_time = random_times()
+        start_date, end_date = random_dates()
+        self.start_time = start_time
+        self.end_time = end_time
+        self.start_date = start_date
+        self.end_date = end_date
+        self.day_of_week = random.choice(list(Weekday))
+
+        if self.program.price_model == PriceType.PER_SESSION:
+            self.price = random.randint(100, 1000)
+            self.capacity = random.randint(1, 100)
+
+    def to_event(self) -> SessionEvent:
+        start_datetime = datetime.datetime.combine(self.start_date, self.start_time)
+        end_datetime = datetime.datetime.combine(self.end_date, self.end_time)
+        return SessionEvent(self.program, start_datetime, end_datetime, self.address, self.price, self.capacity)
+
+    def refresh_occurrences(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/",
+            check_status=False,
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+        for session in response.json():
+            if session["id"] == self.session_id:
+                self.occurences = {occ["id"]: occ for occ in session["occurrences"]}
+                return
+
+    def reschedule_occurrence(self, occurence_id: Optional[str] = None) -> str:
+        if not self.session_id:
+            raise Exception("Session ID not set")
+        if not occurence_id:
+            if len(self.occurences) == 0:
+                self.refresh_occurrences() 
+            occurence_id = random.choice(list(self.occurences.keys()))
+
+        new_day = datetime.datetime.now() + datetime.timedelta(days=random.randint(1, 5))
+        new_start_time, new_end_time = random_times()
+        new_start_date = datetime.datetime.combine(new_day.date(), new_start_time)
+        new_end_date = datetime.datetime.combine(new_day.date(), new_end_time)
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}/occurrences/reschedule",
+            json=[
+                {
+                    "occurrence_id": occurence_id,
+                    "note": "Rescheduled",
+                    "start_datetime": new_start_date.isoformat(),
+                    "end_datetime": new_end_date.isoformat(),
+                }
+            ],  # type: ignore
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+        self.refresh_occurrences()
+        occurence = self.occurences[occurence_id]
+        assert occurence["start_datetime"] == new_start_date.isoformat()
+        assert occurence["end_datetime"] == new_end_date.isoformat()
+        assert occurence["note"] == "Rescheduled", f"Note mismatch {occurence['note']}"
+        assert occurence["status"] == "rescheduled", f"Status mismatch {occurence['status']}"
+        return occurence_id
+
+    def cancel_occurrence(self, occurence_id: Optional[str] = None, check: bool = True) -> str:
+        if not self.session_id:
+            raise Exception("Session ID not set")
+        if not occurence_id:
+            if len(self.occurences) == 0:
+                self.refresh_occurrences() 
+            occurence_id = random.choice(list(self.occurences.keys()))
+
+        response = self.user.delete(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}/occurrences/{occurence_id}",
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            self.refresh_occurrences()
+            occurence = self.occurences[occurence_id]
+            assert occurence["status"] == "cancelled", f"Status mismatch {occurence['status']}"
+        return occurence_id
+
+    def reinstate_occurrence(self, occurence_id: Optional[str] = None) -> str:
+        if not self.session_id:
+            raise Exception("Session ID not set")            
+        if not occurence_id:
+            if len(self.occurences) == 0:
+                self.refresh_occurrences() 
+            occurence_id = random.choice(list(self.occurences.keys()))
+
+        response = self.user.put(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}/occurrences/reinstate",
+            json=[
+                {
+                    "occurrence_id": occurence_id,
+                    "note": "Reinstated",
+                }
+            ],  # type: ignore
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+
+        self.refresh_occurrences()
+        occurence = self.occurences[occurence_id]
+        assert occurence["note"] == "Reinstated", f"Note mismatch {occurence['note']}"
+        assert occurence["status"] == "scheduled", f"Status mismatch {occurence['status']}"
+        return occurence_id
+
+
+def get_random_session_events(program: Program, count: int = 1) -> List[SessionEvent]:
+    sessions = []
+    for _ in range(count):
+        start_time, end_time = random_times()
+        date, _ = random_dates()
+
+        price = None
+        capacity = None
+
+        if program.price_model == PriceType.PER_SESSION:
+            price = random.randint(100, 1000)
+            capacity = random.randint(1, 100)
+
+        session = SessionEvent(
+            program,
+            start_datetime=datetime.datetime.combine(date, start_time),
+            end_datetime=datetime.datetime.combine(date, end_time),
+            price=price,
+            capacity=capacity,
+        )
+        sessions.append(session)
+    return sessions
+
+
+def get_random_session_courses(program: Program, count: int = 1) -> List[SessionCourse]:
+    sessions = []
+    for _ in range(count):
+        start_time, end_time = random_times()
+        start_date, end_date = random_dates()
+        price = None
+        capacity = None
+
+        if program.price_model == PriceType.PER_SESSION:
+            price = random.randint(100, 1000)
+            capacity = random.randint(1, 100)
+
+        session = SessionCourse(
+            program,
+            day_of_week=random.choice(list(Weekday)),
+            start_time=start_time,
+            end_time=end_time,
+            start_date=start_date,
+            end_date=end_date,
+            price=price,
+            capacity=capacity,
+        )
+        sessions.append(session)
+    return sessions
+
+
+def get_random_programs(club: Club, count: int = 2, max_sessions: Optional[int] = None) -> List[Program]:
+    programs = []
+    count_package = random.randint(1, count - 1) if count > 1 else 1
+    count_per_session = count - count_package
+
+    for _ in range(count):
+        name = f"Test Program {datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')} {os.urandom(4).hex()}"
+        description = f"Test Program {datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')} Description"
+
+        if count_package > 0:
+            price_model = PriceType.PACKAGE
+            count_package -= 1
+        else:
+            price_model = PriceType.PER_SESSION
+            count_per_session -= 1
+        price = None
+        capacity = None
+
+        if price_model == PriceType.PACKAGE:
+            price = random.randint(100, 1000)
+            capacity = random.randint(1, 100)
+
+        program = Program(
+            club,
+            name,
+            description,
+            price_model,
+            price,
+            capacity,
+            random.randint(4, max_sessions) if max_sessions else None,
+        )
+        programs.append(program)
+    return programs

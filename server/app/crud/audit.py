@@ -858,6 +858,19 @@ class AuditLogger:
             details=f"Updated program {program_id} in club {club_id}: {details}",
         )
 
+    def program_deleted(self, user_id: uuid.UUID, club_id: uuid.UUID, program_id: uuid.UUID):
+        """Log a program deletion action.
+
+        :param user_id: The user ID deleting the program
+        :param program_id: The ID of the deleted program
+        """
+        self.log_to_audit(
+            user_id,
+            action="Program Deleted",
+            category=AuditLogCategories.CLUB,
+            details=f"Deleted program {program_id} in club {club_id}",
+        )
+
     # ======================================================== #
     # ======================== Session ======================= #
     # ======================================================== #

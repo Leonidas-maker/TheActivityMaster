@@ -34,7 +34,7 @@ class ClubRole(BaseModel):
 
 class ClubRoleUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=50)
-    level: int = Field(..., gt=0, le=10)
+    level: Optional[int] = Field(None, gt=0, le=10)
     description: Optional[str] = Field(None, max_length=255)
     permissions: Optional[List[ClubPermissions]] = None
 
@@ -43,7 +43,8 @@ class ClubRoleUpdate(BaseModel):
         if (
             self.name is None and
             self.description is None and
-            self.permissions is None
+            self.permissions is None and
+            self.level is None
         ):
             raise ValueError(
                 "At least one of the fields 'name', 'description', or 'permissions' must be provided."

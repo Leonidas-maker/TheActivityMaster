@@ -318,6 +318,7 @@ class Session(Base):
         default=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
         onupdate=lambda: datetime.datetime.now(DEFAULT_TIMEZONE),
     )
+    deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     program: Mapped["Program"] = relationship("Program", back_populates="sessions")
     occurrences: Mapped[list["SessionOccurrence"]] = relationship(

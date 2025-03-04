@@ -3,11 +3,11 @@ from datetime import datetime
 import re
 from urllib.parse import urlencode
 from fastapi.testclient import TestClient
+import random   
 
-from .testclasses import TestUser, AdminUser
+from .testclasses import TestUser, AdminUser, Club
 
-from main import app
-
+from main import app # type: ignore
 
 @pytest.fixture(scope="module")
 def client():
@@ -15,19 +15,34 @@ def client():
         yield c
 
 
+# Create a test user
 @pytest.fixture(scope="module")
 def test_user(client):
     user = TestUser(client)
     yield user
     user.logout()
 
+# Create two test users
+@pytest.fixture(scope="module")
+def test_users(client):
+    user1 = TestUser(client)
+    user2 = TestUser(client)
+    yield [user1, user2]
+    user1.logout()
+    user2.logout()
 
+# Login as an admin user
 @pytest.fixture(scope="module")
 def admin_user(client):
     user = AdminUser(client)
     yield user
     user.logout()
 
+# Create a club
+@pytest.fixture(scope="module")
+def test_club(test_user):
+    club = Club(test_user)
+    yield club
 
 def get_verify_token(capsys):
     # Capture standard output
@@ -64,21 +79,8 @@ def get_security_token(capsys):
 
 timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
 
-
-# ======================================================== #
-# ========================= Club ========================= #
-# ======================================================== #
-pytest.club_data = {
-    "name": f"Test Club {timestamp}",
-    "description": "Test Description",
-    "address": {
-        "street": "123 Test St",
-        "city": "Test City",
-        "state": "TS",
-        "postal_code": "12345",
-        "country": "Germany",
-    },
-}
-pytest.club_id = None
-
-pytest.club_role_data = {"level": 5, "name": "Test Role", "description": "Test Description", "permissions": []}
+def get_random_role(club: Club):
+    role = random.choice(club.roles)
+    while role.level == 0:
+        role = random.choice(club.roles)
+    return role
