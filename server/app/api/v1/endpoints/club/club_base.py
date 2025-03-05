@@ -192,6 +192,26 @@ async def get_my_attended_sessions_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get user attended sessions")
 
+@router.get(
+    "/{club_id}/me",
+    response_model=s_role.ClubRole,
+    tags=["Club - Employee"],
+    response_model_exclude_none=True,
+)
+async def get_my_club_permissions_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+):
+    """Get the user's role in a club"""
+    try:
+        user_id = token_details.user_id
+        role = await club_crud.get_club_employee_by_id(ep_context.db, club_id, user_id, with_details=True)
+        if not role:
+            raise HTTPException(status_code=404, detail="You are not an employee of this club")
+        return s_role.ClubRole.model_validate(role.club_role)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user club permissions")
 
 ###########################################################################
 ################################# BOOKINGS ################################
@@ -368,24 +388,20 @@ async def get_program_sessions_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get program sessions")
 
-
-@router.get(
-    "/{club_id}/me",
-    response_model=s_role.ClubRole,
-    tags=["Club - Employee"],
-    response_model_exclude_none=True,
+@router.put(
+    "/{club_id}/stripe",
+    response_model=s_club.Club,
+    tags=["[Elevated] Club"],
 )
-async def get_my_club_permissions_v1(
+async def update_club_stripe_account_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
+    club_stripe_update: s_club.ClubStripeUpdate = Body(..., description="The Stripe account ID", validation_alias="stripe_account_id"),
+    token_details: core_security.TokenDetails = Depends(
+        auth_middleware.AccessTokenChecker(generic_roles=["admin"])
+    ),
 ):
-    """Get the user's role in a club"""
     try:
-        user_id = token_details.user_id
-        role = await club_crud.get_club_employee_by_id(ep_context.db, club_id, user_id, with_details=True)
-        if not role:
-            raise HTTPException(status_code=404, detail="You are not an employee of this club")
-        return s_role.ClubRole.model_validate(role.club_role)
+        return await club_controller.update_club_stripe_account(ep_context, token_details, club_id, club_stripe_update.stripe_account_id)
     except Exception as e:
-        await handle_exception(e, ep_context, "Failed to get user club permissions")
+        await handle_exception(e, ep_context, "Failed to update club stripe account")

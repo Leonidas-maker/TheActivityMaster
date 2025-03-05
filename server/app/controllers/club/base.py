@@ -106,6 +106,38 @@ async def update_club(
     return response
 
 
+async def update_club_stripe_account(
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    club_id: uuid.UUID,
+    stripe_account_id: Optional[str],
+) -> s_club.Club:
+    """Update a club's stripe account
+
+    :param ep_context: The endpoint context containing database and logger
+    :param club_id: The ID of the club to update
+    :param stripe_account_id: The stripe account id
+    :return: The updated club object
+    """
+    db = ep_context.db
+    audit_log = ep_context.audit_logger
+    user_id = token_details.user_id
+
+    club = await club_crud.get_club(db, club_id, with_details=True)
+
+    if not club:
+        raise HTTPException(status_code=404, detail="Club not found")
+
+    club.stripe_account_id = stripe_account_id
+    details = f"[Elevated] Sripe account id updated to {stripe_account_id}"
+
+    audit_log.club_updated(user_id, club_id, details)
+
+    response = s_club.Club.model_validate(club)
+    await db.commit()
+    return response
+
+
 async def delete_club(
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,

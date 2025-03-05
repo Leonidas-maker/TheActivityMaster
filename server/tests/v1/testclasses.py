@@ -481,7 +481,7 @@ class Club:
                 program.get("capacity"),
                 session_count=len(program["sessions"]),
             )
-            program_obj.programm_id = program["id"]
+            program_obj.program_id = program["id"]
             self.programs.append(program_obj)
 
 
@@ -620,6 +620,7 @@ class Employee:
         )
         if check:
             assert response.status_code == status.HTTP_200_OK, response.json()
+        self.club.employees.append(self)
 
     def get(self, check: bool = True):
         if not self.employee_id:
@@ -698,11 +699,13 @@ class Program:
 
         self.session_events: List[SessionEvent] = []
         self.session_courses: List[SessionCourse] = []
+        self.trainers = []
+
         if session_count:
             self.session_events = get_random_session_events(self, session_count // 2)
             self.session_courses = get_random_session_courses(self, session_count // 2 + session_count % 2)
 
-        self.programm_id = None
+        self.program_id = None
 
     def create(self, check=True):
         if not self.club.club_id:
@@ -732,22 +735,22 @@ class Program:
             assert response.json().get("price") == self.price
             assert response.json()["currency"] == self.currency
             assert response.json().get("capacity") == self.capacity
-            self.programm_id = response.json()["id"]
+            self.program_id = response.json()["id"]
             self.check_sessions()
 
         self.club.programs.append(self)
 
     def get(self, check=True):
-        if not self.programm_id:
+        if not self.get_id():
             raise Exception("Program ID not set")
 
         response = self.user.get(
-            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}",
             check_status=False,
         )
         if check:
             assert response.status_code == status.HTTP_200_OK, response.json()
-            assert response.json()["id"] == self.programm_id
+            assert response.json()["id"] == self.get_id()
             assert response.json()["name"] == self.name
             assert response.json()["description"] == self.description
             assert response.json()["pricing_model"] == self.price_model.value
@@ -756,10 +759,23 @@ class Program:
             assert response.json().get("capacity") == self.capacity
             self.check_sessions(response.json()["sessions"])
         return response
+    
+    def refresh_id(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/programs",
+        )
+        for program in response.json():
+            if program["name"] == self.name:
+                self.program_id = program["id"]
+                break 
+
+    def get_id(self):
+        if not self.program_id: 
+            self.refresh_id()
+        return self.program_id
+
 
     def update(self, check=True):
-        if not self.programm_id:
-            raise Exception("Program ID not set")
         new_name = f"Updated {self.name}"
         new_description = f"Updated {self.description}"
         session_data = {}
@@ -792,7 +808,7 @@ class Program:
             new_currency = "EUR"
 
         response = self.user.put(
-            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}",
             json={
                 "name": new_name,
                 "description": new_description,
@@ -807,7 +823,7 @@ class Program:
 
         if check:
             assert response.status_code == status.HTTP_200_OK, response.json()
-            assert response.json()["id"] == self.programm_id
+            assert response.json()["id"] == self.get_id()
             assert response.json()["name"] == new_name
             assert response.json()["description"] == new_description
             assert response.json()["pricing_model"] == new_pricing_model.value
@@ -823,11 +839,8 @@ class Program:
             self.check_sessions()
 
     def update_status(self, program_status: ProgramStatusPublic, check=True):
-        if not self.programm_id:
-            raise Exception("Program ID not set")
-
         response = self.user.put(
-            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}/status",
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}",
             json={"status": program_status.value},
             check_status=False,
         )
@@ -835,32 +848,30 @@ class Program:
         if check:
             assert response.status_code == status.HTTP_200_OK, response.json()
             assert response.json()["status"] == program_status.value
+        return response
 
     def delete(self, force_delete=False, check_deletion=True):
-        if not self.programm_id:
-            raise Exception("Program ID not set")
-
         response = self.user.delete(
-            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}",
             params={"force": force_delete},
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
 
         if check_deletion:
             response = self.user.get(
-                f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}",
+                f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}",
                 check_status=False,
             )
             assert response.status_code == status.HTTP_200_OK, response.json()
             assert response.json()["status"] == "deleted"
-        self.programm_id = None
+        self.program_id = None
 
     # ======================================================== #
     # ======================= Sessions ======================= #
     # ======================================================== #
     def get_sessions(self) -> List[dict]:
         response = self.user.get(
-            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}/sessions",
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}/sessions",
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
         return response.json()
@@ -903,7 +914,7 @@ class Program:
 
     def refresh_sessions(self):
         response = self.user.get(
-            f"/api/v1/clubs/{self.club.club_id}/programs/{self.programm_id}/sessions",
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}/sessions",
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
         self.session_events.clear()
@@ -935,6 +946,36 @@ class Program:
                 session_obj.session_id = session["id"]
                 self.session_courses.append(session_obj)
 
+    # ======================================================== #
+    # ======================== Trainer ======================= #
+    # ======================================================== #
+    def assign_trainer(self, user_id: str, check=True):
+        self.user.post(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}/trainers",
+            params={"user_id": user_id},
+        )
+        self.trainers.append(user_id)
+
+        if check:
+            trainers = self.get_trainers()
+            assert user_id in {trainer["id"] for trainer in trainers}
+
+    def unassign_trainer(self, user_id: str, check=True):
+        self.user.delete(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}/trainers/{user_id}",
+        )
+        self.trainers.remove(user_id)
+
+        if check:
+            trainers = self.get_trainers()
+            assert user_id not in {trainer["id"] for trainer in trainers}
+
+    def get_trainers(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}/trainers",
+        )
+        return response.json()
+
 
 class Session:
     def __init__(self, program: Program):
@@ -954,11 +995,8 @@ class Session:
         pass
 
     def create(self, check=True):
-        if not self.program.programm_id:
-            raise Exception("Program ID not set")
-
         response = self.user.post(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions",
             json=self.to_dict(),
             check_status=False,
         )
@@ -967,17 +1005,14 @@ class Session:
         self.session_id = response.json()["id"]
 
     def get(self, check=True) -> bool:
-        if not self.session_id:
-            raise Exception("Session ID not set")
-
         response = self.user.get(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions",
             check_status=False,
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
         session_found = False
         for session in response.json():
-            if session["id"] == self.session_id:
+            if session["id"] == self.get_id():
                 assert session.get("price") == self.price
                 assert session.get("capacity") == self.capacity
                 assert session.get("address") == self.address
@@ -986,13 +1021,24 @@ class Session:
         if check:
             assert session_found, "Session not found"
         return session_found
+    
+    def refresh_id(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions",
+        )
+        for session in response.json():
+            if session["price"] == self.price:
+                self.session_id = session["id"]
+                break
+    
+    def get_id(self):
+        if not self.session_id:
+            self.refresh_id()
+        return self.session_id
 
     def update(self, check=True):
-        if not self.session_id:
-            raise Exception("Session ID not set")
-
         response = self.user.put(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/{self.get_id()}",
             json=self.to_dict(),
             check_status=False,
         )
@@ -1001,11 +1047,8 @@ class Session:
         return response
 
     def delete(self, check_deletion=True):
-        if not self.session_id:
-            raise Exception("Session ID not set")
-
         response = self.user.delete(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/{self.get_id()}",
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
 
@@ -1013,7 +1056,6 @@ class Session:
             session_found = self.get(check=False)
             assert session_found is False, "Session not deleted"
         self.session_id = None
-
 
 def random_times() -> Tuple[datetime.time, datetime.time]:
     start_time = datetime.time(random.randint(0, 22), random.randint(0, 59))
@@ -1023,7 +1065,7 @@ def random_times() -> Tuple[datetime.time, datetime.time]:
 
 def random_dates() -> Tuple[datetime.date, datetime.date]:
     start_date = datetime.date.today() + datetime.timedelta(days=random.randint(1, 30))
-    end_date = start_date + datetime.timedelta(days=random.randint(1, 30))
+    end_date = start_date + datetime.timedelta(days=random.randint(8, 30))
     return start_date, end_date
 
 
@@ -1159,22 +1201,20 @@ class SessionCourse(Session):
 
     def refresh_occurrences(self):
         response = self.user.get(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/",
             check_status=False,
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
 
         for session in response.json():
-            if session["id"] == self.session_id:
+            if session["id"] == self.get_id():
                 self.occurences = {occ["id"]: occ for occ in session["occurrences"]}
                 return
 
     def reschedule_occurrence(self, occurence_id: Optional[str] = None) -> str:
-        if not self.session_id:
-            raise Exception("Session ID not set")
         if not occurence_id:
             if len(self.occurences) == 0:
-                self.refresh_occurrences() 
+                self.refresh_occurrences()
             occurence_id = random.choice(list(self.occurences.keys()))
 
         new_day = datetime.datetime.now() + datetime.timedelta(days=random.randint(1, 5))
@@ -1183,7 +1223,7 @@ class SessionCourse(Session):
         new_end_date = datetime.datetime.combine(new_day.date(), new_end_time)
 
         response = self.user.put(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}/occurrences/reschedule",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/{self.get_id()}/occurrences/reschedule",
             json=[
                 {
                     "occurrence_id": occurence_id,
@@ -1204,15 +1244,13 @@ class SessionCourse(Session):
         return occurence_id
 
     def cancel_occurrence(self, occurence_id: Optional[str] = None, check: bool = True) -> str:
-        if not self.session_id:
-            raise Exception("Session ID not set")
         if not occurence_id:
             if len(self.occurences) == 0:
-                self.refresh_occurrences() 
+                self.refresh_occurrences()
             occurence_id = random.choice(list(self.occurences.keys()))
 
         response = self.user.delete(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}/occurrences/{occurence_id}",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/{self.get_id()}/occurrences/{occurence_id}",
             check_status=False,
         )
         if check:
@@ -1223,15 +1261,13 @@ class SessionCourse(Session):
         return occurence_id
 
     def reinstate_occurrence(self, occurence_id: Optional[str] = None) -> str:
-        if not self.session_id:
-            raise Exception("Session ID not set")            
         if not occurence_id:
             if len(self.occurences) == 0:
-                self.refresh_occurrences() 
+                self.refresh_occurrences()
             occurence_id = random.choice(list(self.occurences.keys()))
 
         response = self.user.put(
-            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.programm_id}/sessions/{self.session_id}/occurrences/reinstate",
+            f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/{self.get_id()}/occurrences/reinstate",
             json=[
                 {
                     "occurrence_id": occurence_id,

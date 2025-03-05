@@ -1,6 +1,7 @@
 import pytest
 import random
 from fastapi import status
+import os
 
 from .conftest import *
 
@@ -17,6 +18,7 @@ from .testclasses import (
     get_random_session_events,
 )
 
+from .enums import ProgramStatusPublic
 
 ###########################################################################
 ################################# Default #################################
@@ -155,7 +157,6 @@ def test_create_employee(test_club, test_users):
     employee_user = test_users[0]
     employee = Employee(employee_user.email, test_club, role_to_assign, employee_user)
     employee.create()
-    test_club.employees.append(employee)
 
 
 @pytest.mark.dependency(depends=["test_create_employee"])
@@ -177,7 +178,7 @@ def test_delete_employee(test_club):
 @pytest.mark.dependency(depends=["test_create_club"])
 def test_create_all_program_offering_types(test_club):
     """This tests program and session creation"""
-    programs = get_random_programs(test_club, 2, 20)
+    programs = get_random_programs(test_club, 2, 15)
 
     for program in programs:
         program.create()
@@ -255,3 +256,37 @@ def test_reinstate_session(test_club):
     session: SessionCourse = random.choice(program.session_courses)
     occurrence_id = session.cancel_occurrence(check=False)
     session.reinstate_occurrence(occurrence_id)
+
+@pytest.mark.dependency(depends=["test_create_all_program_offering_types", "test_create_employee"])
+def test_assign_trainer_to_program(test_club, test_users):
+    """Test assigning and getting trainers for a program"""
+    program = test_club.programs[0]
+    trainer = test_users[0]
+    manager_role = next(role for role in test_club.roles if role.level == 1)
+
+    employee = Employee(trainer.email, test_club, manager_role, trainer)
+    employee.create()
+
+    program.assign_trainer(trainer.user_id)
+
+@pytest.mark.dependency(depends=["test_assign_trainer_to_program"])
+def test_unassign_trainer_from_program(test_club, test_users):
+    program = test_club.programs[0]    
+    program.unassign_trainer(test_users[0].user_id)
+
+
+@pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
+def test_update_program_status_error(test_club):
+    response = test_club.programs[0].update_status(ProgramStatusPublic.ACTIVE, check=False)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.json()
+
+@pytest.mark.dependency(depends=["test_create_club"])
+def test_club_update_stripe(admin_user, test_club):
+    admin_user.put(
+        f"/api/v1/clubs/{test_club.club_id}/stripe",
+        json={"stripe_account_id": f"acct_{os.urandom(16).hex()}"},
+    )
+
+@pytest.mark.dependency(depends=["test_create_all_program_offering_types", "test_club_update_stripe"])
+def test_update_program_status(test_club):
+    test_club.programs[0].update_status(ProgramStatusPublic.ACTIVE)

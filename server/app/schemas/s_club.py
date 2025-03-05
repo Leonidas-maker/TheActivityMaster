@@ -69,6 +69,10 @@ class ClubUpdate(BaseModel):
             raise ValueError("At least one of the fields 'name', 'description', or 'address' must be provided.")
         return self
 
+class ClubStripeUpdate(BaseModel):
+    stripe_account_id: Optional[str] = Field(None, max_length=50)
+
+   
 
 # ======================================================== #
 # ======================= Club Role ====================== #

@@ -128,7 +128,7 @@ class Club(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[Text] = mapped_column(Text(1000), nullable=False)
-    stripe_account_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
+    stripe_account_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     address_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=False)
