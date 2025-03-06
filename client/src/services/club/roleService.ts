@@ -34,7 +34,7 @@ export const getClubRoles = async (club_id: string | string[]) => {
   }
 };
 
-export const getClubRole = async (club_id: string, role_id: string) => {
+export const getClubRole = async (club_id: string | string[], role_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/roles/${role_id}`
@@ -47,13 +47,13 @@ export const getClubRole = async (club_id: string, role_id: string) => {
 };
 
 export const updateClubRole = async (
-  club_id: string,
-  role_id: string,
+  club_id: string | string[],
+  role_id: string | string[],
   role: ClubRole
 ) => {
   try {
     const requestBody = {
-      role,
+      ...role,
     };
 
     const response = await axiosInstance.put(
@@ -79,7 +79,7 @@ export const deleteClubRole = async (club_id: string | string[], role_id: string
   }
 };
 
-export const getClubRoleMembers = async (club_id: string, role_id: string) => {
+export const getClubRoleMembers = async (club_id: string | string[], role_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/roles/${role_id}/members`

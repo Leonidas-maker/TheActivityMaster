@@ -83,5 +83,16 @@
     "roleCreationErrorDescription": "Please try again later and check your input",
     "roleCreationErrorEmpty": "Input Error",
     "roleCreationErrorEmptyDescription": "Please fill out all fields and select permissions",
-    "manageRoles_navigator_title": "Manage Roles"
+    "manageRoles_navigator_title": "Manage Roles",
+    "edit_role_heading": "Edit Role",
+    "edit_role_btn": "Edit Role",
+    "role_members_subheading": "Role Members",
+    "roleDeletionAlertTitle": "Delete Role",
+    "roleDeletionAlertDescription": "Are you sure you want to delete this role?",
+    "roleManageError": "Error",
+    "roleManageErrorDescription": "Please try again later",
+    "roleManageEmptyError": "Input Error",
+    "roleManageEmptyErrorDescription": "Please fill out all fields and select permissions",
+    "roleManageInfo": "Nothing changed",
+    "roleManageInfoDescription": "Change one or more fields to update the role"
 }

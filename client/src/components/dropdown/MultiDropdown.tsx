@@ -8,16 +8,26 @@ import { MultiDropdownProps } from "@/src/interfaces/componentInterfaces";
 
 const MultiDropdown: React.FC<MultiDropdownProps> = ({
   setSelected,
-  values,
+  values = [],
   placeholder = "Select Permissions",
   notFound = "Please check your internet connection",
   useSections = true,
   searchPlaceholderText = "Search...",
   confirmButtonText = "Confirm",
+  initialSelected = [],
 }) => {
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  // Initialize internal state with initialSelected prop
+  const [selectedItems, setSelectedItems] = useState<string[]>(() => initialSelected);
+
   const colorScheme = useColorScheme();
   const isLight = colorScheme === "light";
+
+  // Only update state from initialSelected if there are any values in it
+  useEffect(() => {
+    if (initialSelected && initialSelected.length > 0 && JSON.stringify(initialSelected) !== JSON.stringify(selectedItems)) {
+      setSelectedItems(initialSelected);
+    }
+  }, [initialSelected]);
 
   const modalBgColor = isLight ? "#FFFFFF" : "#1C1C1E";
   const textColor = isLight ? "#000000" : "#FFFFFF";
@@ -110,6 +120,7 @@ const MultiDropdown: React.FC<MultiDropdownProps> = ({
     } as TextStyle,
   };
 
+  // Build items list based on whether sections are used
   const items = useSections
     ? [
         {
@@ -126,13 +137,14 @@ const MultiDropdown: React.FC<MultiDropdownProps> = ({
         name: item.value,
       }));
 
+  // Handle changes in selected items
   const onSelectedItemsChange = (selected: any[]) => {
     setSelectedItems(selected);
     setSelected(selected);
   };
 
   return (
-    <View className="w-3/4">
+    <View style={{ width: "75%" }}>
       <SectionedMultiSelect
         IconRenderer={Icon as any}
         items={items}

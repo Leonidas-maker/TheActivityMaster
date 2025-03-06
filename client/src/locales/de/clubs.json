@@ -79,5 +79,17 @@
     "roleCreationErrorDescription": "Bitte versuchen Sie es später erneut und überprüfen Sie Ihre Eingabe",
     "roleCreationErrorEmpty": "Eingabefehler",
     "roleCreationErrorEmptyDescription": "Bitte fülle alle Felder aus und wähle Berechtigungen",
-    "manageRoles_navigator_title": "Rollen verwalten"
+    "manageRoles_navigator_title": "Rollen verwalten",
+    "edit_role_heading": "Rolle bearbeiten",
+    "edit_role_btn": "Rolle bearbeiten",
+    "role_members_subheading": "Rollenmitglieder",
+    "roleDeletionAlertTitle": "Rolle löschen",
+    "roleDeletionAlertDescription": "Sind Sie sicher, dass Sie diese Rolle löschen möchten?",
+    "roleManageErrorDescription": "Bitte versuchen Sie es später erneut",
+    "roleManageError": "Fehler",
+    "roleManageEmptyError": "Eingabefehler",
+    "roleManageEmptyErrorDescription": "Bitte fülle alle Felder aus und wähle Berechtigungen",
+    "roleManageInfo": "Nichts geändert",
+    "roleManageInfoDescription": "Ändern Sie ein oder mehrere Felder, um die Rolle zu aktualisieren"
+    
 }

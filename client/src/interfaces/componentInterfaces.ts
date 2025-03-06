@@ -26,6 +26,12 @@ interface NavigatorProps {
   isExternalLink?: boolean[];
 }
 
+interface DefaultListProps {
+  title: string;
+  texts: string[];
+  iconNames: string[];
+}
+
 interface OptionSelectorProps {
   title: string;
   onPressFunctions: (() => void)[];
@@ -156,12 +162,14 @@ interface DropdownProps {
 
 interface MultiDropdownProps {
   setSelected: (value: string[]) => void;
-  values: { key: string; value: string }[];
+  values?: { key: string; value: string }[];
   placeholder?: string;
   notFound?: string;
   useSections?: boolean;
   searchPlaceholderText?: string;
   confirmButtonText?: string;
+  selectedItems?: string[];
+  initialSelected?: string[];
 }
 
 interface WeekSelectProps {
@@ -191,4 +199,5 @@ export {
   WeekSelectProps,
   TextButtonProps,
   MultiDropdownProps,
+  DefaultListProps,
 };
