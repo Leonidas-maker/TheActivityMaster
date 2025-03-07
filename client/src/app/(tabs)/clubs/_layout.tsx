@@ -135,7 +135,6 @@ export default function OverviewLayout() {
       <Stack.Screen
         name="(program)/ManageProgram"
         options={{
-          presentation: "modal",
           headerTitle: t("clubs_manage_program_header"),
         }}
       />
@@ -158,6 +157,13 @@ export default function OverviewLayout() {
         options={{
           presentation: "modal",
           headerTitle: t("clubs_info_role_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(program)/UpdateProgram"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_update_program_header"),
         }}
       />
     </Stack>

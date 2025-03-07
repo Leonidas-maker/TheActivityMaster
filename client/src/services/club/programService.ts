@@ -78,7 +78,7 @@ export const createProgram = async (
   }
 };
 
-export const getProgram = async (club_id: string, program_id: string) => {
+export const getProgram = async (club_id: string | string[], program_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/programs/${program_id}`
@@ -92,17 +92,17 @@ export const getProgram = async (club_id: string, program_id: string) => {
 };
 
 export const updateProgram = async (
-  club_id: string,
-  program_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
   name: string,
   description: string,
-  price: number,
+  price: number | null,
   currency: string,
-  pricing_model: "package" | "per_session",
-  capacity: number,
+  pricing_model: string,
+  capacity: number | null,
   membership_required: boolean,
-  status: "active" | "inactive" | "draft" | "force_deleted" | "deleted",
-  categories: string[]
+  categories: number[],
+  status?: string,
 ) => {
   try {
     const requestBody = {
@@ -113,8 +113,8 @@ export const updateProgram = async (
       pricing_model,
       capacity,
       membership_required,
-      status,
       categories,
+      ...(status ? { status } : {}),
     };
 
     const response = await axiosInstance.put(

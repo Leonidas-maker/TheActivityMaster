@@ -117,5 +117,10 @@
     "descriptionError_text": "Description error",
     "descriptionError_subtext": "Description needs to be at least 10 characters",
     "pricingModelError_text": "Pricing Model error",
-    "pricingModelError_subtext": "Please select a pricing model"
+    "pricingModelError_subtext": "Please select a pricing model",
+    "program_price_placeholder": "Price in Euro",
+    "program_capacity_placeholder": "Maximum participants",
+    "programs_manage_navigator_title": "Manage Programs",
+    "programs_manage_update_program": "Update Program",
+    "programs_manage_sessions": "Session Overview"
 }

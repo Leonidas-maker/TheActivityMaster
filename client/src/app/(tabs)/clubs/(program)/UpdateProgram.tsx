@@ -1,45 +1,96 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, useColorScheme, Pressable, TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView, Platform } from "react-native";
+import { ScrollView, View, useColorScheme, Alert, Pressable, TouchableWithoutFeedback, Keyboard, Platform, KeyboardAvoidingView } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
-import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
+import DefaultText from "@/src/components/textFields/DefaultText";
 import Heading from "@/src/components/textFields/Heading";
+import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
 import { useTranslation } from "react-i18next";
-import { useRouter, useNavigation, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
+import { deleteProgram, getProgram, updateProgram, getProgramCategories } from "@/src/services/club/programService";
+import Toast from "react-native-toast-message";
+import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { createProgram, getProgramCategories } from "@/src/services/club/programService";
+import Subheading from "@/src/components/textFields/Subheading";
 import Dropdown from "@/src/components/dropdown/Dropdown";
 import MultiDropdown from "@/src/components/dropdown/MultiDropdown";
 import OptionSwitch from "@/src/components/optionSwitch/OptionSwitch";
-import DefaultToast from "@/src/components/defaultToast/DefaultToast";
-import Toast from "react-native-toast-message";
-import Subheading from "@/src/components/textFields/Subheading";
 
-const AddProgram = () => {
+//TODO: Add change currency option
+//TODO: Add getSessions and update the pricing and capacity if change between pricing model is made
+const UpdateProgram = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const { t, i18n } = useTranslation("clubs");
-    const { club_id } = useLocalSearchParams();
     const language = i18n.language;
+    const { club_id, program_id } = useLocalSearchParams();
 
-    // Form fields state
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [nameError, setNameError] = useState(false);
-    const [descriptionError, setDescriptionError] = useState(false);
     const [price, setPrice] = useState("");
-    const [priceError, setPriceError] = useState(false);
-    const [pricingModel, setPricingModel] = useState("");
-    const [pricingModelError, setPricingModelError] = useState(false);
+    const [currency, setCurrency] = useState("EUR");
+    const [status, setStatus] = useState("draft");
     const [capacity, setCapacity] = useState("");
-    const [capacityError, setCapacityError] = useState(false);
+    const [pricingModel, setPricingModel] = useState("");
     const [membershipRequired, setMembershipRequired] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [programCategories, setProgramCategories] = useState<{ key: string; value: string }[]>([]);
-    const [currency, setCurrency] = useState("EUR");
-    const [status, setStatus] = useState<"active" | "inactive" | "draft">("draft");
-    const [priceValue, setPriceValue] = useState<number | null>(null);
-    const [capacityValue, setCapacityValue] = useState<number | null>(null);
+    const [nameError, setNameError] = useState(false);
+    const [descriptionError, setDescriptionError] = useState(false);
+    const [priceError, setPriceError] = useState(false);
+    const [capacityError, setCapacityError] = useState(false);
+    const [programCategories, setProgramCategories] = useState<Array<{ key: string; value: string }>>([]);
 
+    useEffect(() => {
+        const fetchProgramCategories = async () => {
+            try {
+                const categories = await getProgramCategories(language);
+                setProgramCategories(
+                    categories.map((category: any) => {
+                        return {
+                            key: category.id.toString(),
+                            value: category.name
+                        };
+                    })
+                );
+            } catch (error) {
+                Toast.show({
+                    type: "error",
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription")
+                });
+            }
+        };
+        fetchProgramCategories();
+    }, [language]);
+
+    useEffect(() => {
+        const fetchProgram = async () => {
+            try {
+                const program = await getProgram(club_id, program_id);
+                if (program) {
+                    setName(program.name);
+                    setDescription(program.description);
+                    if (program.price && program.capacity) {
+                        setPrice(program.price.toString());
+                        setCapacity(program.capacity.toString());
+                    }
+                    setPricingModel(program.pricing_model);
+                    setMembershipRequired(program.membership_required);
+                    // Map over the categories array from the API response
+                    setSelectedCategories(program.categories.map((category: any) => category.id.toString()));
+                }
+            }
+            catch (error) {
+                Toast.show({
+                    type: "error",
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription")
+                });
+            }
+        };
+        fetchProgram();
+    }, [club_id, program_id]);
+
+    // States for color scheme
     const [isLight, setIsLight] = useState(false);
     const colorScheme = useColorScheme();
     useEffect(() => {
@@ -47,10 +98,37 @@ const AddProgram = () => {
     }, [colorScheme]);
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
+    const handleDeletePress = async () => {
+        Alert.alert(t("programDeletionAlertTitle"), t("programDeletionAlertDescription"), [
+            {
+                text: t("cancel_btn"),
+                style: "cancel"
+            },
+            {
+                text: t("confirm_btn"),
+                onPress: handleDeleteConfirm
+            }
+        ]);
+    };
+
+    const handleDeleteConfirm = async () => {
+        try {
+            await deleteProgram(club_id, program_id);
+            router.dismiss();
+        } catch (error) {
+            Toast.show({
+                type: "error",
+                text1: t("roleManageError"),
+                text2: t("roleManageErrorDescription")
+            });
+        }
+    };
+
     const handleDismissPress = () => {
         router.dismiss();
     };
 
+    // Set navigation header buttons
     useEffect(() => {
         navigation.setOptions({
             headerLeft: () => (
@@ -63,89 +141,31 @@ const AddProgram = () => {
                     />
                 </Pressable>
             ),
+            headerRight: () => (
+                <Pressable onPress={handleDeletePress}>
+                    <Icon
+                        name="delete"
+                        size={30}
+                        color={iconColor}
+                        style={{ marginLeft: "auto", marginRight: 15 }}
+                    />
+                </Pressable>
+            )
         });
     }, [navigation, iconColor]);
 
-    // Fetch available program categories on mount
-    useEffect(() => {
-        getProgramCategories(language)
-            .then((response) => {
-                const categoriesOptions = response.map((category: { id: number; name: string; description: string }) => ({
-                    key: category.id.toString(),
-                    value: category.name,
-                }));
-                setProgramCategories(categoriesOptions);
-            })
-            .catch((err) => {
-                console.error("Error fetching program categories:", err);
-            });
-    }, []);
+    const numericCategories = selectedCategories.map((key) => Number(key));
+    const priceValue = pricingModel === "package" ? Number(price) : null;
+    const capacityValue = pricingModel === "package" ? Number(capacity) : null;
 
-    const handleCreateProgramPress = async () => {
-        if (!name.trim()) {
-            setNameError(true);
-        }
-        if (!description.trim()) {
-            setDescriptionError(true);
-        }
-
-        if (nameError || descriptionError) {
-            Toast.show({
-                type: "error",
-                text1: t("inputError_text"),
-                text2: t("inputError_subtext"),
-            });
-            return;
-        }
-
-        if (description.length < 10) {
-            setDescriptionError(true);
-            Toast.show({
-                type: "error",
-                text1: t("descriptionError_text"),
-                text2: t("descriptionError_subtext"),
-            });
-            return;
-        }
-
-        if (!pricingModel.trim()) {
-            Toast.show({
-                type: "error",
-                text1: t("pricingModelError_text"),
-                text2: t("pricingModelError_subtext"),
-            });
-            return;
-        }
-
-        // Check pricingModel specific validations
-        if (pricingModel === t("package")) {
-            let packageError = false;
-            if (!price.trim()) {
-                setPriceError(true);
-                packageError = true;
-            }
-            if (!capacity.trim()) {
-                setCapacityError(true);
-                packageError = true;
-            }
-            if (packageError) {
-                Toast.show({
-                    type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
-                });
-                return;
-            }
-        }
-
-        // Convert string keys to numbers.
-        const numericCategories = selectedCategories.map((key) => Number(key));
-        const priceValue = pricingModel === "package" ? Number(price) : null;
-        const capacityValue = pricingModel === "package" ? Number(capacity) : null;
-
+    //! Add validation for the fields
+    //! Needs more testing
+    const handleUpdateProgramPress = async () => {
         try {
-            await createProgram(
+            const statusValue = status?.trim() && status === "draft" ? undefined : status;
+            await updateProgram(
                 club_id,
+                program_id,
                 name,
                 description,
                 priceValue,
@@ -154,17 +174,16 @@ const AddProgram = () => {
                 capacityValue,
                 membershipRequired,
                 numericCategories,
-                status
+                statusValue // Pass statusValue, which will be undefined if no status is provided
             );
             router.dismiss();
         } catch (error) {
-            console.error("Error creating program:", error);
             Toast.show({
                 type: "error",
                 text1: t("roleManageError"),
-                text2: t("roleManageErrorDescription"),
+                text2: t("roleManageErrorDescription")
             });
-        }
+        };
     };
 
     return (
@@ -209,6 +228,10 @@ const AddProgram = () => {
                                 { key: "per_session", value: t("per_session") }
                             ]}
                             placeholder={t("selectPricingModel_placeholder")}
+                            defaultOption={{
+                                key: pricingModel,
+                                value: pricingModel === "package" ? t("package") : t("per_session")
+                            }}
                             save="key"
                         />
                         <OptionSwitch
@@ -250,6 +273,8 @@ const AddProgram = () => {
                             <Subheading text={t("program_categories_placeholder")} />
                             <MultiDropdown
                                 setSelected={setSelectedCategories}
+                                // Set initial selected categories from the program response
+                                initialSelected={selectedCategories}
                                 values={programCategories}
                                 placeholder={t("selectProgramCategories_placeholder")}
                                 notFound={t("no_program_categories_found")}
@@ -259,7 +284,23 @@ const AddProgram = () => {
                                 maxSelectedItems={4}
                             />
                         </View>
-                        <DefaultButton text={t("program_create_btn")} onPress={handleCreateProgramPress} />
+                        <Dropdown
+                            setSelected={setStatus}
+                            values={[
+                                { key: "draft", value: t("draft") },
+                                { key: "active", value: t("active") },
+                                { key: "inactive", value: t("inactive") }
+                            ]}
+                            placeholder={t("selectStatus_placeholder")}
+                            defaultOption={{
+                                key: status,
+                                value: status === "draft" ? t("draft") : status === "active" ? t("active") : t("inactive")
+                            }}
+                            save="key"
+                        />
+                        <View className="w-full items-center justify-center pb-4">
+                            <DefaultButton text={t("program_create_btn")} onPress={handleUpdateProgramPress} />
+                        </View>
                     </View>
                 </ScrollView>
             </TouchableWithoutFeedback>
@@ -268,4 +309,4 @@ const AddProgram = () => {
     );
 };
 
-export default AddProgram;
+export default UpdateProgram;

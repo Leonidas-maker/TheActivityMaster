@@ -113,5 +113,10 @@
     "descriptionError_text": "Fehler in der Beschreibung",
     "descriptionError_subtext": "Die Beschreibung muss mindestens 10 Zeichen lang sein",
     "pricingModelError_text": "Fehler im Preismodell",
-    "pricingModelError_subtext": "Bitte wählen Sie ein Preismodell aus"
+    "pricingModelError_subtext": "Bitte wählen Sie ein Preismodell aus",
+    "program_price_placeholder": "Preis in Euro",
+    "program_capacity_placeholder": "Maximale Teilnehmer",
+    "programs_manage_navigator_title": "Programme verwalten",
+    "programs_manage_update_program": "Programm aktualisieren",
+    "programs_manage_sessions": "Termin Übersicht"
 }
