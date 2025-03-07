@@ -82,7 +82,7 @@ async def get_employee_v1(
 @router.post("", response_model=s_generic.MessageResponse, tags=["Club - Employee"])
 async def add_employee_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    role_assignment: s_club.UserClubRoleAssignment = Body(..., description="The role assignment data"),
+    role_assignment: s_club.UserClubRoleAssignment = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_EMPLOYEES])
@@ -99,7 +99,7 @@ async def add_employee_v1(
 @router.put("", tags=["Club - Employee"], response_model=s_generic.MessageResponse)
 async def update_employee_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    role_change: s_club.UserClubRoleChange = Body(..., description="The role change data"),
+    role_change: s_club.UserClubRoleChange = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_EMPLOYEES])

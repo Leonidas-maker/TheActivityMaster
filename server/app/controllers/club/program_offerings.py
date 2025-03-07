@@ -199,8 +199,8 @@ async def create_session(
 
     if (
         program.pricing_model == m_club.PriceType.PER_SESSION
-        and new_session.price is None
-        or new_session.capacity is None
+        and (new_session.price is None
+        or new_session.capacity is None)
     ):
         raise HTTPException(
             status_code=400, detail="Each session must have a price and capacity if the pricing model is 'per_session'."

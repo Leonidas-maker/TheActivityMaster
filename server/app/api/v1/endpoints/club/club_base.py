@@ -249,7 +249,7 @@ async def get_booking_v1(
 
 @router.delete("/bookings", response_model=s_payment.Transaction, tags=["Club - Booking"])
 async def delete_booking_v1(
-    bookings: List[uuid.UUID] = Body(..., description="The IDs of the bookings to delete"),
+    bookings: List[uuid.UUID] = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
 ):
@@ -310,7 +310,7 @@ async def get_clubs_v1(
 
 @router.post("", response_model=s_club.Club, tags=["Club"])
 async def create_club_v1(
-    club_create: s_club.ClubCreate = Body(..., description="The club data to create"),
+    club_create: s_club.ClubCreate = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -336,7 +336,7 @@ async def get_club_v1(
 @router.put("/{club_id}", response_model=s_club.Club, tags=["Club"])
 async def update_club_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    club_update: s_club.ClubUpdate = Body(..., description="The updated club data"),
+    club_update: s_club.ClubUpdate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_CLUB_DATA])
@@ -396,7 +396,7 @@ async def get_program_sessions_v1(
 async def update_club_stripe_account_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     ep_context: EndpointContext = Depends(get_endpoint_context),
-    club_stripe_update: s_club.ClubStripeUpdate = Body(..., description="The Stripe account ID", validation_alias="stripe_account_id"),
+    club_stripe_update: s_club.ClubStripeUpdate = Body(...),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(generic_roles=["admin"])
     ),

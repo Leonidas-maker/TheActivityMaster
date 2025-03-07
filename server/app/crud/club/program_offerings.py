@@ -864,6 +864,7 @@ async def get_authorized_programs(
     page_size: int,
     user_id: Optional[uuid.UUID] = None,
     search: Optional[str] = None,
+    with_details: bool = False,
 ) -> List[m_club.Program]:
     """Get programs that the user is authorized to view
 
@@ -879,6 +880,11 @@ async def get_authorized_programs(
         undefer(m_club.Program.description),
     ]
     conditions = [m_club.Program.club_id == club_id]
+
+    if with_details:
+        query_options.append(joinedload(m_club.Program.sessions))
+        query_options.append(joinedload(m_club.Program.sessions).joinedload(m_club.Session.address))
+        query_options.append(joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences))
 
     if user_id:
         conditions.append(

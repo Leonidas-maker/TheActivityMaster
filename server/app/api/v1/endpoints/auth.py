@@ -23,7 +23,7 @@ router = APIRouter()
 @router.post("/login", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Login"])
 async def login_v1(
     request: Request,
-    login_form: s_auth.LoginRequest = Body(..., description="The login form"),
+    login_form: s_auth.LoginRequest = Body(...),
     application_id: str = Header(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -40,7 +40,7 @@ async def login_v1(
 @router.post("/verify-code-2fa", response_model=s_auth.TokenResponse, tags=["Authentication - Login"])
 async def verify_code_2fa_v1(
     request: Request,
-    metadata: s_auth.LoginCode2fa = Body(..., description="The 2FA code and method"),
+    metadata: s_auth.LoginCode2fa = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.SecurityTokenChecker("2fa")),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -119,7 +119,7 @@ async def forgot_password_v1(
 
 @router.post("/reset-password", response_model=s_generic.MessageResponse, tags=["Authentication - Forgot-Password"])
 async def reset_password_v1(
-    reset_form: s_auth.ResetPassword = Body(..., description="The reset password form"),
+    reset_form: s_auth.ResetPassword = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.SecurityTokenChecker("reset_password")),
 ):

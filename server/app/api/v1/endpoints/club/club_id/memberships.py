@@ -48,7 +48,7 @@ async def get_memberships_v1(
 @router.post("", response_model=s_club.Membership, tags=["Club - Membership"])
 async def create_membership_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership is to be added"),
-    membership: s_club.MembershipCreate = Body(..., description="The details of the new membership"),
+    membership: s_club.MembershipCreate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_MEMBERSHIPS])
@@ -82,7 +82,7 @@ async def get_membership_v1(
 async def update_membership_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership belongs"),
     membership_id: uuid.UUID = Path(..., description="The ID of the membership to be updated"),
-    membership_update: s_club.MembershipUpdate = Body(..., description="The details of the membership update"),
+    membership_update: s_club.MembershipUpdate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_MEMBERSHIPS])
@@ -163,7 +163,7 @@ async def update_membership_access_v1(
 async def delete_membership_access_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership belongs"),
     membership_id: uuid.UUID = Path(..., description="The ID of the membership to be updated"),
-    program_id: List[uuid.UUID] = Body(..., description="The ID of the program to be updated"),
+    program_id: List[uuid.UUID] = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_MEMBERSHIPS])

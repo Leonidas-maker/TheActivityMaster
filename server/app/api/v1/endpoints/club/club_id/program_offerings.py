@@ -58,6 +58,34 @@ async def get_programs_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get programs")
 
+@router.get(
+    "/details",
+    response_model=List[s_club.ProgramDetails],
+    tags=["Club - Program", "Access: Hybrid"],
+    response_model_exclude_none=True,
+)
+async def get_programs_details_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    page: int = Query(1, ge=1, description="The page number"),
+    page_size: int = Query(10, ge=1, le=50, description="The number of items per page"),
+    search_query: Optional[str] = Query(None, description="Search query"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenCheckerHybrid()),
+):
+    """Get programs of a club with details
+
+    **Note: If the user has the permission to read programs or is a trainee of the program,
+    provide the authentication details to view a program with any status.**
+    """
+    try:
+        user_id = token_details.user_id if token_details else None
+        programs = await club_crud.get_authorized_programs(
+            ep_context.db, club_id, page, page_size, user_id, search_query, with_details=True
+        )
+        return [s_club.ProgramDetails.model_validate(program) for program in programs]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get programs")
+
 
 @router.get(
     "/{program_id}",
@@ -94,7 +122,7 @@ async def get_program_v1(
 @router.post("", response_model=s_club.Program, tags=["Club - Program"], response_model_exclude_none=True)
 async def create_program_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    new_program: s_club.ProgramCreate = Body(..., description="The program values for creation"),
+    new_program: s_club.ProgramCreate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_PROGRAMS])
@@ -112,7 +140,7 @@ async def create_program_v1(
 async def update_program_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
-    program_update: s_club.ProgramUpdate = Body(..., description="The update values"),
+    program_update: s_club.ProgramUpdate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
@@ -187,7 +215,7 @@ async def get_sessions_v1(
 async def create_session_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
-    new_session: s_club.SessionCreate = Body(..., description="The session values for creation"),
+    new_session: s_club.SessionCreate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
@@ -209,7 +237,7 @@ async def update_session_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    session_update: s_club.SessionUpdate = Body(..., description="The update values"),
+    session_update: s_club.SessionUpdate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
@@ -255,7 +283,7 @@ async def reschedule_occurrences_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    reschedule_data: List[s_club.SessionReschedule] = Body(..., description="The reschedule data"),
+    reschedule_data: List[s_club.SessionReschedule] = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])
@@ -278,7 +306,7 @@ async def reinstate_occurrences_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
-    occurrences_reinstate: List[s_club.SessionReinstate] = Body(..., description="The reinstate data"),
+    occurrences_reinstate: List[s_club.SessionReinstate] = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_PROGRAMS])

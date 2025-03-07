@@ -27,7 +27,7 @@ router = APIRouter()
 @router.post("", response_model=s_role.ClubRole, tags=["Club - Role"])
 async def create_club_role_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
-    club_role_create: s_role.ClubRoleCreate = Body(..., description="The role data to create"),
+    club_role_create: s_role.ClubRoleCreate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.CREATE_ROLES])
@@ -80,7 +80,7 @@ async def get_club_role_v1(
 async def update_club_role_v1(
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     role_id: int = Path(..., description="The ID of the role to update"),
-    club_role_update: s_role.ClubRoleUpdate = Body(..., description="The updated role data"),
+    club_role_update: s_role.ClubRoleUpdate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(
         auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.UPDATE_ROLES])

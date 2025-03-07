@@ -20,6 +20,7 @@ from .testclasses import (
 
 from .enums import ProgramStatusPublic
 
+
 ###########################################################################
 ################################# Default #################################
 ###########################################################################
@@ -185,6 +186,18 @@ def test_create_all_program_offering_types(test_club):
 
 
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
+def test_get_all_programs(test_club):
+    test_club.refresh_programs()
+    assert len(test_club.programs) > 0, "No programs found"
+
+
+@pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
+def test_get_all_programs_details(test_club):
+    test_club.refresh_programs_details()
+    assert len(test_club.programs) > 0, "No programs found"
+
+
+@pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
 def test_draft_get_program_offering(test_club):
     program = random.choice(test_club.programs)
     program.get()
@@ -219,11 +232,13 @@ def test_create_session_course(test_club):
     session = get_random_session_courses(program, 1)[0]
     session.create()
 
+
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
 def test_get_session(test_club):
     program = random.choice(test_club.programs)
     session = random.choice(program.session_courses + program.session_events)
     session.get()
+
 
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
 def test_complete_update_draft_session(test_club):
@@ -232,11 +247,16 @@ def test_complete_update_draft_session(test_club):
         session.randomize()
         session.update()
 
+
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
 def test_delete_session(test_club):
     program = random.choice(test_club.programs)
-    session = random.choice(program.session_courses + program.session_events)
+    session = program.session_courses.pop()
     session.delete(check_deletion=True)
+
+    session = program.session_events.pop()
+    session.delete(check_deletion=True)
+
 
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
 def test_reschedule_session(test_club):
@@ -244,18 +264,21 @@ def test_reschedule_session(test_club):
     session: SessionCourse = random.choice(program.session_courses)
     session.reschedule_occurrence()
 
+
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types"])
 def test_cancel_session(test_club):
     program = random.choice(test_club.programs)
     session: SessionCourse = random.choice(program.session_courses)
     session.cancel_occurrence()
 
+
 @pytest.mark.dependency(depends=["test_cancel_session"])
 def test_reinstate_session(test_club):
     program = random.choice(test_club.programs)
     session: SessionCourse = random.choice(program.session_courses)
-    occurrence_id = session.cancel_occurrence(check=False)
+    occurrence_id = session.cancel_occurrence(check=True)
     session.reinstate_occurrence(occurrence_id)
+
 
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types", "test_create_employee"])
 def test_assign_trainer_to_program(test_club, test_users):
@@ -269,9 +292,10 @@ def test_assign_trainer_to_program(test_club, test_users):
 
     program.assign_trainer(trainer.user_id)
 
+
 @pytest.mark.dependency(depends=["test_assign_trainer_to_program"])
 def test_unassign_trainer_from_program(test_club, test_users):
-    program = test_club.programs[0]    
+    program = test_club.programs[0]
     program.unassign_trainer(test_users[0].user_id)
 
 
@@ -280,12 +304,14 @@ def test_update_program_status_error(test_club):
     response = test_club.programs[0].update_status(ProgramStatusPublic.ACTIVE, check=False)
     assert response.status_code == status.HTTP_400_BAD_REQUEST, response.json()
 
+
 @pytest.mark.dependency(depends=["test_create_club"])
 def test_club_update_stripe(admin_user, test_club):
     admin_user.put(
         f"/api/v1/clubs/{test_club.club_id}/stripe",
         json={"stripe_account_id": f"acct_{os.urandom(16).hex()}"},
     )
+
 
 @pytest.mark.dependency(depends=["test_create_all_program_offering_types", "test_club_update_stripe"])
 def test_update_program_status(test_club):

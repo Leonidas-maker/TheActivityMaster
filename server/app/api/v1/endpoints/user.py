@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.post("/register", response_model=s_generic.MessageResponse, tags=["User"])
 async def register_user_v1(
-    user: s_user.UserCreate = Body(..., description="User data"),
+    user: s_user.UserCreate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Register a new user"""
@@ -64,7 +64,7 @@ async def get_user_roles(
 
 @router.patch("/me", tags=["User"])
 async def delete_user_v1(
-    user_delete: s_user.UserDelete = Body(..., description="Password to delete the user"),
+    user_delete: s_user.UserDelete = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -105,7 +105,7 @@ async def totp_register_v1(
 
 @router.post("/me/totp_remove", tags=["User - TOTP"])
 async def totp_remove_v1(
-    remove_totp: s_user.RemoveTOTP = Body(..., description="Password ans TOTP code to remove the TOTP device"),
+    remove_totp: s_user.RemoveTOTP = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -122,7 +122,7 @@ async def totp_remove_v1(
 
 @router.post("/me/change_password", tags=["User"])
 async def change_password_v1(
-    password_change: s_user.ChangePassword = Body(..., description="New and old password"),
+    password_change: s_user.ChangePassword = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -136,7 +136,7 @@ async def change_password_v1(
 
 @router.put("/me", tags=["User"])
 async def update_user_profile_v1(
-    user_update: s_user.UserUpdate = Body(..., description="User data to update"),
+    user_update: s_user.UserUpdate = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -150,7 +150,7 @@ async def update_user_profile_v1(
 
 @router.put("/me/email", tags=["User"])
 async def update_user_email_v1(
-    email_change: s_user.ChangeEmail = Body(..., description="New email and password"),
+    email_change: s_user.ChangeEmail = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
@@ -166,7 +166,7 @@ async def update_user_email_v1(
 
 @router.put("/me/username", tags=["User"])
 async def update_user_username_v1(
-    username_change: s_user.ChangeUsername = Body(..., description="New username and password"),
+    username_change: s_user.ChangeUsername = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
