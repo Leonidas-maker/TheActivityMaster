@@ -201,9 +201,6 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
     await engine.dispose()
 
-
-from fastapi import FastAPI
-
 tags_metadata = [
     {
         "name": "Access: Public",

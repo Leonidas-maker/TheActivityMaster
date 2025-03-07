@@ -1133,7 +1133,7 @@ async def update_program(
         details += f"Capacity: {program.capacity} -> {program_update.capacity}"
         program.capacity = program_update.capacity
 
-    if program_update.membership_required and program.membership_required != program_update.membership_required:
+    if program_update.membership_required is not None and program.membership_required != program_update.membership_required:
         details += f"Membership Required: {program.membership_required} -> {program_update.membership_required}"
         program.membership_required = program_update.membership_required
 

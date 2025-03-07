@@ -6,6 +6,7 @@ from pathlib import Path
 DEFAULT_TIMEZONE = pytz.timezone("UTC")
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 DEBUG = True if ENVIRONMENT == "dev" else False #* Set to True for debugging
+TESTING = os.environ.get("TESTING", "False") == "True" and ENVIRONMENT == "dev"
 
 SYSTEM_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 

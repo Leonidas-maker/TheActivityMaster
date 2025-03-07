@@ -6,6 +6,7 @@ import uuid
 import traceback
 from rich.console import Console
 import datetime
+import os
 
 from schemas import s_club
 
@@ -14,7 +15,7 @@ from models import m_club, m_generic, m_user
 from crud import role as role_crud, generic as generic_crud, audit as audit_crud
 
 from config.permissions import ClubPermissions
-from config.settings import DEFAULT_TIMEZONE
+from config.settings import DEFAULT_TIMEZONE, DEBUG, TESTING
 
 
 ###########################################################################
@@ -71,6 +72,9 @@ async def create_club(db: AsyncSession, user_id: uuid.UUID, club: s_club.ClubCre
     address = await generic_crud.get_create_address(db, club.address)
 
     db_club = m_club.Club(name=club.name, description=club.description, address=address)
+    
+    if DEBUG and not TESTING:
+        db_club.stripe_account_id = f"acct_{os.urandom(16).hex()}"
 
     db.add(db_club)
     await db.flush()

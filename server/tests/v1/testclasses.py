@@ -501,6 +501,7 @@ class Club:
                 program.get("capacity"),
                 session_count=0,
                 currency=program["currency"],
+                membership_required=program["membership_required"],
             )
             program_obj.program_id = program["id"]
             program_obj.refresh_sessions(program["sessions"])
@@ -702,6 +703,7 @@ class Program:
         capacity: Optional[int] = None,
         session_count: Optional[int] = None,
         currency: str = "EUR",
+        membership_required: bool = True,
     ):
         self.user = club.user
         self.club = club
@@ -718,6 +720,7 @@ class Program:
         self.price = price
         self.currency = currency
         self.capacity = capacity
+        self.membership_required = membership_required
 
         self.session_events: List[SessionEvent] = []
         self.session_courses: List[SessionCourse] = []
@@ -746,6 +749,7 @@ class Program:
                 "currency": self.currency,
                 "capacity": self.capacity,
                 "sessions": sessions,
+                "membership_required": self.membership_required,
             },
             check_status=False,
         )
@@ -757,6 +761,7 @@ class Program:
             assert response.json().get("price") == self.price
             assert response.json()["currency"] == self.currency
             assert response.json().get("capacity") == self.capacity
+            assert response.json()["membership_required"] == self.membership_required
             self.program_id = response.json()["id"]
             self.check_sessions()
 
@@ -779,6 +784,7 @@ class Program:
             assert response.json().get("price") == self.price
             assert response.json()["currency"] == self.currency
             assert response.json().get("capacity") == self.capacity
+            assert response.json()["membership_required"] == self.membership_required
             self.check_sessions(response.json()["sessions"])
         return response
 
@@ -818,6 +824,7 @@ class Program:
             new_price = None
             new_capacity = None
             new_currency = "USD"
+            new_membership_required = False
         else:
             for session in self.session_events + self.session_courses:
                 session.price = None
@@ -827,6 +834,7 @@ class Program:
             new_price = random.randint(0, 100)
             new_capacity = random.randint(1, 100)
             new_currency = "EUR"
+            new_membership_required = True
 
         response = self.user.put(
             f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}",
@@ -838,6 +846,7 @@ class Program:
                 "currency": new_currency,
                 "capacity": new_capacity,
                 "session_data": session_data if self.price_model == PriceType.PACKAGE else None,
+                "membership_required": new_membership_required,
             },
             check_status=False,
         )
@@ -851,6 +860,7 @@ class Program:
             assert response.json().get("price") == new_price
             assert response.json()["currency"] == new_currency
             assert response.json().get("capacity") == new_capacity
+            assert response.json()["membership_required"] == new_membership_required
             self.check_sessions()
 
         self.name = new_name
@@ -859,6 +869,7 @@ class Program:
         self.price = new_price
         self.currency = new_currency
         self.capacity = new_capacity
+        self.membership_required = new_membership_required
 
     def update_status(self, program_status: ProgramStatusPublic, check=True):
         response = self.user.put(

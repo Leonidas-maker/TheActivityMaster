@@ -4,13 +4,19 @@ import re
 from urllib.parse import urlencode
 from fastapi.testclient import TestClient
 import random   
+import os
 
 from .testclasses import TestUser, AdminUser, Club
 
-from main import app # type: ignore
+
+
+def pytest_sessionstart(session):
+    os.environ["TESTING"] = "True"
+
 
 @pytest.fixture(scope="module")
 def client():
+    from main import app # type: ignore
     with TestClient(app) as c:
         yield c
 
@@ -76,11 +82,9 @@ def get_security_token(capsys):
 
     return security_token
 
-
-timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
-
 def get_random_role(club: Club):
     role = random.choice(club.roles)
     while role.level == 0:
         role = random.choice(club.roles)
     return role
+
