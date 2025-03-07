@@ -15,6 +15,8 @@ const MultiDropdown: React.FC<MultiDropdownProps> = ({
   searchPlaceholderText = "Search...",
   confirmButtonText = "Confirm",
   initialSelected = [],
+  maxSelectedItems,
+  save = "key",
 }) => {
   // Initialize internal state with initialSelected prop
   const [selectedItems, setSelectedItems] = useState<string[]>(() => initialSelected);
@@ -127,18 +129,23 @@ const MultiDropdown: React.FC<MultiDropdownProps> = ({
           id: "0",
           name: "Options",
           children: values.map((item) => ({
-            id: item.key,
+            id: save === "value" ? item.value : item.key,
             name: item.value,
           })),
         },
       ]
     : values.map((item) => ({
-        id: item.key,
+        id: save === "value" ? item.value : item.key,
         name: item.value,
       }));
 
-  // Handle changes in selected items
+  // Handle changes in selected items from the SectionedMultiSelect component.
   const onSelectedItemsChange = (selected: any[]) => {
+    // Enforce a maximum selection limit if provided.
+    if (maxSelectedItems && selected.length > maxSelectedItems) {
+      return;
+    }
+    // Update the internal state and pass the selected IDs to the parent.
     setSelectedItems(selected);
     setSelected(selected);
   };

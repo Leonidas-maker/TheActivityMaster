@@ -47,5 +47,7 @@
     "clubs_info_role_header": "Rollenberechtigungen Übersicht",
     "clubs_add_role_header": "Rolle hinzufügen",
     "clubs_manage_roles_header": "Rollen verwalten",
-    "clubs_manage_role_header": "Rolle verwalten"
+    "clubs_manage_role_header": "Rolle verwalten",
+    "clubs_manage_programs_header": "Programme verwalten",
+    "clubs_add_program_header": "Programm erstellen"
 }

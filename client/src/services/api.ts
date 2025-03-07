@@ -77,13 +77,19 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Response interceptor: handles 401 errors and performs token refresh when needed
+// Response interceptor: handles 401 errors and performs token refresh when needed.
+// Also, it now includes the response body in the error message.
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as CustomAxiosRequestConfig;
     // If skipAuth flag is set, do not attempt token refresh; simply reject the error.
     if (originalRequest.skipAuth) {
+      if (error.response && error.response.data) {
+        error.message = `${error.message} - ${JSON.stringify(
+          error.response.data
+        )}`;
+      }
       return Promise.reject(error);
     }
 
@@ -116,7 +122,6 @@ axiosInstance.interceptors.response.use(
         if (globalLogout) {
           globalLogout();
         }
-
         router.replace("/auth");
         return Promise.reject(error);
       }
@@ -163,6 +168,12 @@ axiosInstance.interceptors.response.use(
             }
             // Redirect to the login page
             router.replace("/auth");
+            // Append the response body to the error message if available
+            if (err.response && err.response.data) {
+              err.message = `${err.message} - ${JSON.stringify(
+                err.response.data
+              )}`;
+            }
             reject(err);
           })
           .finally(() => {
@@ -171,6 +182,12 @@ axiosInstance.interceptors.response.use(
       });
     }
 
+    // For other errors, append the response body to the error message if available
+    if (error.response && error.response.data) {
+      error.message = `${error.message} - ${JSON.stringify(
+        error.response.data
+      )}`;
+    }
     return Promise.reject(error);
   }
 );

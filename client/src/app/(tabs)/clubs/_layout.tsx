@@ -52,18 +52,6 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="(program)/ClubCreateProgramm"
-        options={{
-          headerTitle: t("clubs_create_programm_header"),
-        }}
-      />
-      <Stack.Screen
-        name="(session)/ClubCreateSession"
-        options={{
-          headerTitle: t("clubs_create_session_header"),
-        }}
-      />
-      <Stack.Screen
         name="(employee)/ClubManageEmployee"
         options={{
           headerTitle: t("clubs_manage_employee_header"),

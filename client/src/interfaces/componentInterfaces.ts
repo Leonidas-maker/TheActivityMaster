@@ -170,6 +170,8 @@ interface MultiDropdownProps {
   confirmButtonText?: string;
   selectedItems?: string[];
   initialSelected?: string[];
+  maxSelectedItems?: number;
+  save?: "value" | "key";
 }
 
 interface WeekSelectProps {

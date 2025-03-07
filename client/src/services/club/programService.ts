@@ -40,17 +40,17 @@ export const getPrograms = async (
 };
 
 export const createProgram = async (
-  club_id: string,
+  club_id: string | string[],
   name: string,
   description: string,
-  price: number,
+  price: number | null,
   currency: string,
-  pricing_model: "package" | "per_session",
-  capacity: number,
+  pricing_model: "package" | "per_session" | string,
+  capacity: number | null,
   membership_required: boolean,
-  sessions: sessions[],
-  categories: string[],
-  status: "active" | "inactive" | "draft" | "force_deleted" | "deleted"
+  categories: number[],
+  status: "active" | "inactive" | "draft",
+  sessions?: sessions[],
 ) => {
   try {
     const requestBody = {
@@ -61,7 +61,7 @@ export const createProgram = async (
       pricing_model,
       capacity,
       membership_required,
-      sessions,
+      sessions: sessions ?? [],
       categories,
       status,
     };
@@ -129,10 +129,10 @@ export const updateProgram = async (
   }
 };
 
-export const deleteProgram = async (club_id: string, program_id: string) => {
+export const deleteProgram = async (club_id: string | string[], program_id: string | string[], force: boolean = false) => {
   try {
     const response = await axiosInstance.delete(
-      `/clubs/${club_id}/programs/${program_id}`
+      `/clubs/${club_id}/programs/${program_id}?force=${force}`
     );
 
     return response.data;
