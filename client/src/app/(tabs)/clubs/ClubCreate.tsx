@@ -14,7 +14,6 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useNavigation, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
-import { register } from "@/src/services/user/userService";
 
 // Custom components
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -103,7 +102,7 @@ const ClubCreate = () => {
                 </Pressable>
             ),
         });
-        }, [navigation, iconColor]);
+    }, [navigation, iconColor]);
 
     // Fetch the countries and store the full response in state
     useEffect(() => {
@@ -272,7 +271,7 @@ const ClubCreate = () => {
                 text2: t("clubError_subtext"),
             });
         }
-    };
+    }
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">

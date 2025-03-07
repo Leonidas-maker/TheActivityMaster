@@ -32,6 +32,7 @@ const ClubDelete = () => {
             while (router.canGoBack()) {
                 router.back();
             }
+            router.navigate("/(tabs)/clubs");
         } catch (error) {
             console.error("Failed to delete club:", error);
         }

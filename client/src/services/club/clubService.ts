@@ -115,3 +115,21 @@ export const deleteClub = async (club_id: string | string[]) => {
     throw error;
   }
 };
+
+//! Only for testing/debug purposes
+export const updateClubStripeId = async (
+  club_id: string | string[],
+  stripe_account_id: string
+) => {
+  try {
+    const requestBody = {
+      stripe_account_id,
+    };
+
+    const response = await axiosInstance.put(`/clubs/${club_id}/stripe`, requestBody);
+    return response.data;
+  } catch (error) {
+    console.error("Error during updateClubStripeId call:", error);
+    throw error;
+  }
+};

@@ -6,8 +6,6 @@ import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 
-//TODO: Add change currency option
-//TODO: Add getSessions and update the pricing and capacity if change between pricing model is made
 const ManageProgram = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");

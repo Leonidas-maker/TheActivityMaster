@@ -90,7 +90,7 @@
     "roleManageEmptyError": "Eingabefehler",
     "roleManageEmptyErrorDescription": "Bitte fülle alle Felder aus und wähle Berechtigungen",
     "roleManageInfo": "Nichts geändert",
-    "roleManageInfoDescription": "Ändern Sie ein oder mehrere Felder, um die Rolle zu aktualisieren",
+    "roleManageInfoDescription": "Ändern Sie ein oder mehrere Felder",
     "programsNavigation_title": "Programmübersicht",
     "noPrograms": "Keine Programme verfügbar, erstelle jetzt eins!",
     "activePrograms": "Programme - Aktiv",
@@ -118,5 +118,12 @@
     "program_capacity_placeholder": "Maximale Teilnehmer",
     "programs_manage_navigator_title": "Programme verwalten",
     "programs_manage_update_program": "Programm aktualisieren",
-    "programs_manage_sessions": "Termin Übersicht"
+    "programs_manage_sessions": "Termin Übersicht",
+    "update_program_heading": "Programm aktualisieren",
+    "program_pricing_subheading": "Preismodell",
+    "program_status_subheading": "Programmstatus",
+    "draft": "Entwurf",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "program_update_btn": "Programm aktualisieren"
 }

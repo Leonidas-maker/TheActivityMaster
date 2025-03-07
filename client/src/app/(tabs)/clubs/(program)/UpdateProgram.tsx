@@ -25,14 +25,23 @@ const UpdateProgram = () => {
     const { club_id, program_id } = useLocalSearchParams();
 
     const [name, setName] = useState("");
+    const [initialName, setInitialName] = useState("");
     const [description, setDescription] = useState("");
+    const [initialDescription, setInitialDescription] = useState("");
     const [price, setPrice] = useState("");
+    const [initialPrice, setInitialPrice] = useState("");
     const [currency, setCurrency] = useState("EUR");
-    const [status, setStatus] = useState("draft");
+    const [initialCurrency, setInitialCurrency] = useState("EUR");
+    const [status, setStatus] = useState("");
+    const [initialStatus, setInitialStatus] = useState("");
     const [capacity, setCapacity] = useState("");
+    const [initialCapacity, setInitialCapacity] = useState("");
     const [pricingModel, setPricingModel] = useState("");
+    const [initialPricingModel, setInitialPricingModel] = useState("");
     const [membershipRequired, setMembershipRequired] = useState(false);
+    const [initialMembershipRequired, setInitialMembershipRequired] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [initialSelectedCategories, setInitialSelectedCategories] = useState<string[]>([]);
     const [nameError, setNameError] = useState(false);
     const [descriptionError, setDescriptionError] = useState(false);
     const [priceError, setPriceError] = useState(false);
@@ -44,12 +53,10 @@ const UpdateProgram = () => {
             try {
                 const categories = await getProgramCategories(language);
                 setProgramCategories(
-                    categories.map((category: any) => {
-                        return {
-                            key: category.id.toString(),
-                            value: category.name
-                        };
-                    })
+                    categories.map((category: any) => ({
+                        key: category.id.toString(),
+                        value: category.name
+                    }))
                 );
             } catch (error) {
                 Toast.show({
@@ -68,15 +75,29 @@ const UpdateProgram = () => {
                 const program = await getProgram(club_id, program_id);
                 if (program) {
                     setName(program.name);
+                    setInitialName(program.name);
                     setDescription(program.description);
+                    setInitialDescription(program.description);
                     if (program.price && program.capacity) {
                         setPrice(program.price.toString());
+                        setInitialPrice(program.price.toString());
                         setCapacity(program.capacity.toString());
+                        setInitialCapacity(program.capacity.toString());
                     }
                     setPricingModel(program.pricing_model);
+                    setInitialPricingModel(program.pricing_model);
                     setMembershipRequired(program.membership_required);
+                    setInitialMembershipRequired(program.membership_required);
+                    // Update the status if available from the API response.
+                    if (program.status) {
+                        setStatus(program.status);
+                        setInitialStatus(program.status);
+                    }
                     // Map over the categories array from the API response
-                    setSelectedCategories(program.categories.map((category: any) => category.id.toString()));
+                    setSelectedCategories(
+                        program.categories.map((category: any) => category.id.toString())
+                    );
+                    setInitialSelectedCategories(program.categories.map((category: any) => category.id.toString()));
                 }
             }
             catch (error) {
@@ -158,22 +179,81 @@ const UpdateProgram = () => {
     const priceValue = pricingModel === "package" ? Number(price) : null;
     const capacityValue = pricingModel === "package" ? Number(capacity) : null;
 
-    //! Add validation for the fields
-    //! Needs more testing
+
     const handleUpdateProgramPress = async () => {
+        // Use a local variable to track if there is any error
+        let hasError = false;
+    
+        // Validate the name field
+        if (!name.trim()) {
+            setNameError(true);
+            hasError = true;
+        }
+    
+        // Validate the description field
+        if (!description.trim()) {
+            setDescriptionError(true);
+            hasError = true;
+        }
+
+        if (description.length < 10) {
+            setDescriptionError(true);
+            Toast.show({
+                type: "error",
+                text1: t("descriptionError_text"),
+                text2: t("descriptionError_subtext")
+            });
+            return;
+        }
+    
+        // Only validate price and capacity if pricing model is "package"
+        if (pricingModel === "package") {
+            if (!price.trim()) {
+                setPriceError(true);
+                hasError = true;
+            }
+            if (!capacity.trim()) {
+                setCapacityError(true);
+                hasError = true;
+            }
+        } else if (pricingModel === "per_session") {
+            setPriceError(false);
+            setCapacityError(false);
+        }
+    
+        // If any error is found, show an error toast and exit the function
+        if (hasError) {
+            Toast.show({
+                type: "error",
+                text1: t("inputError_text"),
+                text2: t("inputError_subtext")
+            });
+            return;
+        }
+
+        if (name === initialName && description === initialDescription && price === initialPrice && currency === initialCurrency && pricingModel === initialPricingModel && capacity === initialCapacity && membershipRequired === initialMembershipRequired && numericCategories.length === initialSelectedCategories.length && numericCategories.every((value, index) => value === Number(initialSelectedCategories[index])) && status === initialStatus) {
+            Toast.show({
+                type: "info",
+                text1: t("roleManageInfo"),
+                text2: t("roleManageInfoDescription")
+            });
+            return;
+        }
+    
         try {
+            //TODO: check if membershipRequired works in backend
             const statusValue = status?.trim() && status === "draft" ? undefined : status;
             await updateProgram(
                 club_id,
                 program_id,
                 name,
                 description,
-                priceValue,
+                pricingModel === "package" ? Number(price) : null,
                 currency,
                 pricingModel,
-                capacityValue,
+                pricingModel === "package" ? Number(capacity) : null,
                 membershipRequired,
-                numericCategories,
+                selectedCategories.map((key) => Number(key)),
                 statusValue // Pass statusValue, which will be undefined if no status is provided
             );
             router.dismiss();
@@ -183,8 +263,22 @@ const UpdateProgram = () => {
                 text1: t("roleManageError"),
                 text2: t("roleManageErrorDescription")
             });
-        };
+        }
     };
+    
+
+    // Determine the available status options based on the current status.
+    // "draft" option is only available if the current status is "draft".
+    const statusOptions = status === "draft"
+        ? [
+            { key: "draft", value: t("draft") },
+            { key: "active", value: t("active") },
+            { key: "inactive", value: t("inactive") }
+        ]
+        : [
+            { key: "active", value: t("active") },
+            { key: "inactive", value: t("inactive") }
+        ];
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
@@ -192,7 +286,7 @@ const UpdateProgram = () => {
                 <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
                     <View className="items-center">
                         <View className="py-4">
-                            <Heading text={t("create_program_heading")} />
+                            <Heading text={t("update_program_heading")} />
                         </View>
                         <Subheading text={t("program_detail_subheading")} />
                         <DefaultTextFieldInput
@@ -217,6 +311,7 @@ const UpdateProgram = () => {
                             }}
                             hasError={descriptionError}
                         />
+                        <Subheading text={t("program_pricing_subheading")} />
                         <Dropdown
                             setSelected={(selected) => {
                                 setPricingModel(selected);
@@ -273,7 +368,6 @@ const UpdateProgram = () => {
                             <Subheading text={t("program_categories_placeholder")} />
                             <MultiDropdown
                                 setSelected={setSelectedCategories}
-                                // Set initial selected categories from the program response
                                 initialSelected={selectedCategories}
                                 values={programCategories}
                                 placeholder={t("selectProgramCategories_placeholder")}
@@ -284,22 +378,24 @@ const UpdateProgram = () => {
                                 maxSelectedItems={4}
                             />
                         </View>
+                        <Subheading text={t("program_status_subheading")} />
                         <Dropdown
                             setSelected={setStatus}
-                            values={[
-                                { key: "draft", value: t("draft") },
-                                { key: "active", value: t("active") },
-                                { key: "inactive", value: t("inactive") }
-                            ]}
+                            values={statusOptions}
                             placeholder={t("selectStatus_placeholder")}
                             defaultOption={{
                                 key: status,
-                                value: status === "draft" ? t("draft") : status === "active" ? t("active") : t("inactive")
+                                value:
+                                    status === "draft"
+                                        ? t("draft")
+                                        : status === "active"
+                                        ? t("active")
+                                        : t("inactive")
                             }}
                             save="key"
                         />
                         <View className="w-full items-center justify-center pb-4">
-                            <DefaultButton text={t("program_create_btn")} onPress={handleUpdateProgramPress} />
+                            <DefaultButton text={t("program_update_btn")} onPress={handleUpdateProgramPress} />
                         </View>
                     </View>
                 </ScrollView>

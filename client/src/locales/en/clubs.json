@@ -94,7 +94,7 @@
     "roleManageEmptyError": "Input Error",
     "roleManageEmptyErrorDescription": "Please fill out all fields and select permissions",
     "roleManageInfo": "Nothing changed",
-    "roleManageInfoDescription": "Change one or more fields to update the role",
+    "roleManageInfoDescription": "Change one or more fields",
     "programsNavigation_title": "Program Overview",
     "noPrograms": "No programs available, create one now!",
     "activePrograms": "Programs - Active",
@@ -122,5 +122,12 @@
     "program_capacity_placeholder": "Maximum participants",
     "programs_manage_navigator_title": "Manage Programs",
     "programs_manage_update_program": "Update Program",
-    "programs_manage_sessions": "Session Overview"
+    "programs_manage_sessions": "Session Overview",
+    "update_program_heading": "Update Program",
+    "program_pricing_subheading": "Pricing model",
+    "program_status_subheading": "Program Status",
+    "draft": "Draft",
+    "active": "Active",
+    "inactive": "Inactive",
+    "program_update_btn": "Update Program"
 }

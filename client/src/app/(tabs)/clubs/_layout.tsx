@@ -166,6 +166,13 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_update_program_header"),
         }}
       />
+      <Stack.Screen
+        name="(session)/AddSession"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_add_session_header"),
+        }}
+      />
     </Stack>
   );
 }
