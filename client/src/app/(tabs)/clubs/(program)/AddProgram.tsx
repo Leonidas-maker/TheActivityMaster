@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, useColorScheme, Pressable, Alert } from "react-native";
+import { ScrollView, View, useColorScheme, Pressable, TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView, Platform } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
 import Heading from "@/src/components/textFields/Heading";
@@ -118,7 +118,7 @@ const AddProgram = () => {
         }
 
         // Check pricingModel specific validations
-        if (pricingModel === "package") {
+        if (pricingModel === t("package")) {
             let packageError = false;
             if (!price.trim()) {
                 setPriceError(true);
@@ -168,98 +168,103 @@ const AddProgram = () => {
     };
 
     return (
-        <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-            <View className="items-center">
-                <View className="py-4">
-                    <Heading text={t("create_program_heading")} />
-                </View>
-                <Subheading text={t("program_detail_subheading")} />
-                <DefaultTextFieldInput
-                    placeholder={t("program_name_placeholder")}
-                    value={name}
-                    onChangeText={(text) => {
-                        setName(text);
-                        if (text.trim()) {
-                            setNameError(false);
-                        }
-                    }}
-                    hasError={nameError}
-                />
-                <DefaultTextFieldInput
-                    placeholder={t("program_description_placeholder")}
-                    value={description}
-                    onChangeText={(text) => {
-                        setDescription(text);
-                        if (text.trim()) {
-                            setDescriptionError(false);
-                        }
-                    }}
-                    hasError={descriptionError}
-                />
-                <Dropdown
-                    setSelected={(selected) => {
-                        setPricingModel(selected);
-                        setPriceError(false);
-                        setCapacityError(false);
-                    }}
-                    values={[
-                        { key: "package", value: t("package") },
-                        { key: "per_session", value: t("per_session") }
-                    ]}
-                    placeholder={t("selectPricingModel_placeholder")}
-                />
-                <OptionSwitch
-                    title={t("membership_required")}
-                    texts={[t("enable_membership")]}
-                    iconNames={["person"]}
-                    values={[membershipRequired]}
-                    onValueChanges={[
-                        () => setMembershipRequired((prev) => !prev)
-                    ]}
-                />
-                {pricingModel === "package" && (
-                    <>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
+                    <View className="items-center">
+                        <View className="py-4">
+                            <Heading text={t("create_program_heading")} />
+                        </View>
+                        <Subheading text={t("program_detail_subheading")} />
                         <DefaultTextFieldInput
-                            placeholder={t("program_price_placeholder")}
-                            value={price}
+                            placeholder={t("program_name_placeholder")}
+                            value={name}
                             onChangeText={(text) => {
-                                setPrice(text);
+                                setName(text);
                                 if (text.trim()) {
-                                    setPriceError(false);
+                                    setNameError(false);
                                 }
                             }}
-                            hasError={priceError}
+                            hasError={nameError}
                         />
                         <DefaultTextFieldInput
-                            placeholder={t("program_capacity_placeholder")}
-                            value={capacity}
+                            placeholder={t("program_description_placeholder")}
+                            value={description}
                             onChangeText={(text) => {
-                                setCapacity(text);
+                                setDescription(text);
                                 if (text.trim()) {
-                                    setCapacityError(false);
+                                    setDescriptionError(false);
                                 }
                             }}
-                            hasError={capacityError}
+                            hasError={descriptionError}
                         />
-                    </>
-                )}
-                <View className="w-full items-center justify-center pb-4">
-                    <Subheading text={t("program_categories_placeholder")} />
-                    <MultiDropdown
-                        setSelected={setSelectedCategories}
-                        values={programCategories}
-                        placeholder={t("selectProgramCategories_placeholder")}
-                        notFound={t("no_program_categories_found")}
-                        searchPlaceholderText={t("search_program_categories_placeholder")}
-                        useSections={false}
-                        confirmButtonText={t("selectPermissions_confirmButton")}
-                        maxSelectedItems={4}
-                    />
-                </View>
-                <DefaultButton text={t("program_create_btn")} onPress={handleCreateProgramPress} />
-            </View>
+                        <Dropdown
+                            setSelected={(selected) => {
+                                setPricingModel(selected);
+                                setPriceError(false);
+                                setCapacityError(false);
+                            }}
+                            values={[
+                                { key: "package", value: t("package") },
+                                { key: "per_session", value: t("per_session") }
+                            ]}
+                            placeholder={t("selectPricingModel_placeholder")}
+                            save="key"
+                        />
+                        <OptionSwitch
+                            title={t("membership_required")}
+                            texts={[t("enable_membership")]}
+                            iconNames={["person"]}
+                            values={[membershipRequired]}
+                            onValueChanges={[
+                                () => setMembershipRequired((prev) => !prev)
+                            ]}
+                        />
+                        {pricingModel === "package" && (
+                            <>
+                                <DefaultTextFieldInput
+                                    placeholder={t("program_price_placeholder")}
+                                    value={price}
+                                    onChangeText={(text) => {
+                                        setPrice(text);
+                                        if (text.trim()) {
+                                            setPriceError(false);
+                                        }
+                                    }}
+                                    hasError={priceError}
+                                />
+                                <DefaultTextFieldInput
+                                    placeholder={t("program_capacity_placeholder")}
+                                    value={capacity}
+                                    onChangeText={(text) => {
+                                        setCapacity(text);
+                                        if (text.trim()) {
+                                            setCapacityError(false);
+                                        }
+                                    }}
+                                    hasError={capacityError}
+                                />
+                            </>
+                        )}
+                        <View className="w-full items-center justify-center pb-4">
+                            <Subheading text={t("program_categories_placeholder")} />
+                            <MultiDropdown
+                                setSelected={setSelectedCategories}
+                                values={programCategories}
+                                placeholder={t("selectProgramCategories_placeholder")}
+                                notFound={t("no_program_categories_found")}
+                                searchPlaceholderText={t("search_program_categories_placeholder")}
+                                useSections={false}
+                                confirmButtonText={t("selectPermissions_confirmButton")}
+                                maxSelectedItems={4}
+                            />
+                        </View>
+                        <DefaultButton text={t("program_create_btn")} onPress={handleCreateProgramPress} />
+                    </View>
+                </ScrollView>
+            </TouchableWithoutFeedback>
             <DefaultToast />
-        </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 

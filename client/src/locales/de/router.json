@@ -49,5 +49,7 @@
     "clubs_manage_roles_header": "Rollen verwalten",
     "clubs_manage_role_header": "Rolle verwalten",
     "clubs_manage_programs_header": "Programme verwalten",
-    "clubs_add_program_header": "Programm erstellen"
+    "clubs_add_program_header": "Programm erstellen",
+    "clubs_update_program_header": "Programm aktualisieren",
+    "clubs_manage_program_header": "Programm verwalten"
 }
