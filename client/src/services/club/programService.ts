@@ -116,7 +116,6 @@ export const updateProgram = async (
       categories,
       ...(status ? { status } : {}),
     };
-    console.log(requestBody);
 
     const response = await axiosInstance.put(
       `/clubs/${club_id}/programs/${program_id}`,

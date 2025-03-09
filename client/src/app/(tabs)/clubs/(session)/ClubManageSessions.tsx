@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useNavigation, useLocalSearchParams } from "expo-router";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { getSessions } from "@/src/services/club/programSessionService";
 
 const ClubManageSessions = () => {
     const router = useRouter();
@@ -26,6 +27,18 @@ const ClubManageSessions = () => {
     const handleAddPress = () => {
         router.push(`/(tabs)/clubs/(session)/AddSession?club_id=${club_id}&program_id=${program_id}`);
     };
+
+    useEffect(() => {
+        const fetchSessions = async () => {
+            try {
+                const sessions = await getSessions(club_id, program_id);
+                console.log(sessions);
+            } catch (error) {
+                console.error("Error during fetchSessions call:", error);
+            }
+        };
+        fetchSessions();
+    }, [club_id, program_id]);
 
     useEffect(() => {
         navigation.setOptions({
