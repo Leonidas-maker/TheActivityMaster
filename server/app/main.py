@@ -237,7 +237,6 @@ app.include_router(v1_router, prefix="/api/v1")
 static_folder = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_folder), name="static")
 
-
 @app.get("/ping")
 def ping():
     return {"message": "pong"}
