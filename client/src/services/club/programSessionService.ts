@@ -23,7 +23,7 @@ interface address {
   country: string;
 }
 
-export const getSession = async (club_id: string, program_id: string) => {
+export const getSessions = async (club_id: string | string[], program_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/programs/${program_id}/sessions`
@@ -100,8 +100,8 @@ export const deleteSession = async (
   }
 };
 
-export const getSessions = async (
-  club_id: string,
+export const getClubSessions = async (
+  club_id: string | string[],
   page: number,
   page_size: number
 ) => {
