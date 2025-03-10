@@ -240,8 +240,9 @@ const UpdateProgram = () => {
             return;
         }
     
+        //! Bug with session_data in backend
         try {
-            //TODO: check if membershipRequired works in backend
+            const session_data = null;
             const statusValue = status?.trim() && status === "draft" ? undefined : status;
             await updateProgram(
                 club_id,
@@ -254,7 +255,8 @@ const UpdateProgram = () => {
                 pricingModel === "package" ? Number(capacity) : null,
                 membershipRequired,
                 selectedCategories.map((key) => Number(key)),
-                statusValue // Pass statusValue, which will be undefined if no status is provided
+                session_data,
+                statusValue
             );
             router.dismiss();
         } catch (error) {

@@ -9,14 +9,14 @@ import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 const ManageProgram = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");
-    const { club_id, program_id } = useLocalSearchParams();
+    const { club_id, program_id, pricing_model } = useLocalSearchParams();
 
     const handleUpdateProgramPress = () => {
         router.navigate(`/(tabs)/clubs/(program)/UpdateProgram?club_id=${club_id}&program_id=${program_id}`);
     };
 
     const handleSessionsPress = () => {
-        router.navigate(`/(tabs)/clubs/(session)/ClubManageSessions?club_id=${club_id}&program_id=${program_id}`);
+        router.navigate(`/(tabs)/clubs/(session)/ClubManageSessions?club_id=${club_id}&program_id=${program_id}&pricing_model=${pricing_model}`);
     };
 
     const onPressFunctions = [handleUpdateProgramPress, handleSessionsPress];

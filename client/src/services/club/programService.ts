@@ -91,6 +91,7 @@ export const getProgram = async (club_id: string | string[], program_id: string 
   }
 };
 
+//TODO: Check for session_data
 export const updateProgram = async (
   club_id: string | string[],
   program_id: string | string[],
@@ -102,6 +103,7 @@ export const updateProgram = async (
   capacity: number | null,
   membership_required: boolean,
   categories: number[],
+  session_data: string | null,
   status?: string,
 ) => {
   try {
@@ -114,6 +116,7 @@ export const updateProgram = async (
       capacity,
       membership_required,
       categories,
+      session_data,
       ...(status ? { status } : {}),
     };
 

@@ -100,7 +100,7 @@ const ClubManagePrograms = () => {
                             texts={activePrograms.map((program) => program.name)}
                             onPressFunctions={activePrograms.map((program) => () =>
                                 router.push(
-                                    `/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}`
+                                    `/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}&pricing_model=${program.pricing_model}`
                                 )
                             )}
                             iconNames={activePrograms.map(() => "event")}
@@ -114,7 +114,7 @@ const ClubManagePrograms = () => {
                             texts={draftPrograms.map((program) => program.name)}
                             onPressFunctions={draftPrograms.map((program) => () =>
                                 router.push(
-                                    `/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}`
+                                    `/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}&pricing_model=${program.pricing_model}`
                                 )
                             )}
                             iconNames={draftPrograms.map(() => "event")}
@@ -128,7 +128,7 @@ const ClubManagePrograms = () => {
                             texts={inactivePrograms.map((program) => program.name)}
                             onPressFunctions={inactivePrograms.map((program) => () =>
                                 router.push(
-                                    `/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}`
+                                    `/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}&pricing_model=${program.pricing_model}`
                                 )
                             )}
                             iconNames={inactivePrograms.map(() => "event")}

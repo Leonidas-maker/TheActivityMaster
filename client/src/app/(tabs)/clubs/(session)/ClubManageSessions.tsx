@@ -14,7 +14,7 @@ const ClubManageSessions = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const { t } = useTranslation("clubs");
-    const { club_id, program_id } = useLocalSearchParams();
+    const { club_id, program_id, pricing_model } = useLocalSearchParams();
 
     // State to track if the theme is light
     const [isLight, setIsLight] = useState(false);
@@ -25,7 +25,7 @@ const ClubManageSessions = () => {
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
     const handleAddPress = () => {
-        router.push(`/(tabs)/clubs/(session)/AddSession?club_id=${club_id}&program_id=${program_id}`);
+        router.push(`/(tabs)/clubs/(session)/AddSession?club_id=${club_id}&program_id=${program_id}&pricing_model=${pricing_model}`);
     };
 
     useEffect(() => {

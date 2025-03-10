@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TouchableWithoutFeedback, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, TouchableWithoutFeedback, Platform, useColorScheme } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent, DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import DefaultText from '../textFields/DefaultText';
+import DefaultButton from '../buttons/DefaultButton';
 
 interface InlineTimePopoverProps {
     onClose: (selectedTime: Date) => void;
@@ -44,12 +46,12 @@ export const InlineTimePopover: React.FC<InlineTimePopoverProps> = ({ onClose })
         }
     };
 
-    // Format the time as hh:mm
-    const formatTime = (date: Date) => {
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    };
+    const [isLight, setIsLight] = useState(false);
+    const colorScheme = useColorScheme();
+    useEffect(() => {
+        setIsLight(colorScheme === "light");
+    }, [colorScheme]);
+    const themeVariant = isLight ? "light" : "dark";
 
     return (
         // Outer TouchableWithoutFeedback detects touches outside the modal
@@ -57,27 +59,26 @@ export const InlineTimePopover: React.FC<InlineTimePopoverProps> = ({ onClose })
             <View
                 // Container covering the full screen
                 className="absolute top-0 left-0 right-0 bottom-0 justify-center items-center"
-                style={{ zIndex: 1000, elevation: 20 }}
+                style={{ zIndex: 1000, elevation: 20, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
             >
                 {/* Inner TouchableWithoutFeedback prevents propagation of touches from the modal content */}
                 <TouchableWithoutFeedback onPress={() => { }}>
-                    <View className="bg-white p-4 rounded shadow-lg w-4/5" pointerEvents="auto">
-                        <Text className="text-lg font-bold mb-2 text-center">Select Time</Text>
+                    <View className="bg-light_secondary dark:bg-dark_secondary p-4 rounded-xl shadow-lg" pointerEvents='auto'>
+                        <Text className="text-lg text-black dark:text-white font-bold mb-2 text-center">Select Time</Text>
                         <DateTimePicker
                             value={time}
                             mode="time"
                             display="spinner"
                             onChange={handleTimeChange}
                             style={{ width: '100%' }}
+                            themeVariant={themeVariant}
                         />
-                        <TouchableOpacity
-                            onPress={() => onClose(time)}
-                            className="mt-4 bg-blue-500 p-2 rounded"
-                        >
-                            <Text className="text-white text-center">
-                                Done ({formatTime(time)})
-                            </Text>
-                        </TouchableOpacity>
+                        <View className='justify-center flex-row'>
+                            <DefaultButton
+                                text="Select"
+                                onPress={() => onClose(time)}
+                            />
+                        </View>
                     </View>
                 </TouchableWithoutFeedback>
             </View>
@@ -94,8 +95,8 @@ export const TimePickerTrigger: React.FC<TimePickerTriggerProps> = ({ selectedTi
     };
 
     return (
-        <TouchableOpacity onPress={onPress}>
-            <Text className="text-xl text-center">{formatTime(selectedTime)}</Text>
+        <TouchableOpacity className="justify-center items-center bg-light_secondary dark:bg-dark_secondary w-3/4 m-2 p-4 rounded-xl shadow-lg" onPress={onPress}>
+            <DefaultText text={formatTime(selectedTime)} />
         </TouchableOpacity>
     );
 };
