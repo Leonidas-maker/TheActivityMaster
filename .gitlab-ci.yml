@@ -14,6 +14,7 @@ variables:
   MYSQL_DATABASE: "tam"
   DB_HOST: "mariadb"
   REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
   DOCKER_DRIVER: overlay2
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
