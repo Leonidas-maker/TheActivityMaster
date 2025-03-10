@@ -56,11 +56,11 @@ async def create_program(
     if await club_crud.program_exists(db, club_id, new_program.name):
         raise HTTPException(status_code=400, detail="Program name already exists")
 
-    if (
-        new_program.status == m_club.ProgramStatusPublic.ACTIVE
-        and await club_crud.has_club_stripe_account(db, club_id) is False
-    ):
-        raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
+    if new_program.status == m_club.ProgramStatusPublic.ACTIVE:
+        if len(new_program.sessions) == 0:
+            raise HTTPException(status_code=400, detail="Cannot activate a program without sessions")
+        if await club_crud.has_club_stripe_account(db, club_id) is False:
+            raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
 
     try:
         program = await club_crud.create_program(db, club_id, new_program)
@@ -104,12 +104,11 @@ async def update_program(
     if program_update.pricing_model and program.status == m_club.ProgramStatusPublic.ACTIVE:
         raise HTTPException(status_code=400, detail="Cannot change pricing model of an active program")
 
-    if (
-        program_update.status
-        and program_update.status == m_club.ProgramStatusPublic.ACTIVE
-        and program.club.stripe_account_id is None
-    ):
-        raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
+    if program_update.status and program_update.status == m_club.ProgramStatusPublic.ACTIVE:
+        if len(program.sessions) == 0:
+            raise HTTPException(status_code=400, detail="Cannot activate a program without sessions")
+        if await club_crud.has_club_stripe_account(db, club_id) is False:
+            raise HTTPException(status_code=400, detail="Cannot activate a program without a stripe account")
 
     try:
         details = await club_crud.update_program(db, program, program_update)
@@ -155,6 +154,8 @@ async def delete_program(
         return
     elif force_delete:
         raise HTTPException(status_code=501, detail="Force delete not implemented yet. Please contact support.")
+    else:
+        raise HTTPException(status_code=400, detail="Cannot delete an active program")
 
     # TODO: Check if program sessions are booked
     # * We need a param to force delete the program and cancel all bookings -> init refund process
@@ -197,10 +198,8 @@ async def create_session(
             status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
         )
 
-    if (
-        program.pricing_model == m_club.PriceType.PER_SESSION
-        and (new_session.price is None
-        or new_session.capacity is None)
+    if program.pricing_model == m_club.PriceType.PER_SESSION and (
+        new_session.price is None or new_session.capacity is None
     ):
         raise HTTPException(
             status_code=400, detail="Each session must have a price and capacity if the pricing model is 'per_session'."
@@ -365,6 +364,11 @@ async def delete_session(
             details = f"Club {club_id} cancelled session with bookings: {', '.join([str(booking.id) for booking in session_to_delete.bookings])}"
             audit_log.bookings_cancelled(issuer_id, details)
             await club_crud.delete_session(db, session_to_delete)
+    elif session_to_delete.program.status == m_club.ProgramStatus.ACTIVE and len(session_to_delete.program.sessions) == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete the last session of an active program. Please delete the program instead"
+        )
     else:
         await db.delete(session_to_delete)
 

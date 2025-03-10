@@ -703,7 +703,7 @@ class ProgramUpdate(BaseModel):
         ):
             raise ValueError("At least one update field must be provided.")
 
-        sessions_exist = self.session_data is not None and len(self.session_data) > 0
+        sessions_exist = self.session_data is not None
         price_correct = self.price is not None and self.capacity is not None
 
         if self.pricing_model == PriceType.PACKAGE:
