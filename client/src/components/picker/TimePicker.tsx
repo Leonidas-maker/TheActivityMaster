@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, TouchableWithoutFeedback, Platform, useCo
 import DateTimePicker, { DateTimePickerEvent, DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import DefaultText from '../textFields/DefaultText';
 import DefaultButton from '../buttons/DefaultButton';
+import { useTranslation } from 'react-i18next';
 
 interface InlineTimePopoverProps {
     onClose: (selectedTime: Date) => void;
@@ -15,6 +16,7 @@ interface TimePickerTriggerProps {
 
 export const InlineTimePopover: React.FC<InlineTimePopoverProps> = ({ onClose }) => {
     const [time, setTime] = useState(new Date());
+    const { t } = useTranslation("clubs");
 
     // On Android, open the native time picker dialog using the imperative API
     useEffect(() => {
@@ -64,7 +66,7 @@ export const InlineTimePopover: React.FC<InlineTimePopoverProps> = ({ onClose })
                 {/* Inner TouchableWithoutFeedback prevents propagation of touches from the modal content */}
                 <TouchableWithoutFeedback onPress={() => { }}>
                     <View className="bg-light_secondary dark:bg-dark_secondary p-4 rounded-xl shadow-lg" pointerEvents='auto'>
-                        <Text className="text-lg text-black dark:text-white font-bold mb-2 text-center">Select Time</Text>
+                        <Text className="text-lg text-black dark:text-white font-bold mb-2 text-center">{t("select_time")}</Text>
                         <DateTimePicker
                             value={time}
                             mode="time"
@@ -75,7 +77,7 @@ export const InlineTimePopover: React.FC<InlineTimePopoverProps> = ({ onClose })
                         />
                         <View className='justify-center flex-row'>
                             <DefaultButton
-                                text="Select"
+                                text={t("confirm_btn")}
                                 onPress={() => onClose(time)}
                             />
                         </View>

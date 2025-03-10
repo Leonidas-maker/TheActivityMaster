@@ -14,6 +14,7 @@ import Subheading from "@/src/components/textFields/Subheading";
 import Dropdown from "@/src/components/dropdown/Dropdown";
 import MultiDropdown from "@/src/components/dropdown/MultiDropdown";
 import OptionSwitch from "@/src/components/optionSwitch/OptionSwitch";
+import { getSessions } from "@/src/services/club/programSessionService";
 
 //TODO: Add change currency option
 //TODO: Add getSessions and update the pricing and capacity if change between pricing model is made
@@ -183,13 +184,13 @@ const UpdateProgram = () => {
     const handleUpdateProgramPress = async () => {
         // Use a local variable to track if there is any error
         let hasError = false;
-    
+
         // Validate the name field
         if (!name.trim()) {
             setNameError(true);
             hasError = true;
         }
-    
+
         // Validate the description field
         if (!description.trim()) {
             setDescriptionError(true);
@@ -205,7 +206,7 @@ const UpdateProgram = () => {
             });
             return;
         }
-    
+
         // Only validate price and capacity if pricing model is "package"
         if (pricingModel === "package") {
             if (!price.trim()) {
@@ -220,7 +221,7 @@ const UpdateProgram = () => {
             setPriceError(false);
             setCapacityError(false);
         }
-    
+
         // If any error is found, show an error toast and exit the function
         if (hasError) {
             Toast.show({
@@ -239,8 +240,28 @@ const UpdateProgram = () => {
             });
             return;
         }
-    
-        //! Bug with session_data in backend
+
+        if (status === "active") {
+            try {
+                const sessions = await getSessions(club_id, program_id);
+                if (sessions.length === 0) {
+                    Toast.show({
+                        type: "error",
+                        text1: t("sessionError_text"),
+                        text2: t("sessionError_subtext")
+                    });
+                    return;
+                }
+            } catch (error) {
+                Toast.show({
+                    type: "error",
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription")
+                });
+                return;
+            }
+        }
+
         try {
             const session_data = null;
             const statusValue = status?.trim() && status === "draft" ? undefined : status;
@@ -267,7 +288,7 @@ const UpdateProgram = () => {
             });
         }
     };
-    
+
 
     // Determine the available status options based on the current status.
     // "draft" option is only available if the current status is "draft".
@@ -391,8 +412,8 @@ const UpdateProgram = () => {
                                     status === "draft"
                                         ? t("draft")
                                         : status === "active"
-                                        ? t("active")
-                                        : t("inactive")
+                                            ? t("active")
+                                            : t("inactive")
                             }}
                             save="key"
                         />

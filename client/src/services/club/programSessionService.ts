@@ -2,17 +2,17 @@ import { axiosInstance } from "../api";
 
 //TODO: Export interfaces in a separate file and import them here
 interface sessions {
-  session_type: "course" | "event";
-  capacity: number;
-  price: number;
-  start_datetime: string;
-  end_datetime: string;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  start_date: string;
-  end_date: string;
-  address: address;
+  session_type: string;
+  capacity: number | null;
+  price: number | null;
+  start_datetime: string | null;
+  end_datetime: string | null;
+  day_of_week: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  address: address | null;
 }
 
 interface address {
@@ -23,7 +23,10 @@ interface address {
   country: string;
 }
 
-export const getSessions = async (club_id: string | string[], program_id: string | string[]) => {
+export const getSessions = async (
+  club_id: string | string[],
+  program_id: string | string[]
+) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/programs/${program_id}/sessions`
@@ -36,18 +39,15 @@ export const getSessions = async (club_id: string | string[], program_id: string
 };
 
 export const createSession = async (
-  club_id: string,
-  program_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
   session: sessions
 ) => {
   try {
-    const requestBody = {
-      session,
-    };
-
+    // Send the session data directly instead of wrapping it in a "session" property.
     const response = await axiosInstance.post(
       `/clubs/${club_id}/programs/${program_id}/sessions`,
-      requestBody
+      session
     );
     return response.data;
   } catch (error) {

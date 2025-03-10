@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, TouchableWithoutFeedback, Platform, useCo
 import DateTimePicker, { DateTimePickerEvent, DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import DefaultButton from '../buttons/DefaultButton';
 import DefaultText from '../textFields/DefaultText';
+import { useTranslation } from 'react-i18next';
 
 interface InlineDatePopoverProps {
     minimumDate?: Date;
@@ -17,6 +18,7 @@ interface DatePickerTriggerProps {
 
 export const InlineDatePopover: React.FC<InlineDatePopoverProps> = ({ minimumDate, maximumDate, onClose }) => {
     const [date, setDate] = useState(new Date());
+    const { t } = useTranslation("clubs");
 
     // Build an object for optional date constraints. Only add if provided.
     const pickerProps = {
@@ -76,7 +78,7 @@ export const InlineDatePopover: React.FC<InlineDatePopoverProps> = ({ minimumDat
                 {/* Inner TouchableWithoutFeedback prevents propagation of touches from the modal content */}
                 <TouchableWithoutFeedback onPress={() => { }}>
                     <View className="bg-light_secondary dark:bg-dark_secondary p-4 rounded-xl shadow-lg">
-                        <Text className="text-lg text-black dark:text-white font-bold mb-2 text-center">Select Date</Text>
+                        <Text className="text-lg text-black dark:text-white font-bold mb-2 text-center">{t("select_date")}</Text>
                         <DateTimePicker
                             value={date}
                             mode="date"
@@ -88,7 +90,7 @@ export const InlineDatePopover: React.FC<InlineDatePopoverProps> = ({ minimumDat
                         />
                         <View className='justify-center flex-row'>
                             <DefaultButton
-                                text="Select"
+                                text={t("confirm_btn")}
                                 onPress={() => onClose(date)}
                             />
                         </View>

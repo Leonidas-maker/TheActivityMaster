@@ -173,6 +173,13 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_add_session_header"),
         }}
       />
+      <Stack.Screen
+        name="(session)/ManageSession"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_session_header"),
+        }}
+      />
     </Stack>
   );
 }
