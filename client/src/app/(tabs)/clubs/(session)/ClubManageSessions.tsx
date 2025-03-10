@@ -51,7 +51,7 @@ const ClubManageSessions = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const { t } = useTranslation("clubs");
-    const { club_id, program_id } = useLocalSearchParams();
+    const { club_id, program_id, pricing_model } = useLocalSearchParams();
 
     // State to hold sessions data with proper typing
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -66,7 +66,7 @@ const ClubManageSessions = () => {
 
     // Function to handle the "Add" button press
     const handleAddPress = () => {
-        router.push(`/(tabs)/clubs/(session)/AddSession?club_id=${club_id}&program_id=${program_id}`);
+        router.push(`/(tabs)/clubs/(session)/AddSession?club_id=${club_id}&program_id=${program_id}&pricing_model=${pricing_model}`);
     };
 
     // Fetch sessions when the screen is focused
