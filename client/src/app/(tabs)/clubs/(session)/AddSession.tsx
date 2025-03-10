@@ -286,6 +286,25 @@ const AddSession = () => {
             const formattedStartTime = startEventTime.toISOString().split("T")[1].split(".")[0];
             const formattedEndTime = endEventTime.toISOString().split("T")[1].split(".")[0];
 
+            const eventStartDateTime = new Date(
+                eventDate.getFullYear(),
+                eventDate.getMonth(),
+                eventDate.getDate(),
+                startEventTime.getHours(),
+                startEventTime.getMinutes(),
+                startEventTime.getSeconds()
+            );
+
+            const eventEndDateTime = new Date(
+                eventDate.getFullYear(),
+                eventDate.getMonth(),
+                eventDate.getDate(),
+                endEventTime.getHours(),
+                endEventTime.getMinutes(),
+                endEventTime.getSeconds()
+            );
+
+
             // Build sessionData based on sessionType and pricing_model
             const sessionData: sessions = {
                 session_type: sessionType,
@@ -293,8 +312,8 @@ const AddSession = () => {
                 capacity: pricing_model === "per_session" ? parseInt(capacity) : null,
                 price: pricing_model === "per_session" ? parseInt(price) : null,
                 // For events, send start_datetime and end_datetime, otherwise null
-                start_datetime: sessionType === "event" ? startEventTime.toISOString() : null,
-                end_datetime: sessionType === "event" ? endEventTime.toISOString() : null,
+                start_datetime: sessionType === "event" ? eventStartDateTime.toISOString() : null,
+                end_datetime: sessionType === "event" ? eventEndDateTime.toISOString() : null,
                 // For courses, send day_of_week, start_time, end_time, start_date and optionally end_date
                 day_of_week: sessionType === "course" ? selectedWeekday : null,
                 start_time: sessionType === "course" ? formattedStartTime : null,
