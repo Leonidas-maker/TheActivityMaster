@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body, BackgroundTasks
 import uuid
 from typing import Union, List, Dict
 
@@ -80,6 +80,7 @@ async def get_membership_v1(
 
 @router.put("/{membership_id}", response_model=s_club.Membership, tags=["Club - Membership"])
 async def update_membership_v1(
+    background_tasks: BackgroundTasks,
     club_id: uuid.UUID = Path(..., description="The ID of the club to which the membership belongs"),
     membership_id: uuid.UUID = Path(..., description="The ID of the membership to be updated"),
     membership_update: s_club.MembershipUpdate = Body(...),
@@ -89,7 +90,7 @@ async def update_membership_v1(
     ),
 ):
     try:
-        return await club_controller.update_membership(
+        return await club_controller.update_membership(background_tasks,
             ep_context, token_details, club_id, membership_id, membership_update
         )
     except Exception as e:
@@ -98,6 +99,7 @@ async def update_membership_v1(
 
 @router.delete("/{membership_id}", response_model=s_generic.MessageResponse, tags=["Club - Membership"])
 async def delete_membership_v1(
+    background_tasks: BackgroundTasks,
     club_id: uuid.UUID,
     membership_id: uuid.UUID,
     password_form: s_generic.PasswordForm = Body(...),
@@ -107,7 +109,7 @@ async def delete_membership_v1(
     ),
 ):
     try:
-        await club_controller.delete_membership(
+        await club_controller.delete_membership(background_tasks,
             ep_context, token_details, club_id, membership_id, password_form.password
         )
         return s_generic.MessageResponse(message="Membership deleted")

@@ -1,10 +1,10 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 import uuid
 from typing import List, Union, Optional, Tuple, Dict
 from sqlalchemy.orm import joinedload
 
-from models import m_user, m_club, m_payment
-from schemas import s_club, s_role, s_payment
+from models import m_club, m_payment
+from schemas import s_club, s_payment, s_email
 
 
 from crud import (
@@ -14,7 +14,7 @@ from crud import (
 )
 
 from core.generic import EndpointContext
-from core import security as core_security, transactions as transactions_core
+from core import security as core_security, transactions as transactions_core, email as email_core
 
 
 async def create_membership(
@@ -60,6 +60,7 @@ async def create_membership(
 
 
 async def update_membership(
+    background_tasks: BackgroundTasks,
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
@@ -107,7 +108,19 @@ async def update_membership(
     # Cancel subscriptions if necessary
     if cancel_subscriptions:
         canceled_subscriptions = await club_crud.cancel_membership_subscriptions(db, club_id, membership_id)
-        # TODO - Notify users of subscription cancellation and if their want to "renew" their subscription to the new conditions
+        for canceled_subscription in canceled_subscriptions:
+            with email_core.email_manager_dependency.get() as email_manager:
+                background_tasks.add_task(
+                    email_manager.send_mail,
+                    s_email.UpdateMembershipModel(
+                        user_name=canceled_subscription.user.username,
+                        user_email=canceled_subscription.user.email,
+                        language=canceled_subscription.user.language,
+                        club_name=membership.club.name,
+                        membership_name=membership.name,
+                        renewal_link=f"theactivitymaster://renew_membership?club_id={membership.club_id}&membership_id={membership.id}",
+                    ),
+                )
 
         canceled_subscriptions_ids = [subscription.id for subscription in canceled_subscriptions]
         audit_log.membership_subscriptions_cancelled(
@@ -121,6 +134,7 @@ async def update_membership(
 
 
 async def delete_membership(
+    background_tasks: BackgroundTasks,
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
@@ -154,7 +168,18 @@ async def delete_membership(
 
     # Cancel subscriptions
     canceled_subscriptions = await club_crud.cancel_membership_subscriptions(db, club_id, membership_id)
-    # TODO - Notify users of subscription cancellation
+    for canceled_subscription in canceled_subscriptions:
+        with email_core.email_manager_dependency.get() as email_manager:
+            background_tasks.add_task(
+                email_manager.send_mail,
+                s_email.CancelledMembershipModel(
+                    user_name=canceled_subscription.user.username,
+                    user_email=canceled_subscription.user.email,
+                    language=canceled_subscription.user.language,
+                    club_name=membership.club.name,
+                    membership_name=membership.name,
+                ),
+            )
 
     canceled_subscriptions_ids = [subscription.id for subscription in canceled_subscriptions]
 
@@ -312,7 +337,7 @@ async def buy_membership(
 
     if not membership:
         raise HTTPException(status_code=404, detail="Membership not found")
-    
+
     if membership.status != m_club.MembershipStatusPublic.BOOKABLE:
         raise HTTPException(status_code=404, detail="Membership not found")
 
@@ -330,15 +355,15 @@ async def buy_membership(
     # Log the creation of the membership subscription
     audit_log.membership_supscription_created(user.id, club_id, membership_subscription.id)
 
-    #TODO Change to correct stripe implementation
+    # TODO Change to correct stripe implementation
     client_secret = None
     if not hasattr(membership_subscription, "latest_invoice"):
-        client_secret = "dummy_client_secret" 
+        client_secret = "dummy_client_secret"
     elif hasattr(membership_subscription, "latest_invoice"):
-        client_secret = membership_subscription.latest_invoice.payment_intent.client_secret 
-    
+        client_secret = membership_subscription.latest_invoice.payment_intent.client_secret
+
     if not client_secret:
-        transactions_core.cancel_subscription(membership.club.stripe_account_id, stripe_subscription.id)
+        transactions_core.cancel_subscription(membership.club.stripe_account_id, stripe_subscription.id)  # type: ignore
         raise HTTPException(status_code=500, detail="Payment intent client secret not found. Please try again.")
 
     await db.commit()

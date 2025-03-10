@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Body, Query, Path
+from fastapi import APIRouter, HTTPException, Depends, Request, Body, Query, Path, BackgroundTasks
 import uuid
 
 from schemas import s_user, s_generic, s_role
@@ -20,12 +20,13 @@ router = APIRouter()
 
 @router.post("/register", response_model=s_generic.MessageResponse, tags=["User"])
 async def register_user_v1(
+    background_tasks: BackgroundTasks,
     user: s_user.UserCreate = Body(...),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Register a new user"""
     try:
-        user_id = await user_controller.register_user(ep_context, user)
+        user_id = await user_controller.register_user(background_tasks, ep_context, user)
         return s_generic.MessageResponse(message=str(user_id))
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=f"Invalid user data: {ve}")
@@ -122,13 +123,14 @@ async def totp_remove_v1(
 
 @router.post("/me/change_password", tags=["User"])
 async def change_password_v1(
+    background_tasks: BackgroundTasks,
     password_change: s_user.ChangePassword = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
 ):
     """Change the user's password"""
     try:
-        await user_controller.change_password(ep_context, token_details, password_change)
+        await user_controller.change_password(background_tasks, ep_context, token_details, password_change)
         return {"message": "Password changed"}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to change password")
@@ -150,6 +152,7 @@ async def update_user_profile_v1(
 
 @router.put("/me/email", tags=["User"])
 async def update_user_email_v1(
+    background_tasks: BackgroundTasks,
     email_change: s_user.ChangeEmail = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
@@ -157,7 +160,7 @@ async def update_user_email_v1(
     """Update the user's email"""
     try:
         await user_controller.update_user_email(
-            ep_context, token_details, email_change.new_email, email_change.password
+            background_tasks, ep_context, token_details, email_change.new_email, email_change.password
         )
         return {"message": "Email updated"}
     except Exception as e:
@@ -166,6 +169,7 @@ async def update_user_email_v1(
 
 @router.put("/me/username", tags=["User"])
 async def update_user_username_v1(
+    background_tasks: BackgroundTasks,
     username_change: s_user.ChangeUsername = Body(...),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
     ep_context: EndpointContext = Depends(get_endpoint_context),
@@ -173,7 +177,7 @@ async def update_user_username_v1(
     """Update the user's username"""
     try:
         await user_controller.update_user_username(
-            ep_context, token_details, username_change.new_username, username_change.password
+            background_tasks, ep_context, token_details, username_change.new_username, username_change.password
         )
         return {"message": "Username updated"}
     except Exception as e:

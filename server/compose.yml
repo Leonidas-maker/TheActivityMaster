@@ -48,23 +48,35 @@ services:
     ports:
       - "12111:12111"
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - "8025:8025" 
+      - "1025:1025"
+
   backend:
-  # build:
-  #   context: ./app
-  #   dockerfile: Dockerfile
-  #   args:
-  #     PYTHON_VERSION: 3.12.8
+    # build:
+    #   context: ./app
+    #   dockerfile: Dockerfile
+    #   args:
+    #     PYTHON_VERSION: 3.12.8
     image: registry.gitlab.com/themastercollection/theactivitymaster/backend-dev
     container_name: backend
     environment:
       - DB_HOST=mariadb
       - REDIS_HOST=dragonfly
       - STRIPE_MOCK_HOST=stripe
+      - EMAIL_HOST=mailhog
+      - EMAIL_PORT=1025
+      - SERVER_DOMAIN=localhost:8001
       - COLUMNS=120
       - LINES=40
     depends_on:
       - mariadb
       - dragonfly
+      - stripe
+      - mailhog
     volumes:
       - backend_keyfiles:/app/config/keyfiles
       - backend_verifications:/app/config/verifications

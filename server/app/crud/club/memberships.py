@@ -9,13 +9,13 @@ import datetime
 import traceback
 from rich.console import Console
 
-from schemas import s_club
+from schemas import s_club, s_email
 
 from models import m_club, m_user, m_payment
 
 from crud import audit as audit_crud, generic as generic_crud, transactions as transactions_crud, club as club_crud
 
-from core import transactions as transactions_core
+from core import transactions as transactions_core, email as email_core
 
 from config.permissions import ClubPermissions  #
 
@@ -75,7 +75,7 @@ async def create_membership(
     club = await club_crud.get_club(db, club_id)
 
     stripe_product, stripe_price = transactions_core.create_membership(
-        club.stripe_account_id,
+        club.stripe_account_id, # type: ignore
         new_membership.name,
         new_membership.description,
         new_membership.price,
@@ -300,12 +300,12 @@ async def update_membership(
 
     if name_description_updated:
         transactions_core.modify_membership_name_description(
-            membership.club.stripe_account_id, membership.stripe_product_id, membership.name, membership.description
+            membership.club.stripe_account_id, membership.stripe_product_id, membership.name, membership.description # type: ignore
         )
 
     if cancel_subscriptions:
         new_stripe_price = transactions_core.modify_membership_price_duration(
-            membership.club.stripe_account_id,
+            membership.club.stripe_account_id, # type: ignore
             membership.price,
             membership.currency,
             membership_duration_to_stripe_duration(membership.duration, membership.duration_unit),
@@ -471,7 +471,7 @@ async def create_membership_subscription(
 
     state = inspect(membership)
     if "club" in state.unloaded:
-        await db.refresh(membership, attribute_names=["club"])
+        await db.refresh(membership, ["club"])
 
     timedelta = membership_duration_to_timedelta(membership.duration, membership.duration_unit)
 
@@ -482,7 +482,7 @@ async def create_membership_subscription(
         await db.flush()
 
     stripe_subscription = transactions_core.create_subscription(
-        membership.club.stripe_account_id, user.stripe_customer_id, membership.stripe_price_id
+        membership.club.stripe_account_id, user.stripe_customer_id, membership.stripe_price_id # type: ignore
     )
 
     subscription = m_payment.MembershipSubscription(

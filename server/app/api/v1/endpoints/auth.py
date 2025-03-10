@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Header, Query, Body
+from fastapi import APIRouter, Depends, Request, Header, Query, Body, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 
 
@@ -22,6 +22,7 @@ router = APIRouter()
 
 @router.post("/login", response_model=s_auth.SecurityTokenResponse, tags=["Authentication - Login"])
 async def login_v1(
+    background_tasks: BackgroundTasks,
     request: Request,
     login_form: s_auth.LoginRequest = Body(...),
     application_id: str = Header(...),
@@ -31,7 +32,7 @@ async def login_v1(
     try:
         client_ip = request.client.host if request.client else ""
 
-        security_token, methods_2fa = await auth_controller.login(ep_context, login_form, client_ip, application_id)
+        security_token, methods_2fa = await auth_controller.login(background_tasks, ep_context, login_form, client_ip, application_id)
         return s_auth.SecurityTokenResponse(security_token=security_token, methods=methods_2fa)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to login")
@@ -103,6 +104,7 @@ async def logout_all_v1(
 
 @router.post("/forgot-password", response_model=s_generic.MessageResponse, tags=["Authentication - Forgot-Password"])
 async def forgot_password_v1(
+    background_tasks: BackgroundTasks,
     request: Request,
     ident: str = Query(..., min_length=3, description="The username or email of the user"),
     application_id: str = Header(..., alias="Application-Id"),
@@ -111,7 +113,7 @@ async def forgot_password_v1(
     """Send a forgot password email"""
     try:
         client_ip = request.client.host if request.client else ""
-        await auth_controller.forgot_password(ep_context, ident, application_id, client_ip)
+        await auth_controller.forgot_password(background_tasks, ep_context, ident, application_id, client_ip)
         return {"message": "Successfully sent forgot password email"}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to send forgot password email")

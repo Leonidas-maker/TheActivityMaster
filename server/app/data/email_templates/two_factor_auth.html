@@ -1,0 +1,17 @@
+{% extends "base_email.html" %}
+{% block title %}Your Two-Factor Authentication Code 🔒{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>Your two-factor authentication code is:</p>
+
+<div class="centered">
+  <p style="font-size: 24px; font-weight: bold; padding: 10px 20px; background-color: #f0f0f0; color: #e53935; border: 2px dashed #fb8c00; display: inline-block; border-radius: 8px; letter-spacing: 2px;">
+    {{ two_fa_code }}
+  </p>
+</div>
+
+<p>If you did not attempt to log in, please secure your account immediately 🚨.</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

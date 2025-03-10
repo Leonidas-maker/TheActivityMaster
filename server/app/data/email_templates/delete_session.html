@@ -1,0 +1,23 @@
+{% extends "base_email.html" %}
+{% block title %}Session Cancellation Notice 📅{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  We wanted to let you know that the following occurrences of the session 
+  <strong>{{ session_title }}</strong> from <strong>{{ club_name }}</strong> have been cancelled:
+</p>
+
+<ul>
+  {% for date in session_dates %}
+    <li>{{ date }} ❌</li>
+  {% endfor %}
+</ul>
+
+<p>
+  If you have any questions or require further information, please contact our support team.
+  We apologize for the inconvenience.
+</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base_email.html" %}
+{% block title %}Membership Update Notification 🚀{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  We wanted to inform you that your <strong>{{ membership_name }}</strong> membership at <strong>{{ club_name }}</strong> has been updated with new terms and conditions 🔄.
+  As a result, your current subscription was cancelled. We invite you to renew your subscription under the new conditions if you wish to continue enjoying our services.
+</p>
+
+<div class="centered">
+  <a href="{{ renewal_link }}" class="button">Renew Now 🔥</a>
+</div>
+
+<p>Thank you for being part of TheActivityMaster! 😊</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

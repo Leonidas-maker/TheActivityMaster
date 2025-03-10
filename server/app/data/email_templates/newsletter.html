@@ -1,0 +1,21 @@
+{% extends "base_email.html" %}
+{% block title %}TheActivityMaster Newsletter 📰{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  Welcome to our latest newsletter! Here are some updates and upcoming events at <strong>{{ club_name }}</strong> and across TheActivityMaster:
+</p>
+
+<ul>
+  {% for update in updates %}
+    <li>{{ update }} 📣</li>
+  {% endfor %}
+</ul>
+
+<p>
+  Stay tuned for more updates, and thank you for being part of our community! 😊
+</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

@@ -57,13 +57,11 @@ def authorized_read_program_db_condition(user_id: uuid.UUID, club_id: uuid.UUID)
 def active_sessions_db_condition() -> ColumnElement[bool]:
     return and_(
         or_(
-            m_club.Session.end_date >= datetime.datetime.now(
-                tz=datetime.timezone.utc),
+            m_club.Session.end_date >= datetime.datetime.now(tz=datetime.timezone.utc),
             m_club.Session.end_date == None,
         ),
         or_(
-            m_club.Session.end_datetime >= datetime.datetime.now(
-                tz=datetime.timezone.utc),
+            m_club.Session.end_datetime >= datetime.datetime.now(tz=datetime.timezone.utc),
             m_club.Session.end_datetime == None,
         ),
     )
@@ -98,15 +96,12 @@ def refresh_occurrences_for_session(session: m_club.Session) -> Tuple[List[m_clu
     occurrences = []
     occurrences_updated = 0
 
-    end_date = session.end_date if session.end_date else datetime.date.today() + \
-        datetime.timedelta(days=90)
+    end_date = session.end_date if session.end_date else datetime.date.today() + datetime.timedelta(days=90)
 
     for dt in rrule(
         freq=WEEKLY,
-        dtstart=datetime.datetime.combine(
-            session.start_date, session.start_time),  # type: ignore
-        until=datetime.datetime.combine(
-            end_date, session.end_time),  # type: ignore
+        dtstart=datetime.datetime.combine(session.start_date, session.start_time),  # type: ignore
+        until=datetime.datetime.combine(end_date, session.end_time),  # type: ignore
         byweekday=byweekday,
     ):
         occ_date = dt.date()
@@ -142,8 +137,7 @@ async def clear_future_occurrences_for_session(
     ]
 
     if only_scheduled:
-        conditions.append(m_club.SessionOccurrence.status ==
-                          m_club.OccurrenceStatus.SCHEDULED)
+        conditions.append(m_club.SessionOccurrence.status == m_club.OccurrenceStatus.SCHEDULED)
 
     res = await db.execute(
         delete(m_club.SessionOccurrence).filter(
@@ -158,6 +152,7 @@ async def get_session_occurrences_dict(
     db: AsyncSession,
     program_id: uuid.UUID,
     session_id: uuid.UUID,
+    with_email_details: bool = False,
 ) -> Dict[uuid.UUID, m_club.SessionOccurrence]:
     """Get occurrences for a session
 
@@ -166,9 +161,25 @@ async def get_session_occurrences_dict(
     :param session_id: The ID of the session
     :return:
     """
+    query_options = [joinedload(m_club.SessionOccurrence.session)]
+
+    if with_email_details:
+        query_options.extend(
+            [
+                joinedload(m_club.SessionOccurrence.session)
+                .joinedload(m_club.Session.program)
+                .load_only(m_club.Program.name),
+                joinedload(m_club.SessionOccurrence.session)
+                .joinedload(m_club.Session.program)
+                .joinedload(m_club.Program.club)
+                .load_only(m_club.Club.name),
+            ]
+        )
+
     res = await db.execute(
         select(m_club.SessionOccurrence)
         .join(m_club.Session)
+        .options(*query_options)
         .filter(
             m_club.SessionOccurrence.session_id == session_id,
             m_club.Session.program_id == program_id,
@@ -194,12 +205,10 @@ async def get_session_occurrences(
     :param end_date: The end date
     :return: A list of occurrences
     """
-    conditions = [m_club.SessionOccurrence.session_id ==
-                  session_id, m_club.Session.program_id == program_id]
+    conditions = [m_club.SessionOccurrence.session_id == session_id, m_club.Session.program_id == program_id]
 
     if start_date:
-        conditions.append(
-            m_club.SessionOccurrence.occurrence_date >= start_date)
+        conditions.append(m_club.SessionOccurrence.occurrence_date >= start_date)
 
     if end_date:
         conditions.append(m_club.SessionOccurrence.occurrence_date <= end_date)
@@ -241,7 +250,11 @@ async def get_occurrences_for_program(
 
 
 async def get_session_occurrence(
-    db: AsyncSession, program_id: uuid.UUID, session_id: uuid.UUID, occurrence_id: uuid.UUID
+    db: AsyncSession,
+    program_id: uuid.UUID,
+    session_id: uuid.UUID,
+    occurrence_id: uuid.UUID,
+    with_email_details: bool = False,
 ) -> m_club.SessionOccurrence:
     """Get an occurrence by ID
 
@@ -251,8 +264,24 @@ async def get_session_occurrence(
     :param occurrence_id: The ID of the occurrence
     :return: The occurrence with the given ID
     """
+    query_options = []
+    if with_email_details:
+        query_options.extend(
+            [
+                joinedload(m_club.SessionOccurrence.session),
+                joinedload(m_club.SessionOccurrence.session)
+                .joinedload(m_club.Session.program)
+                .load_only(m_club.Program.name),
+                joinedload(m_club.SessionOccurrence.session)
+                .joinedload(m_club.Session.program)
+                .joinedload(m_club.Program.club)
+                .load_only(m_club.Club.name),
+            ]
+        )
+
     res = await db.execute(
         select(m_club.SessionOccurrence)
+        .options(*query_options)
         .join(m_club.Session)
         .filter(
             m_club.SessionOccurrence.id == occurrence_id,
@@ -449,8 +478,7 @@ async def get_bookable_sessions(db: AsyncSession, session_ids: List[uuid.UUID]) 
             m_club.Session.capacity > bookings_count_subquery,
         )
         .options(
-            joinedload(m_club.Session.program).joinedload(
-                m_club.Program.memberships_access),
+            joinedload(m_club.Session.program).joinedload(m_club.Program.memberships_access),
             joinedload(m_club.Session.program).joinedload(m_club.Program.club),
         )
     )
@@ -487,13 +515,11 @@ async def get_authorized_sessions(
                     authorized_read_program_db_condition(user_id, club_id),
                 ),
                 or_(
-                    m_club.Session.end_date >= datetime.datetime.now(
-                        tz=datetime.timezone.utc),
+                    m_club.Session.end_date >= datetime.datetime.now(tz=datetime.timezone.utc),
                     m_club.Session.end_date == None,
                 ),
                 or_(
-                    m_club.Session.end_datetime >= datetime.datetime.now(
-                        tz=datetime.timezone.utc),
+                    m_club.Session.end_datetime >= datetime.datetime.now(tz=datetime.timezone.utc),
                     m_club.Session.end_datetime == None,
                 ),
             )
@@ -558,7 +584,6 @@ async def create_session(db: AsyncSession, program_id: uuid.UUID, session: s_clu
     if session.session_type == m_club.SessionType.COURSE:
         occurrences, _ = refresh_occurrences_for_session(db_session)
         db.add_all(occurrences)
-    
 
     await db.flush()
     await db.refresh(db_session, ["occurrences"])
@@ -578,18 +603,16 @@ async def create_sessions_for_program(
     :param sessions: The sessions to create
     :return: The created sessions
     """
-    if len (sessions) == 0:
+    if len(sessions) == 0:
         raise ValueError("No sessions provided")
 
     if not program and not program_id:
         raise ValueError("Program or program_id is required")
 
     if program:
-        db_sessions = [m_club.Session(
-            program=program, **session.model_dump()) for session in sessions]
+        db_sessions = [m_club.Session(program=program, **session.model_dump()) for session in sessions]
     else:
-        db_sessions = [m_club.Session(
-            program_id=program_id, **session.model_dump()) for session in sessions]
+        db_sessions = [m_club.Session(program_id=program_id, **session.model_dump()) for session in sessions]
     db.add_all(db_sessions)
     await db.flush()
     return db_sessions
@@ -613,8 +636,7 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
         if session.session_type == m_club.SessionType.COURSE and any(
             [session_update.start_datetime, session_update.end_datetime]
         ):
-            raise ValueError(
-                "Start and end datetime are not allowed for COURSE sessions")
+            raise ValueError("Start and end datetime are not allowed for COURSE sessions")
 
         if session.session_type == m_club.SessionType.EVENT and any(
             [
@@ -625,8 +647,7 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
                 session_update.end_date,
             ]
         ):
-            raise ValueError(
-                "Day of week, start time, end time and start date are not allowed for EVENT sessions")
+            raise ValueError("Day of week, start time, end time and start date are not allowed for EVENT sessions")
 
     if session_update.capacity and session.capacity != session_update.capacity:
         details += f"Capacity: {session.capacity} -> {session_update.capacity}"
@@ -650,8 +671,7 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
 
         if session_update.session_type == m_club.SessionType.EVENT:
             if not session_update.start_datetime or not session_update.end_datetime:
-                raise ValueError(
-                    "Start and end datetime are required for EVENT sessions")
+                raise ValueError("Start and end datetime are required for EVENT sessions")
 
             session.day_of_week = None
             session.start_time = None
@@ -672,8 +692,7 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
                 or not session_update.end_time
                 and not session.start_date
             ):
-                raise ValueError(
-                    "Day of week, start time, end time and start date are required for COURSE sessions")
+                raise ValueError("Day of week, start time, end time and start date are required for COURSE sessions")
 
             session.start_datetime = None
             session.end_datetime = None
@@ -775,6 +794,7 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
     await db.flush()
     return details
 
+
 async def delete_session(db: AsyncSession, session: m_club.Session) -> None:
     """Delete a session
 
@@ -785,6 +805,7 @@ async def delete_session(db: AsyncSession, session: m_club.Session) -> None:
     if session.session_type == m_club.SessionType.COURSE:
         await clear_occurrences_for_session(db, session.id)
     await db.flush()
+
 
 ###########################################################################
 ################################# Program #################################
@@ -853,7 +874,7 @@ async def create_program(db: AsyncSession, club_id: uuid.UUID, program: s_club.P
         await create_sessions_for_program(db, program.sessions, program=db_program)
     await db.flush()
     await db.refresh(db_program, ["sessions"])
-   
+
     return db_program
 
 
@@ -929,17 +950,13 @@ async def get_program(
     :param status: The status of the program
     :return: The program with the given ID
     """
-    query_options = [joinedload(m_club.Program.categories), undefer(
-        m_club.Program.description)]
-    conditions = [m_club.Program.id == program_id,
-                  m_club.Program.club_id == club_id]
+    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
+    conditions = [m_club.Program.id == program_id, m_club.Program.club_id == club_id]
 
     if with_details:
         query_options.append(joinedload(m_club.Program.sessions))
-        query_options.append(joinedload(
-            m_club.Program.sessions, m_club.Session.address))
-        query_options.append(joinedload(
-            m_club.Program.sessions, m_club.Session.occurrences))
+        query_options.append(joinedload(m_club.Program.sessions, m_club.Session.address))
+        query_options.append(joinedload(m_club.Program.sessions, m_club.Session.occurrences))
 
     if with_club:
         query_options.append(joinedload(m_club.Program.club))
@@ -978,8 +995,7 @@ async def get_bookable_programs(db: AsyncSession, program_ids: List[uuid.UUID]) 
             joinedload(m_club.Program.sessions),
             joinedload(m_club.Program.memberships_access),
             joinedload(m_club.Program.club),
-            joinedload(m_club.Program.sessions).joinedload(
-                m_club.Session.program),
+            joinedload(m_club.Program.sessions).joinedload(m_club.Session.program),
         )
     )
     return list(res.unique().scalars().all())
@@ -1008,10 +1024,8 @@ async def get_authorized_program(
 
     if with_details:
         query_options.append(joinedload(m_club.Program.sessions))
-        query_options.append(joinedload(
-            m_club.Program.sessions, m_club.Session.address))
-        query_options.append(joinedload(
-            m_club.Program.sessions, m_club.Session.occurrences))
+        query_options.append(joinedload(m_club.Program.sessions, m_club.Session.address))
+        query_options.append(joinedload(m_club.Program.sessions, m_club.Session.occurrences))
 
     if user_id:
         query = select(m_club.Program).filter(
@@ -1046,8 +1060,7 @@ async def search_programs(
     :param page_size: The number of programs per page
     :return: A list of programs that match the filters
     """
-    query_options = [joinedload(m_club.Program.categories), undefer(
-        m_club.Program.description)]
+    query_options = [joinedload(m_club.Program.categories), undefer(m_club.Program.description)]
 
     query = select(m_club.Program).filter(*filters)
     res = await db.execute(query.offset((page - 1) * page_size).limit(page_size).options(*query_options))
@@ -1084,6 +1097,7 @@ async def is_price_model_package(
     )
     return bool(res.scalar())
 
+
 async def get_club_program_ids(db: AsyncSession, club_id: uuid.UUID) -> set[uuid.UUID]:
     """Get all program IDs of a club
 
@@ -1113,7 +1127,7 @@ async def update_program(
     if program_update.name and program.name != program_update.name:
         if await program_exists(db, program.club_id, program_update.name):
             raise ValueError("Program with the same name already exists")
-        
+
         details += f"Name: {program.name} -> {program_update.name}"
         program.name = program_update.name
 
@@ -1133,7 +1147,10 @@ async def update_program(
         details += f"Capacity: {program.capacity} -> {program_update.capacity}"
         program.capacity = program_update.capacity
 
-    if program_update.membership_required is not None and program.membership_required != program_update.membership_required:
+    if (
+        program_update.membership_required is not None
+        and program.membership_required != program_update.membership_required
+    ):
         details += f"Membership Required: {program.membership_required} -> {program_update.membership_required}"
         program.membership_required = program_update.membership_required
 
@@ -1152,46 +1169,40 @@ async def update_program(
         if program_update.pricing_model == m_club.PriceType.PER_SESSION:
             program.price = None
             program.capacity = None
-        
+
     if program_update.session_data:
         if program.pricing_model == m_club.PriceType.PACKAGE:
-            raise ValueError(
-                "Session prices are not allowed for PACKAGE pricing model")
+            raise ValueError("Session prices are not allowed for PACKAGE pricing model")
 
         if price_model_changed and len(program.sessions) != len(program_update.session_data):
-            raise ValueError(
-                "Length of session prices does not match the number of sessions.")
+            raise ValueError("Length of session prices does not match the number of sessions.")
 
         program.price = None
         sessions_details = []
 
         # Update session prices
         for session in program.sessions:
-            new_price, new_capacity = program_update.session_data.get(
-                session.id, (None, None))
+            new_price, new_capacity = program_update.session_data.get(session.id, (None, None))
 
             session_details = []
 
             # Check if the session has a price
             if session.price != new_price:
-                session_details.append(
-                    f"Price: {session.price} -> {new_price}")
+                session_details.append(f"Price: {session.price} -> {new_price}")
                 session.price = new_price
             elif price_model_changed:
                 raise ValueError(f"Missing price for session {session.id}")
 
             # Check if the session has a capacity
             if session.capacity != new_capacity:
-                session_details.append(
-                    f"Capacity: {session.capacity} -> {new_capacity}")
+                session_details.append(f"Capacity: {session.capacity} -> {new_capacity}")
                 session.capacity = new_capacity
 
             elif price_model_changed:
                 raise ValueError(f"Missing capacity for session {session.id}")
 
             if session_details:
-                sessions_details.append(
-                    f"{session.id} ~ {', '.join(session_details)}")
+                sessions_details.append(f"{session.id} ~ {', '.join(session_details)}")
 
         if sessions_details:
             details += f"Session Prices: {';'.join(sessions_details)}"
@@ -1214,6 +1225,7 @@ async def update_program(
     await db.flush()
     return details
 
+
 async def delete_program(db: AsyncSession, program: m_club.Program) -> None:
     """Delete a program
 
@@ -1225,6 +1237,7 @@ async def delete_program(db: AsyncSession, program: m_club.Program) -> None:
     db.add(program)
     await db.flush()
 
+
 ###########################################################################
 ################################# Sonstiges ###############################
 ###########################################################################
@@ -1235,8 +1248,7 @@ async def get_program_categories(db: AsyncSession, ids: Optional[List[int]] = No
     :param ids: A list of category ids to filter by
     :return: A list of program categories
     """
-    stmt = select(m_club.ProgramCategory).options(
-        joinedload(m_club.ProgramCategory.translations))
+    stmt = select(m_club.ProgramCategory).options(joinedload(m_club.ProgramCategory.translations))
 
     if ids:
         stmt = stmt.filter(m_club.ProgramCategory.id.in_(ids))
@@ -1278,15 +1290,13 @@ async def update_session_occurrences(db: AsyncSession, console: Console) -> bool
             updated_occurrences += updated
 
         db.add_all(new_occurrences)
-        audit_logger.sys_info(
-            f"Added {len(new_occurrences)} new occurrences and updated {updated_occurrences}")
+        audit_logger.sys_info(f"Added {len(new_occurrences)} new occurrences and updated {updated_occurrences}")
         await db.flush()
 
         # Remove occurrences that are older than 90 and not changed
         res = await db.execute(
             delete(m_club.SessionOccurrence).filter(
-                m_club.SessionOccurrence.occurrence_date < today -
-                datetime.timedelta(days=90),
+                m_club.SessionOccurrence.occurrence_date < today - datetime.timedelta(days=90),
                 m_club.SessionOccurrence.status == m_club.OccurrenceStatus.SCHEDULED,
             )
         )
@@ -1300,8 +1310,7 @@ async def update_session_occurrences(db: AsyncSession, console: Console) -> bool
         return True
     except Exception as e:
         await db.rollback()
-        audit_logger.sys_error(
-            "Error updating session occurrences", traceback=traceback.format_exc())
+        audit_logger.sys_error("Error updating session occurrences", traceback=traceback.format_exc())
         await db.commit()
         console.log("[red][ERROR][/red]\t\tError updating session occurrences")
         console.print_exception()
@@ -1340,13 +1349,11 @@ async def set_programs_inactive(db: AsyncSession, console: Console) -> bool:
         audit_logger.sys_info(f"Set {num_updated} programs to inactive")
         await db.commit()
 
-        console.log(
-            f"[blue][INFO][/blue]\t\tSet {num_updated} programs to inactive")
+        console.log(f"[blue][INFO][/blue]\t\tSet {num_updated} programs to inactive")
         return True
     except Exception as e:
         await db.rollback()
-        audit_logger.sys_error(
-            "Error setting programs inactive", traceback=traceback.format_exc())
+        audit_logger.sys_error("Error setting programs inactive", traceback=traceback.format_exc())
         await db.commit()
         console.log("[red][ERROR][/red]\t\tError setting programs inactive")
         console.print_exception()

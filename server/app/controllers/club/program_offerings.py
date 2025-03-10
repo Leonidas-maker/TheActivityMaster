@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 import uuid
 from sqlalchemy.orm import joinedload
 from typing import List, Union, Optional, Tuple
@@ -7,7 +7,7 @@ from config.settings import DEBUG, DEFAULT_TIMEZONE
 from config.permissions import ClubPermissions
 
 from models import m_user, m_club, m_payment
-from schemas import s_club, s_generic, s_role
+from schemas import s_club, s_email
 
 from crud import (
     club as club_crud,
@@ -17,7 +17,7 @@ from crud import (
 )
 
 from core.generic import EndpointContext
-import core.security as core_security
+from core import security as core_security, email as core_email
 
 
 ###########################################################################
@@ -288,6 +288,7 @@ async def update_session(
 
 
 async def delete_session(
+    background_tasks: BackgroundTasks,
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
@@ -312,6 +313,7 @@ async def delete_session(
         session_id,
         query_options=[
             joinedload(m_club.Session.program).joinedload(m_club.Program.sessions),
+            joinedload(m_club.Session.program).joinedload(m_club.Program.club),
             joinedload(m_club.Session.bookings),
         ],
     )
@@ -364,23 +366,49 @@ async def delete_session(
             details = f"Club {club_id} cancelled session with bookings: {', '.join([str(booking.id) for booking in session_to_delete.bookings])}"
             audit_log.bookings_cancelled(issuer_id, details)
             await club_crud.delete_session(db, session_to_delete)
-    elif session_to_delete.program.status == m_club.ProgramStatus.ACTIVE and len(session_to_delete.program.sessions) == 1:
+    elif (
+        session_to_delete.program.status == m_club.ProgramStatus.ACTIVE and len(session_to_delete.program.sessions) == 1
+    ):
         raise HTTPException(
             status_code=400,
-            detail="Cannot delete the last session of an active program. Please delete the program instead"
+            detail="Cannot delete the last session of an active program. Please delete the program instead",
         )
     else:
         await db.delete(session_to_delete)
 
-    # TODO EMAIL - Notify users that have booked the session
     audit_log.session_deleted(issuer_id, club_id, session_id)
+
+    session_title = session_to_delete.session_type.value + " - " + session_to_delete.program.name
+    club_name = session_to_delete.program.club.name
+
     await db.commit()
+
+    # TODO EMAIL - Add more details to the email
+    users = await club_crud.get_users_by_session_id(db, session_id)
+    session_date = "n.a."
+    if session_to_delete.start_datetime:
+        session_date = session_to_delete.start_datetime.strftime("%Y-%m-%d %H:%M")
+
+    with core_email.email_manager_dependency.get() as email_manager:
+        for user in users:
+            background_tasks.add_task(
+                email_manager.send_mail,
+                s_email.DeleteSessionModel(
+                    user_name=user.first_name,
+                    user_email=user.email,
+                    language=user.language,
+                    club_name=club_name,
+                    session_title=session_title,
+                    session_date=session_date,
+                ),
+            )
 
 
 ###########################################################################
 ########################### Session Occurrences ###########################
 ###########################################################################
 async def reschedule_session_occurrences(
+    background_tasks: BackgroundTasks,
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
@@ -401,11 +429,12 @@ async def reschedule_session_occurrences(
     audit_log = ep_context.audit_logger
     issuer_id = token_details.user_id
 
-    occurrences = await club_crud.get_session_occurrences_dict(db, program_id, session_id)
+    occurrences = await club_crud.get_session_occurrences_dict(db, program_id, session_id, with_email_details=True)
 
     if not occurrences:
         raise HTTPException(status_code=404, detail="No occurrences found")
 
+    email_data = {}
     for reschedule in reschedules:
         occurrence = occurrences.get(reschedule.occurrence_id)
         if not occurrence:
@@ -414,16 +443,60 @@ async def reschedule_session_occurrences(
         await club_crud.session_occurrence_reschedule(db, occurrence, reschedule)
 
         if occurrence.status != m_club.OccurrenceStatus.RESCHEDULED:
-            # TODO EMAIL - Notify users that have booked the session
-            pass
+            if not occurrence.session.start_time or not occurrence.session.end_time:
+                raise ValueError(f"Session {occurrence.session_id} does not have a start time or end time")
+            users = await club_crud.get_users_by_session_id(db, session_id)
+
+            old_session_date = occurrence.occurrence_date.isoformat()
+            old_session_date += (
+                f" {occurrence.session.start_time.strftime('%H:%M')} - {occurrence.session.end_time.strftime('%H:%M')}"
+            )
+
+            old_session_date += (
+                f" {occurrence.session.start_time.strftime('%H:%M')} - {occurrence.session.end_time.strftime('%H:%M')}"
+            )
+
+            for user in users:
+                if not email_data.get(user.email):
+                    email_data[user.email] = {
+                        "username": user.username,
+                        "language": user.language,
+                        "occurrence_change": [],
+                    }
+                email_data[user.email]["occurrence_change"].append(
+                    s_email.OccurrenceChange(
+                        old_date=old_session_date,
+                        new_date=f"{reschedule.start_datetime.isoformat()} - {reschedule.end_datetime.isoformat()}",
+                    )
+                )
 
         details = f"Rescheduled to {reschedule.start_datetime} - {reschedule.end_datetime}"
         audit_log.occurrence_rescheduled(issuer_id, club_id, session_id, occurrence.id, details)
 
+    occurrence = occurrences[reschedules[0].occurrence_id]
+    session_title = occurrence.session.session_type.value + " - " + occurrence.session.program.name
+    club_name = occurrence.session.program.club.name
+
+    with core_email.email_manager_dependency.get() as email_manager:
+        for email, data in email_data.items():
+            background_tasks.add_task(
+                email_manager.send_mail,
+                s_email.RescheduledSessionModel(
+                    user_name=data["username"],
+                    user_email=email,
+                    language=data["language"],
+                    club_name=club_name,
+                    session_title=session_title,
+                    occurrence_change=data["occurrence_change"],
+                ),
+            )
+
     await db.commit()
 
 
+# TODO Allow for multiple occurrences to be cancelled at once
 async def cancel_session_occurrences(
+    background_tasks: BackgroundTasks,
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
@@ -446,7 +519,7 @@ async def cancel_session_occurrences(
     audit_log = ep_context.audit_logger
     issuer_id = token_details.user_id
 
-    occurrence = await club_crud.get_session_occurrence(db, program_id, session_id, occurrence_id)
+    occurrence = await club_crud.get_session_occurrence(db, program_id, session_id, occurrence_id, with_email_details=True)
 
     if not occurrence:
         raise HTTPException(status_code=404, detail="Occurrence not found")
@@ -457,18 +530,45 @@ async def cancel_session_occurrences(
     await club_crud.session_occurrence_cancel(db, occurrence, note)
     audit_log.occurrence_cancelled(issuer_id, club_id, session_id, occurrence.id, details=f"{note}")
 
-    # TODO EMAIL - Notify users that have booked the session
+    # Emails
+    if not occurrence.session.start_time or not occurrence.session.end_time:
+        raise ValueError(f"Session {occurrence.session_id} does not have a start time or end time")
+    users = await club_crud.get_users_by_session_id(db, session_id)
+
+    old_session_date = occurrence.occurrence_date.isoformat()
+    old_session_date += (
+        f" {occurrence.session.start_time.strftime('%H:%M')} - {occurrence.session.end_time.strftime('%H:%M')}"
+    )
+
+    old_session_date += (
+        f" {occurrence.session.start_time.strftime('%H:%M')} - {occurrence.session.end_time.strftime('%H:%M')}"
+    )
+
+    with core_email.email_manager_dependency.get() as email_manager:
+        for user in users:
+            background_tasks.add_task(
+                email_manager.send_mail,
+                s_email.CancelSessionOccurrenceModel(
+                    user_name=user.first_name,
+                    user_email=user.email,
+                    language=user.language,
+                    club_name=occurrence.session.program.club.name,
+                    session_title=f"{occurrence.session.session_type.value} - {occurrence.session.program.name}",
+                    session_dates=[old_session_date],
+                ),
+            )
 
     await db.commit()
 
 
 async def reinstate_session_occurrences(
+    background_tasks: BackgroundTasks,
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
     club_id: uuid.UUID,
     program_id: uuid.UUID,
     session_id: uuid.UUID,
-    occurrences_reinstate: List[s_club.SessionReinstate],
+    reinstates: List[s_club.SessionReinstate],
 ) -> None:
     """Reinstate session occurrences
 
@@ -483,13 +583,15 @@ async def reinstate_session_occurrences(
     audit_log = ep_context.audit_logger
     issuer_id = token_details.user_id
 
-    occurrences = await club_crud.get_session_occurrences_dict(db, program_id, session_id)
+    occurrences = await club_crud.get_session_occurrences_dict(db, program_id, session_id, with_email_details=True)
 
     if not occurrences:
         raise HTTPException(status_code=404, detail="No occurrences found")
 
-    for occurrence_reinstate in occurrences_reinstate:
-        occurrence = occurrences.get(occurrence_reinstate.occurrence_id)
+    email_data = {}
+
+    for reinstate in reinstates:
+        occurrence = occurrences.get(reinstate.occurrence_id)
 
         if not occurrence:
             raise HTTPException(status_code=404, detail="Occurrence not found")
@@ -497,12 +599,46 @@ async def reinstate_session_occurrences(
         if occurrence.status == m_club.OccurrenceStatus.SCHEDULED:
             raise HTTPException(status_code=400, detail="Cannot reinstate a scheduled occurrence")
 
-        await club_crud.session_occurrence_reinstate(db, occurrence, occurrence_reinstate.note)
+        await club_crud.session_occurrence_reinstate(db, occurrence, reinstate.note)
 
         details = f"Reinstated from {occurrence.status}"
         audit_log.occurrence_rescheduled(issuer_id, club_id, session_id, occurrence.id, details)
 
-        # TODO EMAIL - Notify users that have booked the session
+        if not occurrence.session.start_time or not occurrence.session.end_time:
+            raise ValueError(f"Session {occurrence.session_id} does not have a start time or end time")
+        users = await club_crud.get_users_by_session_id(db, session_id)
+
+        old_session_date = occurrence.occurrence_date.isoformat()
+        old_session_date += (
+            f" {occurrence.session.start_time.strftime('%H:%M')} - {occurrence.session.end_time.strftime('%H:%M')}"
+        )
+
+        for user in users:
+            if not email_data.get(user.email):
+                email_data[user.email] = {
+                    "username": user.username,
+                    "language": user.language,
+                    "session_dates": [],
+                }
+            email_data[user.email]["session_dates"].append(old_session_date)
+
+    occurrence = occurrences[reinstates[0].occurrence_id]
+    session_title = occurrence.session.session_type.value + " - " + occurrence.session.program.name
+    club_name = occurrence.session.program.club.name
+
+    with core_email.email_manager_dependency.get() as email_manager:
+        for email, data in email_data.items():
+            background_tasks.add_task(
+                email_manager.send_mail,
+                s_email.ReinstateSessionOccurrenceModel(
+                    user_name=data["username"],
+                    user_email=email,
+                    language=data["language"],
+                    club_name=club_name,
+                    session_title=session_title,
+                    session_dates=data["session_dates"],
+                ),
+            )
 
     await db.commit()
 
