@@ -38,7 +38,8 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
     )
 
     if user.address:
-        user_db.address = await get_create_address(db, user.address)
+        await get_create_address(db, user.address)
+        
 
     res = await db.execute(select(m_user.GenericRole).where(m_user.GenericRole.name == "NotEmailVerified"))
     role = res.unique().scalar_one()
@@ -46,10 +47,12 @@ async def create_user(db: AsyncSession, user: UserCreate) -> m_user.User:
 
     db.add(user_db)
     await db.flush()
+    await db.refresh(user_db, ["address"])
+
     return user_db
 
 
-async def get_user_by_ident(db: AsyncSession, ident: str, locked: bool = False) -> m_user.User:
+async def get_user_by_ident(db: AsyncSession, ident: str, query_options: list = [], locked: bool = False) -> m_user.User:
     """
     Get a user by their email address
 
@@ -57,7 +60,7 @@ async def get_user_by_ident(db: AsyncSession, ident: str, locked: bool = False) 
     :param email: str: Email address to search for
     :return: User: The user
     """
-    query_options = [joinedload(m_user.User.generic_roles)]
+    query_options.append(joinedload(m_user.User.generic_roles))
 
     stmt = select(m_user.User).options(*query_options).filter(or_(m_user.User.email == ident, m_user.User.username == ident))
     if locked:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body
+from fastapi import APIRouter, HTTPException, Depends, Request, Query, Path, Body, BackgroundTasks
 from sqlalchemy import or_, ColumnElement
 import uuid
 from typing import Union, List, Dict, Optional
@@ -57,6 +57,7 @@ async def get_programs_v1(
         return [s_club.Program.model_validate(program) for program in programs]
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to get programs")
+
 
 @router.get(
     "/details",
@@ -256,6 +257,7 @@ async def update_session_v1(
     "/{program_id}/sessions/{session_id}", response_model=s_generic.MessageResponse, tags=["Club - Program - Session"]
 )
 async def delete_session_v1(
+    background_tasks: BackgroundTasks,
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
@@ -265,7 +267,9 @@ async def delete_session_v1(
     ),
 ):
     try:
-        await club_controller.delete_session(ep_context, token_details, club_id, program_id, session_id)
+        await club_controller.delete_session(
+            background_tasks, ep_context, token_details, club_id, program_id, session_id
+        )
         return {"message": "Session deleted successfully."}
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to delete session")
@@ -280,6 +284,7 @@ async def delete_session_v1(
     tags=["Club - Program - Session Occurrence"],
 )
 async def reschedule_occurrences_v1(
+    background_tasks: BackgroundTasks,
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
@@ -291,7 +296,7 @@ async def reschedule_occurrences_v1(
 ):
     try:
         await club_controller.reschedule_session_occurrences(
-            ep_context, token_details, club_id, program_id, session_id, reschedule_data
+            background_tasks, ep_context, token_details, club_id, program_id, session_id, reschedule_data
         )
         return {"message": "Occurrence rescheduled successfully."}
     except Exception as e:
@@ -303,6 +308,7 @@ async def reschedule_occurrences_v1(
     tags=["Club - Program - Session Occurrence"],
 )
 async def reinstate_occurrences_v1(
+    background_tasks: BackgroundTasks,
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
@@ -314,7 +320,7 @@ async def reinstate_occurrences_v1(
 ):
     try:
         await club_controller.reinstate_session_occurrences(
-            ep_context, token_details, club_id, program_id, session_id, occurrences_reinstate
+            background_tasks, ep_context, token_details, club_id, program_id, session_id, occurrences_reinstate
         )
         return {"message": "Occurrences reinstated successfully."}
     except Exception as e:
@@ -326,6 +332,7 @@ async def reinstate_occurrences_v1(
     tags=["Club - Program - Session Occurrence"],
 )
 async def cancel_occurrence_v1(
+    background_tasks: BackgroundTasks,
     club_id: uuid.UUID = Path(..., description="The ID of the club"),
     program_id: uuid.UUID = Path(..., description="The ID of the program"),
     session_id: uuid.UUID = Path(..., description="The ID of the session"),
@@ -338,7 +345,7 @@ async def cancel_occurrence_v1(
 ):
     try:
         await club_controller.cancel_session_occurrences(
-            ep_context, token_details, club_id, program_id, session_id, occurrence_id, note
+            background_tasks, ep_context, token_details, club_id, program_id, session_id, occurrence_id, note
         )
         return {"message": "Occurrence cancelled successfully."}
     except Exception as e:

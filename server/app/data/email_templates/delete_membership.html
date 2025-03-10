@@ -1,0 +1,14 @@
+{% extends "base_email.html" %}
+{% block title %}Membership Cancellation Notification ⚠️{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  We regret to inform you that your <strong>{{ membership_name }}</strong> membership at <strong>{{ club_name }}</strong> has been cancelled 🚫.
+  If you have any questions or concerns, please contact our support team.
+</p>
+
+<p>Thank you for your past support 🙏.</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

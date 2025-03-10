@@ -1,0 +1,18 @@
+{% extends "base_email.html" %}
+{% block title %}Membership Cancellation and Refund Notice 💸{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  We wanted to inform you that your <strong>{{ membership_name }}</strong> membership at <strong>{{ club_name }}</strong> has been cancelled.
+  In accordance with the remaining membership period, a refund for any booked sessions will be processed shortly 💰.
+</p>
+
+<p>
+  If you have any questions, please contact our support team.
+</p>
+
+<p>Thank you for your time with us 🙏.</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

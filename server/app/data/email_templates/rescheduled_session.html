@@ -1,0 +1,21 @@
+{% extends "base_email.html" %}
+{% block title %}Session Rescheduled Notice 🔄{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  The session <strong>{{ session_title }}</strong> from <strong>{{ club_name }}</strong> has the following rescheduled occurrences:
+</p>
+
+<ul>
+  {% for change in occurrence_changes %}
+    <li>Originally on {{ change.old_date }} is now scheduled for {{ change.new_date }} 🔔</li>
+  {% endfor %}
+</ul>
+
+<p>
+  Please update your calendar accordingly. If you have any questions, please contact our support team.
+</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

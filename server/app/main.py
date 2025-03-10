@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.style import Style
 
 from core.database import engine, get_async_session, check_db_connection, get_db
-from config.settings import ENVIRONMENT
+from config.settings import ENVIRONMENT, REDIS_PASSWORD, REDIS_URL, REDIS_PORT
 from config.database import Base
 import core.init_database as init_db
 
@@ -26,6 +26,8 @@ from core.security import (
     email_verify_manager_dependency,
     ec_encryptor_dependency,
 )
+from core.email import email_manager_dependency
+from core.redis import redis_manager_dependency
 
 from crud.audit import anonymize_ip_addresses
 from crud.auth import clean_tokens, totp_key_rotation, clean_2fa_table
@@ -44,6 +46,8 @@ from utils.totp_manager import TOTPManager
 from utils.email_verify_manager import EmailVerifyManager
 from utils.asymmetric_ev_encryptor import AsymmetricECEncryptor
 from utils.task_scheduler import TaskSchedulerRedis
+from utils.email_manager import EmailManager
+from utils.redis_manager import RedisManager
 
 from api.v1.router import router as v1_router
 
@@ -96,20 +100,24 @@ async def lifespan(app: FastAPI):
     evm = EmailVerifyManager()
     email_verify_manager_dependency.init(evm)
 
+    # Initialize the Email Manager
+    email_manager = EmailManager()
+    email_manager_dependency.init(email_manager)
+
     # Initialize the EC Encryptor
     ec_encryptor = AsymmetricECEncryptor()
     ec_encryptor_dependency.init(ec_encryptor)
 
-    # Initialize the Redis connection
-    redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
-    redis_port = os.getenv("REDIS_PASSWORD", "root")
-
     # Initialize the FastAPI Cache
-    redis = aioredis.Redis(host=redis_host, db=0, password=redis_port)
+    redis = aioredis.Redis(host=REDIS_URL, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
     FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
 
     # Initialize the Task Scheduler
-    scheduler = TaskSchedulerRedis(redis_host=redis_host, redis_password=redis_port, redis_db=1)
+    scheduler = TaskSchedulerRedis(redis_host=REDIS_URL, redis_port=REDIS_PORT, redis_password=REDIS_PASSWORD, redis_db=1)
+
+    # Initialize the Redis Manager
+    redis_manager = RedisManager(host=REDIS_URL, port=REDIS_PORT, password=REDIS_PASSWORD, db=2)
+    redis_manager_dependency.init(redis_manager)
 
     # Clean up the audit logs
     scheduler.add_task(
@@ -201,6 +209,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
     await engine.dispose()
 
+
 tags_metadata = [
     {
         "name": "Access: Public",
@@ -232,6 +241,20 @@ app.mount("/static", StaticFiles(directory=static_folder), name="static")
 @app.get("/ping")
 def ping():
     return {"message": "pong"}
+
+
+@app.get("/test-mail")
+async def test_mail():
+    from schemas import s_email
+
+    with email_manager_dependency.get() as email_manager:
+        await email_manager.send_mail(
+            s_email.TwoFactorAuthModel(
+                user_name="Test User", user_email="test@example.com", language="en", two_fa_code="123456"
+            )
+        )
+
+    return {"message": "Mail sent successfully!"}
 
 
 if __name__ == "__main__":

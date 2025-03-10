@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,9 +8,9 @@ import datetime
 
 import models.m_user as m_user
 
-from schemas import s_user, s_role
+from schemas import s_user, s_role, s_email
 
-import core.security as core_security
+from core import security as core_security, redis as core_redis, email as core_email
 
 from crud import (
     user as user_crud,
@@ -21,13 +21,15 @@ from crud import (
 )
 
 
-from config.security import TOKEN_ISSUER
+from config.security import TOKEN_ISSUER, EMAIL_VERIFY_EXPIRE_MINUTES
 from config.settings import DEBUG, DEFAULT_TIMEZONE, ENVIRONMENT
 
 from core.generic import EndpointContext
 
 
-async def register_user(ep_context: EndpointContext, user: s_user.UserCreate) -> uuid.UUID:
+async def register_user(
+    background_task: BackgroundTasks, ep_context: EndpointContext, user: s_user.UserCreate
+) -> uuid.UUID:
     """
     Register a new user
 
@@ -53,17 +55,33 @@ async def register_user(ep_context: EndpointContext, user: s_user.UserCreate) ->
     # Create the user
     user_db = await user_crud.create_user(db, user)
     user_id = user_db.id
+    user_language = user_db.language
 
     # Add audit logs
     audit_logger.sys_info("User registered", details=f"User ID: {user_id}")
     await db.commit()
 
+    with core_redis.redis_manager_dependency.get() as redis_manager:
+        await redis_manager.setex(f"email_verification:{user_id}", EMAIL_VERIFY_EXPIRE_MINUTES * 60, "1")
+
     with core_security.email_verify_manager_dependency.get() as evm:
         url_params = evm.generate_verification_params(user_id)
-        # TODO: Send email
-        # theactivitymaster://auth/VerifyMailConfirm
-        if ENVIRONMENT == "dev":
-            print(url_params)
+
+    verification_url = f"theactivitymaster://auth/VerifyMailConfirm?{url_params}"
+
+    with core_email.email_manager_dependency.get() as email_manager:
+        background_task.add_task(
+            email_manager.send_mail,
+            s_email.EmailVerificationModel(
+                user_email=user.email,
+                user_name=user.username,
+                language=user_language,
+                verification_url=verification_url,
+            ),
+        )
+
+    if ENVIRONMENT == "dev" and DEBUG:
+        print(url_params)
 
     return user_id
 
@@ -144,7 +162,7 @@ async def totp_register_init(ep_context: EndpointContext, token_details: core_se
     audit_logger = ep_context.audit_logger
 
     user = await user_crud.get_user_by_id(db, token_details.user_id, query_options=[joinedload(m_user.User._2fa)])
-    
+
     totp_2fa = None
     for _2fa in user._2fa:
         if _2fa.method == m_user.User2FAMethods.TOTP:
@@ -195,7 +213,7 @@ async def totp_register(
 
     if not totp_db:
         raise HTTPException(status_code=400, detail="TOTP not registered")
-    
+
     if totp_db.fails != -1:
         raise HTTPException(status_code=400, detail="TOTP already registered")
 
@@ -253,9 +271,9 @@ async def totp_remove(
     for _2fa in user._2fa:
         if _2fa.method == m_user.User2FAMethods.TOTP:
             totp_db = _2fa
-        elif _2fa.method != m_user.User2FAMethods.TOTP and  _2fa.method != m_user.User2FAMethods.EMAIL:
+        elif _2fa.method != m_user.User2FAMethods.TOTP and _2fa.method != m_user.User2FAMethods.EMAIL:
             other_2fa_exists = True
-    
+
     if not totp_db:
         raise HTTPException(status_code=400, detail="TOTP not registered")
 
@@ -265,7 +283,7 @@ async def totp_remove(
             audit_logger.totp_removal_failed(user_id, token_details.payload["aud"], "Invalid TOTP code")
             await db.commit()
             raise HTTPException(status_code=400, detail="Invalid TOTP code")
-        
+
     # Remove the TOTP secret
     await db.delete(totp_db)
 
@@ -281,7 +299,10 @@ async def totp_remove(
 ################################# Changes #################################
 ###########################################################################
 async def change_password(
-    ep_context: EndpointContext, token_details: core_security.TokenDetails, password_change: s_user.ChangePassword
+    background_task: BackgroundTasks,
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    password_change: s_user.ChangePassword,
 ) -> None:
     """
     Change the password of a user
@@ -295,7 +316,7 @@ async def change_password(
     user_id = token_details.user_id
 
     # Get the user
-    user = await user_crud.get_user_by_id(db, user_id)
+    user = await user_crud.get_user_by_id(db, user_id, query_options=[joinedload(m_user.User.address)])
 
     if not DEBUG and user.updated_at.replace(tzinfo=DEFAULT_TIMEZONE) + datetime.timedelta(
         minutes=30
@@ -309,7 +330,16 @@ async def change_password(
     # Hash the new password
     user.password = core_security.hash_password(password_change.new_password)
 
-    # TODO Send Email to inform user of password change
+    # Send email
+    with core_email.email_manager_dependency.get() as email_manager:
+        background_task.add_task(
+            email_manager.send_mail,
+            s_email.PasswordChangeModel(
+                user_email=user.email,
+                user_name=user.username,
+                language=user.language,
+            ),
+        )
 
     # Add audit logs
     audit_logger.user_password_change(user_id, token_details.payload["aud"])
@@ -317,7 +347,11 @@ async def change_password(
 
 
 async def update_user_email(
-    ep_context: EndpointContext, token_details: core_security.TokenDetails, email: str, password: str
+    background_task: BackgroundTasks,
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    email: str,
+    password: str,
 ) -> None:
     """
     Change the email of a user
@@ -331,7 +365,9 @@ async def update_user_email(
     user_id = token_details.user_id
 
     # Get the user
-    user = await user_crud.get_user_by_id(db, user_id, query_options=[joinedload(m_user.User.generic_roles)])
+    user = await user_crud.get_user_by_id(
+        db, user_id, query_options=[joinedload(m_user.User.generic_roles), joinedload(m_user.User.address)]
+    )
 
     # Check if the password is correct
     if not core_security.verify_password(password, user.password):
@@ -349,16 +385,40 @@ async def update_user_email(
 
     # Update the email
     old_email_hash = core_security.sha256_salt(user.email)
+    old_email = user.email
     user.email = email
 
     if not any([role.name == "NotEmailVerified" for role in user.generic_roles]):
         user.generic_roles.append(await role_crud.get_generic_role_by_name(db, "NotEmailVerified"))
 
-    # TODO Send Email to old email and verify new email
+    # Send email
     with core_security.email_verify_manager_dependency.get() as evm:
         url_params = evm.generate_verification_params(user_id)
-        if ENVIRONMENT == "dev":
-            print(url_params)
+
+    verification_url = f"theactivitymaster://auth/VerifyMailConfirm?{url_params}"
+    with core_email.email_manager_dependency.get() as email_manager:
+        background_task.add_task(
+            email_manager.send_mail,
+            s_email.EmailChangeModel(
+                user_email=old_email,
+                user_name=user.username,
+                language=user.language,
+                new_email=email,
+            ),
+        )
+
+        background_task.add_task(
+            email_manager.send_mail,
+            s_email.EmailVerificationModel(
+                user_email=email,
+                user_name=user.username,
+                language=user.language,
+                verification_url=verification_url,
+            ),
+        )
+
+    if ENVIRONMENT == "dev" and DEBUG:
+        print(url_params)
 
     # Add audit logs
     audit_logger.user_email_change(user_id, token_details.payload["aud"], old_email_hash)
@@ -366,7 +426,11 @@ async def update_user_email(
 
 
 async def update_user_username(
-    ep_context: EndpointContext, token_details: core_security.TokenDetails, username: str, password: str
+    background_task: BackgroundTasks,
+    ep_context: EndpointContext,
+    token_details: core_security.TokenDetails,
+    username: str,
+    password: str,
 ) -> None:
     """
     Change the username of a user
@@ -380,7 +444,7 @@ async def update_user_username(
     user_id = token_details.user_id
 
     # Get the user
-    user = await user_crud.get_user_by_id(db, user_id)
+    user = await user_crud.get_user_by_id(db, user_id, query_options=[joinedload(m_user.User.address)])
 
     # Check if the password is correct
     if not core_security.verify_password(password, user.password):
@@ -397,9 +461,17 @@ async def update_user_username(
         raise HTTPException(status_code=400, detail="Username already in use")
 
     # Update the username
+    old_username = user.username
     user.username = username
 
-    # TODO Send Email to inform user of username change
+    # Send email
+    with core_email.email_manager_dependency.get() as email_manager:
+        background_task.add_task(
+            email_manager.send_mail,
+            s_email.UsernameChangeModel(
+                user_email=user.email, user_name=old_username, language=user.language, new_username=username
+            ),
+        )
 
     # Add audit logs
     audit_logger.user_username_change(user_id, token_details.payload["aud"])

@@ -1,0 +1,12 @@
+{% extends "base_email.html" %}
+{% block title %}Email Address Change Notification{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }},</p>
+
+<p>
+  We would like to inform you that your email address has been updated to <strong>{{ new_email }}</strong>.
+  If you did not request this change, please contact our support team immediately.
+</p>
+
+<p>Best regards,<br>TheActivityMaster Team</p>
+{% endblock %}

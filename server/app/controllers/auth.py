@@ -1,25 +1,28 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 from typing import Tuple
 import uuid
 from sqlalchemy import select, delete
+from sqlalchemy.orm import joinedload
 import jwt
 import datetime
 from typing import List, Union
 from urllib.parse import urlencode
+from pydantic.networks import HttpUrl
+import asyncio
 
 from config.settings import DEBUG, DEFAULT_TIMEZONE, ENVIRONMENT
-from config.security import TOKEN_ISSUER
+from config.security import TOKEN_ISSUER, EMAIL_VERIFY_EXPIRE_MINUTES
 
 from models import m_audit, m_user
 
-import schemas.s_auth as s_auth
+from schemas import s_auth, s_email
 
 from utils.time import unix_timestamp
 
 from crud import audit as audit_crud
 from crud import auth as auth_crud, user as user_crud, role as role_crud
 
-from core import security as core_security
+from core import security as core_security, email as core_email, redis as core_redis
 from core.generic import EndpointContext
 
 from data.auth import TokenDetails
@@ -165,7 +168,11 @@ async def create_auth_tokens(
 ################################### MAIN ##################################
 ###########################################################################
 async def login(
-    ep_context: EndpointContext, login_form: s_auth.LoginRequest, ip_address: str, application_id: str
+    backgroud_tasks: BackgroundTasks,
+    ep_context: EndpointContext,
+    login_form: s_auth.LoginRequest,
+    ip_address: str,
+    application_id: str,
 ) -> Tuple[str, list[m_user.User2FAMethods]]:
     """
     Check the user's password and handle 2FA login process.
@@ -193,13 +200,49 @@ async def login(
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     for generic_role in user.generic_roles:
-        if generic_role.name == "NotEmailVerified":
-            # TODO: Send the email verification email here if the last email was sent more than 30 minutes ago
-            raise HTTPException(status_code=401, detail="Email address not verified")
+        # Load the address if the user is not email verified
+        await db.refresh(user, ["address"])
 
+        if generic_role.name == "NotEmailVerified":
+            with core_redis.redis_manager_dependency.get() as redis_manager:
+                if await redis_manager.exists(f"email_verification:{user.id}"):
+                    raise HTTPException(
+                        status_code=401,
+                        detail=f"Email address not verified. Please check your email for the verification link."
+                        f" If you did not receive the email, please wait {await redis_manager.ttl(f'email_verification:{user.id}')} seconds.",
+                    )
+                else:
+                    await redis_manager.setex(f"email_verification:{user.id}", EMAIL_VERIFY_EXPIRE_MINUTES * 60, "1")
+
+            with core_security.email_verify_manager_dependency.get() as evm:
+                url_params = evm.generate_verification_params(user.id)
+            verification_url = f"theactivitymaster://auth/VerifyMailConfirm?{url_params}"
+
+            with core_email.email_manager_dependency.get() as email_manager:
+                asyncio.create_task(
+                    email_manager.send_mail(
+                        s_email.EmailVerificationModel(
+                            user_name=user.username,
+                            user_email=user.email,
+                            language=user.language,
+                            verification_url=verification_url,
+                        )
+                    )
+                )
+
+            if ENVIRONMENT == "dev" and DEBUG:
+                print(url_params)
+
+            raise HTTPException(
+                status_code=401, detail="Email address not verified. Please check your email for the verification link."
+            )
 
     # Get the 2FA methods
-    res = await db.execute(select(m_user.User2FA.id, m_user.User2FA.method, m_user.User2FA.fails, m_user.User2FA.updated_at).filter(m_user.User2FA.user_id == user.id))
+    res = await db.execute(
+        select(m_user.User2FA.id, m_user.User2FA.method, m_user.User2FA.fails, m_user.User2FA.updated_at).filter(
+            m_user.User2FA.user_id == user.id
+        )
+    )
     methods_2fa = {method: (id, updated_at) for id, method, fails, updated_at in res.all() if fails != -1}
 
     # Handle case where EMAIL is the only 2FA method
@@ -207,15 +250,26 @@ async def login(
         if m_user.User2FAMethods.EMAIL in methods_2fa:
             # Delete the existing EMAIL 2FA method
             email_2fa_id, updated_at = methods_2fa[m_user.User2FAMethods.EMAIL]
-            if updated_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(DEFAULT_TIMEZONE) - datetime.timedelta(seconds=30):
-                raise HTTPException(status_code=429, detail="2FA code already sent. Please wait a few seconds before trying again.")
+            if updated_at.replace(tzinfo=DEFAULT_TIMEZONE) > datetime.datetime.now(
+                DEFAULT_TIMEZONE
+            ) - datetime.timedelta(seconds=30):
+                raise HTTPException(
+                    status_code=429, detail="2FA code already sent. Please wait a few seconds before trying again."
+                )
             await auth_crud.delete_single_2fa(db, user.id, email_2fa_id)
         else:
             methods_2fa[m_user.User2FAMethods.EMAIL] = (None, None)
 
         # Create a new email code and potentially add a new 2FA entry
         email_code = await auth_crud.create_email_code(db, user)
-        # TODO: Send the email with the 2FA code here
+        with core_email.email_manager_dependency.get() as email_manager:
+            backgroud_tasks.add_task(
+                email_manager.send_mail,
+                s_email.TwoFactorAuthModel(
+                    user_name=user.username, user_email=user.email, language="en", two_fa_code=email_code
+                ),
+            )
+
         if ENVIRONMENT == "dev":
             print(f"Email code: {email_code}")
 
@@ -361,6 +415,7 @@ async def logout(ep_context: EndpointContext, token_details: core_security.Token
 
     await db.commit()
 
+
 async def logout_all_sessions(ep_context: EndpointContext, token_details: core_security.TokenDetails, client_ip: str):
     """Logout the user from all sessions
 
@@ -379,7 +434,9 @@ async def logout_all_sessions(ep_context: EndpointContext, token_details: core_s
     await db.commit()
 
 
-async def forgot_password(ep_context: EndpointContext, ident: str, application_id:str, ip_address: str) -> None:
+async def forgot_password(
+    backgroud_tasks: BackgroundTasks, ep_context: EndpointContext, ident: str, application_id: str, ip_address: str
+) -> None:
     """Send a password reset email to the user
 
     :param ep_context: The endpoint context
@@ -389,8 +446,8 @@ async def forgot_password(ep_context: EndpointContext, ident: str, application_i
     """
     db = ep_context.db
     audit_logger = ep_context.audit_logger
-
-    user = await user_crud.get_user_by_ident(db, ident)
+    
+    user = await user_crud.get_user_by_ident(db, ident, query_options=[joinedload(m_user.User.address)])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -400,12 +457,20 @@ async def forgot_password(ep_context: EndpointContext, ident: str, application_i
     if not await audit_crud.forgot_password_allowed(db, user.id):
         raise HTTPException(status_code=429, detail="Too many password reset requests. Please try again later.")
 
-    security_token = await create_security_token(
-        ep_context, user.id, application_id, ["reset_password"], ip_address
-    )
-    # TODO send email
-    # theactivitymaster://auth/ResetPassword?security_token=security_token
-    if ENVIRONMENT == "dev":
+    security_token = await create_security_token(ep_context, user.id, application_id, ["reset_password"], ip_address)
+
+    with core_email.email_manager_dependency.get() as email_manager:
+        backgroud_tasks.add_task(
+            email_manager.send_mail,
+            s_email.ForgotPasswordModel(
+                user_name=user.username,
+                user_email=user.email,
+                language=user.language,
+                reset_password_url=f"theactivitymaster://auth/ResetPassword?{urlencode({'security_token': security_token})}",
+            ),
+        )
+
+    if ENVIRONMENT == "dev" and DEBUG:
         print(urlencode({"security_token": security_token}))
     audit_logger.user_forgot_password(user.id, ip_address)
     await db.commit()

@@ -118,6 +118,14 @@ class User(Base):
             _2fa_methods = ["email"]
 
         return _2fa_methods
+    
+    @property
+    def language(self) -> str:
+        state = inspect(self)
+        if "address" in state.unloaded:
+            raise ValueError("address not loaded")
+        return self.address.postal_code.city.state.country.iso2.lower() if self.address else "en"
+
 
 
 class GenericRole(Base):

@@ -1,0 +1,21 @@
+{% extends "base_email.html" %}
+{% block title %}Session Occurrence Reinstated ✅{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }} 👋,</p>
+
+<p>
+  Good news! The following occurrences of the session <strong>{{ session_title }}</strong> from <strong>{{ club_name }}</strong> have been reinstated:
+</p>
+
+<ul>
+  {% for date in session_dates %}
+    <li>{{ date }} ✅</li>
+  {% endfor %}
+</ul>
+
+<p>
+  We look forward to your participation. If you have any questions, please reach out to our support team.
+</p>
+
+<p>Best regards,<br>TheActivityMaster Team ✨</p>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base_email.html" %}
+{% block title %}Username Change Notification{% endblock %}
+{% block content %}
+<p>Hello {{ user_name }},</p>
+
+<p>
+  We would like to inform you that your username has been changed to <strong>{{ new_username }}</strong>.
+  If you did not request this change, please contact our support team immediately.
+</p>
+
+<p>Best regards,<br>TheActivityMaster Team</p>
+{% endblock %}

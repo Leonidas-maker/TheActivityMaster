@@ -98,14 +98,21 @@ async def get_bookings_by_ids(
     return list(bookings.unique().scalars().all())
 
 
-async def get_bookings_by_session_id(db: AsyncSession, session_id: uuid.UUID) -> List[m_payment.Booking]:
+async def get_bookings_by_session_id(
+    db: AsyncSession, session_id: uuid.UUID, with_user=False
+) -> List[m_payment.Booking]:
     """Get bookings by session ID
 
     :param db: The database session
     :param session_id: The ID of the session
     :return: The bookings
     """
-    bookings = await db.execute(select(m_payment.Booking).filter(m_payment.Booking.session_id == session_id))
+    query_options = []
+    if with_user:
+        query_options.append(joinedload(m_payment.Booking.user))
+    bookings = await db.execute(
+        select(m_payment.Booking).options(*query_options).filter(m_payment.Booking.session_id == session_id)
+    )
     return list(bookings.unique().scalars().all())
 
 
@@ -197,15 +204,30 @@ async def get_user_booked_sessions(db: AsyncSession, user_id: uuid.UUID):
         joinedload(m_club.Program.categories),
         undefer(m_club.Program.description),
         joinedload(m_club.Program.sessions),
-         joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences),
-        with_loader_criteria(m_club.Session, lambda s: s.bookings.any(m_payment.Booking.user_id == user_id), include_aliases=True),
+        joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences),
+        with_loader_criteria(
+            m_club.Session, lambda s: s.bookings.any(m_payment.Booking.user_id == user_id), include_aliases=True
+        ),
     ]
 
-    res = await db.execute(
-        select(m_club.Program)
-        .options(*query_options)
-    )
+    res = await db.execute(select(m_club.Program).options(*query_options))
     return list(res.unique().scalars().all())
+
+
+async def get_users_by_session_id(db: AsyncSession, session_id: uuid.UUID) -> List[m_user.User]:
+    """Get users by session ID
+
+    :param db: The database session
+    """
+    users = await db.execute(
+        select(m_user.User)
+        .options(
+            joinedload(m_user.User.address),
+        )
+        .join(m_payment.Booking)
+        .filter(m_payment.Booking.session_id == session_id)
+    )
+    return list(users.unique().scalars().all())
 
 
 async def has_user_booked(db: AsyncSession, user_id: uuid.UUID, session_ids: List[uuid.UUID]) -> bool:
