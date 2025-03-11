@@ -6,7 +6,7 @@ sleep 5
 
 case "$(uname -s)" in
     CYGWIN*|MINGW32*|MSYS*|MINGW*)
-        # Windows environment
+        # Windows-Umgebung
         start "http://localhost:8001/docs"
         start "http://localhost:8025"
         ;;
@@ -19,10 +19,10 @@ case "$(uname -s)" in
         xdg-open "http://localhost:8025"
         ;;
     *)
-        echo "Please open the URLs manually: http://localhost:8001/docs and http://localhost:8025"
+        echo "Bitte öffne die URLs manuell: http://localhost:8001/docs und http://localhost:8025"
         ;;
 esac
 
 trap "echo 'Beende Container...'; docker compose down" EXIT
 
-docker compose logs -f
+docker compose logs -f backend
