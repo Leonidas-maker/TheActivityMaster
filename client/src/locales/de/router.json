@@ -55,5 +55,8 @@
     "clubs_add_session_header": "Termin erstellen",
     "clubs_manage_sessions_header": "Termin Übersicht",
     "clubs_manage_event_header": "Veranstaltung verwalten",
-    "clubs_manage_session_header": "Kurs verwalten"
+    "clubs_manage_session_header": "Kurs verwalten",
+    "clubs_manage_course_header": "Kurs verwalten",
+    "clubs_manage_occurence_header": "Termin verwalten",
+    "clubs_manage_trainer_header": "Trainer verwalten"
 }

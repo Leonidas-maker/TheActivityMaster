@@ -67,20 +67,6 @@ const ManageSession = () => {
     const [occurrenceList, setOccurrenceList] = useState<Occurrence[]>([]);
 
     useEffect(() => {
-        console.log(
-            club_id,
-            program_id,
-            session_id,
-            pricing_model,
-            day_of_week,
-            start_time,
-            end_time,
-            start_date,
-            end_date,
-            occurrences,
-            capacity_event,
-            price_event
-        );
         let occurrencesStr = "";
         if (Array.isArray(occurrences)) {
             occurrencesStr = occurrences[0];
@@ -90,26 +76,12 @@ const ManageSession = () => {
         const parsedOccurrences = occurrencesStr
             ? JSON.parse(decodeURIComponent(occurrencesStr))
             : [];
-        console.log(parsedOccurrences);
         setOccurrenceList(parsedOccurrences);
-    }, [
-        club_id,
-        program_id,
-        session_id,
-        pricing_model,
-        day_of_week,
-        start_time,
-        end_time,
-        start_date,
-        end_date,
-        occurrences,
-        capacity_event,
-        price_event
-    ]);
+    }, [occurrences,]);
 
     const handleCourseUpdatePress = () => {
         router.navigate(
-            `/(tabs)/clubs/(session)/ManageCourse?club_id=${club_id}&program_id=${program_id}&session_id=${session_id}&pricing_model=${pricing_model}&day_of_week=${day_of_week}&start_time=${start_time}&end_time=${end_time}&start_date=${start_date}&end_date=${end_date}&occurrences=${occurrences}&capacity_event=${capacity_event}&price_event=${price_event}`
+            `/(tabs)/clubs/(session)/ManageCourse?club_id=${club_id}&program_id=${program_id}&session_id=${session_id}&pricing_model=${pricing_model}&day_of_week=${day_of_week}&start_time=${start_time}&end_time=${end_time}&start_date=${start_date}&end_date=${end_date}&capacity_event=${capacity_event}&price_event=${price_event}`
         );
     };
 
@@ -137,7 +109,7 @@ const ManageSession = () => {
                     iconNames={occurrenceList.map(() => "calendar-today")}
                     onPressFunctions={occurrenceList.map((occurrence: Occurrence) => () => {
                         router.navigate(
-                            `/(tabs)/clubs/(session)/ManageOccurrence?club_id=${club_id}&program_id=${program_id}&session_id=${session_id}&occurrence_id=${occurrence.id}`
+                            `/(tabs)/clubs/(session)/ManageOccurrence?club_id=${club_id}&program_id=${program_id}&session_id=${session_id}&occurrence_id=${occurrence.id}&occurrence_status=${occurrence.status}&start_datetime=${occurrence.start_datetime}&end_datetime=${occurrence.end_datetime}&note=${occurrence.note}`
                         );
                     })}
                 />

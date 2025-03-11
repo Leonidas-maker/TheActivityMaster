@@ -1,21 +1,23 @@
 import { axiosInstance } from "../api";
 
 export const rescheduleOccurrence = async (
-  club_id: string,
-  program_id: string,
-  session_id: string,
-  occurence_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
+  session_id: string | string[],
+  occurrence_id: string | string[],
   note: string,
   start_datetime: string,
   end_datetime: string
 ) => {
   try {
-    const requestBody = {
-      occurence_id,
-      note,
-      start_datetime,
-      end_datetime,
-    };
+    const requestBody = [
+      {
+        occurrence_id,
+        note,
+        start_datetime,
+        end_datetime,
+      }
+    ];
 
     const response = await axiosInstance.put(
       `/clubs/${club_id}/programs/${program_id}/sessions/${session_id}/occurrences/reschedule`,
@@ -29,17 +31,19 @@ export const rescheduleOccurrence = async (
 };
 
 export const reinstateOccurrence = async (
-  club_id: string,
-  program_id: string,
-  session_id: string,
-  occurence_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
+  session_id: string | string[],
+  occurrence_id: string | string[],
   note: string
 ) => {
   try {
-    const requestBody = {
-      occurence_id,
-      note,
-    };
+    const requestBody = [
+      {
+        occurrence_id,
+        note,
+      }
+    ];
 
     const response = await axiosInstance.put(
       `/clubs/${club_id}/programs/${program_id}/sessions/${session_id}/occurrences/reinstate`,
@@ -53,16 +57,18 @@ export const reinstateOccurrence = async (
 };
 
 export const cancelOccurrence = async (
-  club_id: string,
-  program_id: string,
-  session_id: string,
-  occurence_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
+  session_id: string | string[],
+  occurrence_id: string | string[],
   note: string
 ) => {
   try {
     const response = await axiosInstance.delete(
-      `/clubs/${club_id}/programs/${program_id}/sessions/${session_id}/occurrences/${occurence_id}`,
-      { data: note }
+      `/clubs/${club_id}/programs/${program_id}/sessions/${session_id}/occurrences/${occurrence_id}`,
+      {
+        data: JSON.stringify(note),
+      }
     );
     return response.data;
   } catch (error) {

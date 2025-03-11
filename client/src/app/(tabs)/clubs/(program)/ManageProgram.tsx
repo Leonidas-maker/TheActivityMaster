@@ -19,11 +19,19 @@ const ManageProgram = () => {
         router.navigate(`/(tabs)/clubs/(session)/ClubManageSessions?club_id=${club_id}&program_id=${program_id}&pricing_model=${pricing_model}`);
     };
 
-    const onPressFunctions = [handleUpdateProgramPress, handleSessionsPress];
+    const handleTrainersPress = () => {
+        router.navigate(`/(tabs)/clubs/(program)/ManageTrainer?club_id=${club_id}&program_id=${program_id}`);
+    };
 
-    const navigatorTitles = [t("programs_manage_update_program"), t("programs_manage_sessions")];
+    const onPressFunctions = [handleSessionsPress, handleTrainersPress, handleUpdateProgramPress];
 
-    const navigatorIcons = ["person", "person"]
+    const navigatorTitles = [
+        t("programs_manage_sessions"), 
+        t("programs_manage_trainers"),
+        t("programs_manage_update_program"),        
+    ];
+
+    const navigatorIcons = ["event", "supervisor-account", "edit"];
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">

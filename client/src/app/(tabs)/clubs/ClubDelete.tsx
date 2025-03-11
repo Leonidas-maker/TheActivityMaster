@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, View, Alert } from "react-native";
+import { ScrollView, View, Alert, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import Heading from "@/src/components/textFields/Heading";
@@ -7,6 +7,8 @@ import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput"
 import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { deleteClub } from "@/src/services/club/clubService";
+import Toast from "react-native-toast-message";
+import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 
 const ClubDelete = () => {
     const router = useRouter();
@@ -39,17 +41,22 @@ const ClubDelete = () => {
     };
 
     return (
-        <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-            <View className="items-center">
-                <View className="py-4">
-                    <Heading text={t("delete_club_heading")} />
-                </View>
-                <View className="px-4 pb-4">
-                    <DefaultText text={t("delete_club_text")} />
-                </View>
-                <DefaultButton text={t("confirm_club_deletion_btn")} onPress={handleDeleteClub} />
-            </View>
-        </ScrollView>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
+                    <View className="items-center">
+                        <View className="py-4">
+                            <Heading text={t("delete_club_heading")} />
+                        </View>
+                        <View className="px-4 pb-4">
+                            <DefaultText text={t("delete_club_text")} />
+                        </View>
+                        <DefaultButton text={t("confirm_club_deletion_btn")} onPress={handleDeleteClub} />
+                    </View>
+                </ScrollView>
+            </TouchableWithoutFeedback>
+            <DefaultToast />
+        </KeyboardAvoidingView >
     );
 }
 

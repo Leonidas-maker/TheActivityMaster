@@ -55,5 +55,8 @@
     "clubs_add_session_header": "Create Session",
     "clubs_manage_sessions_header": "Session Overview",
     "clubs_manage_event_header": "Manage Event",
-    "clubs_manage_session_header": "Manage Course"
+    "clubs_manage_session_header": "Manage Course",
+    "clubs_manage_course_header": "Manage Course",
+    "clubs_manage_occurence_header": "Manage Occurrence",
+    "clubs_manage_trainer_header": "Manage Trainers"
 }

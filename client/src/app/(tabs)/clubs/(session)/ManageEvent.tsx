@@ -7,7 +7,8 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    TouchableWithoutFeedback
+    TouchableWithoutFeedback,
+    Alert
 } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -124,11 +125,32 @@ const ManageEvent = () => {
         return date;
     }, []);
 
-    // Handler for delete button remains unchanged.
+    // Handler for delete button with validation of the deletion note.
     const handleDeletePress = async () => {
+        Alert.alert(
+            t("delete_event"),
+            t("delete_event_confirmation"),
+            [
+                {
+                    text: t("cancel_btn"),
+                    style: "cancel",
+                },
+                {
+                    text: t("confirm_btn"),
+                    onPress: handleDelete,
+                },
+            ]
+        );
+    };
+
+    // Helper function to handle the deletion of the session.
+    const handleDelete = async () => {
         try {
+            // Call deleteSession with the note.
             await deleteSession(club_id, program_id, session_id, note);
-            router.dismiss();
+            for (let i = 0; i < 2; i++) {
+                router.back()
+            }
         } catch (error) {
             Toast.show({
                 type: "error",
@@ -140,6 +162,25 @@ const ManageEvent = () => {
 
     // Handler for update button with change checking and date formatting.
     const handleUpdatePress = async () => {
+        // Validate required fields when pricing model is per session.
+        if (pricing_model === "per_session") {
+            if (!price.trim()) {
+                setPriceError(true);
+            }
+            if (!capacity.trim()) {
+                setCapacityError(true);
+            }
+
+            if (!price.trim() || !capacity.trim()) {
+                Toast.show({
+                    type: "error",
+                    text1: t("inputError_text"),
+                    text2: t("inputError_subtext"),
+                });
+                return;
+            }
+        }
+
         // Check if any of the key fields have changed
         if (
             price === initialPrice &&

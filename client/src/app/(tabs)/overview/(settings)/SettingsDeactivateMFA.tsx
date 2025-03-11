@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Heading from "@/src/components/textFields/Heading";
-import { View } from "react-native";
+import { View, Platform, Keyboard, KeyboardAvoidingView, TouchableWithoutFeedback } from "react-native";
 import { useRouter } from 'expo-router';
 import { useTranslation } from "react-i18next";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -51,38 +51,43 @@ const SettingsDeactivateMFA = () => {
     };
 
     return (
-        <View className="flex h-screen items-center bg-light_primary dark:bg-dark_primary">
-            <View className="py-4">
-                <Heading text={t("settings_deactivate_mfa_heading")} />
-            </View>
-            <Subheading text={t("settings_deactivate_mfa_description")} />
-            <TwoFactorInput
-                onCodeChange={(text, isComplete) => {
-                    setCode(text);
-                    if (isComplete) {
-                        setCodeError(false);
-                    } else {
-                        setCodeError(true);
-                    }
-                }}
-            />
-            <DefaultTextFieldInput
-                placeholder={t("mfa_deactivate_password_textfield")}
-                value={password}
-                onChangeText={(text) => {
-                    setPassword(text);
-                    if (text.trim()) {
-                        setPasswordError(false);
-                    }
-                }}
-                secureTextEntry
-                hasError={passwordError}
-            />
-            <View className="py-4 w-full justify-center items-center">
-                <DefaultButton text={t("settings_deactivate_mfa_next")} onPress={handleMFADeactivatePress} />
-            </View>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <View className="flex h-screen items-center bg-light_primary dark:bg-dark_primary">
+                    <View className="py-4">
+                        <Heading text={t("settings_deactivate_mfa_heading")} />
+                    </View>
+                    <Subheading text={t("settings_deactivate_mfa_description")} />
+                    <TwoFactorInput
+                        onCodeChange={(text, isComplete) => {
+                            setCode(text);
+                            if (isComplete) {
+                                setCodeError(false);
+                            } else {
+                                setCodeError(true);
+                            }
+                        }}
+                    />
+                    <DefaultTextFieldInput
+                        placeholder={t("mfa_deactivate_password_textfield")}
+                        value={password}
+                        onChangeText={(text) => {
+                            setPassword(text);
+                            if (text.trim()) {
+                                setPasswordError(false);
+                            }
+                        }}
+                        secureTextEntry
+                        hasError={passwordError}
+                    />
+                    <View className="py-4 w-full justify-center items-center">
+                        <DefaultButton text={t("settings_deactivate_mfa_next")} onPress={handleMFADeactivatePress} />
+                    </View>
+                </View>
+            </TouchableWithoutFeedback>
             <DefaultToast />
-        </View>
+        </KeyboardAvoidingView>
+
     );
 };
 

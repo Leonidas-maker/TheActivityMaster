@@ -194,6 +194,13 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_manage_occurence_header"),
         }}
       />
+      <Stack.Screen
+        name="(program)/ManageTrainer"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_trainer_header"),
+        }}
+      />
     </Stack>
   );
 }

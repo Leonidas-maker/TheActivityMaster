@@ -1,6 +1,6 @@
 import { axiosInstance } from "../api";
 
-export const getTrainers = async (club_id: string, program_id: string) => {
+export const getTrainers = async (club_id: string | string[], program_id: string | string[]) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/programs/${program_id}/trainers`
@@ -13,8 +13,8 @@ export const getTrainers = async (club_id: string, program_id: string) => {
 };
 
 export const addTrainer = async (
-  club_id: string,
-  program_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
   user_id: string
 ) => {
   try {
@@ -29,8 +29,8 @@ export const addTrainer = async (
 };
 
 export const removeTrainer = async (
-  club_id: string,
-  program_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
   trainer_id: string
 ) => {
   try {
