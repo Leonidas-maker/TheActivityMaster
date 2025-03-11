@@ -724,9 +724,9 @@ async def update_session(db: AsyncSession, session: m_club.Session, session_upda
         details += f"Start Datetime: {session.start_datetime} -> {session_update.start_datetime}"
         session.start_datetime = session_update.start_datetime
 
-    if session_update.end_datetime and session.end_datetime != session_update.end_datetime:
+    if session.end_datetime != session_update.end_datetime:
         if (
-            session_update.start_datetime
+            session_update.start_datetime and session_update.end_datetime is not None
             and session.start_datetime
             and session_update.end_datetime < session.start_datetime
         ):

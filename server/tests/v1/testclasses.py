@@ -14,7 +14,7 @@ import warnings
 from abc import abstractmethod
 
 from config.permissions import DEFAULT_CLUB_ROLES, ClubPermissions  # type: ignore
-from .enums import PriceType, SessionType, ProgramStatusPublic, Weekday, OccurrenceStatus
+from .enums import PriceType, SessionType, ProgramStatusPublic, Weekday, OccurrenceStatus, DurationUnit
 
 
 ###########################################################################
@@ -354,6 +354,7 @@ class Club:
         self.employees: List[Employee] = []
         self.roles: List[ClubRole] = []
         self.programs: List[Program] = []
+        self.memberships: List[Membership] = []
 
     def create(self, check_default_roles=False, check: bool = True):
         response = self.user.post(
@@ -1446,3 +1447,71 @@ def get_random_programs(club: Club, count: int = 2, max_sessions: Optional[int] 
         )
         programs.append(program)
     return programs
+
+
+class Membership:
+    def __init__(
+        self,
+        club: Club,
+        name: str,
+        description: str,
+        price: int,
+        currency: str = "EUR",
+        duration: int = 30,
+        duration_unit: DurationUnit = DurationUnit.DAY,
+        session_count: int = 0,
+    ):
+        self.user = club.user
+        self.club = club
+
+        self.name = name
+        self.description = description
+        self.price = price
+        self.currency = currency
+        self.duration = duration
+        self.duration_unit = duration_unit
+        self.session_count = session_count
+
+        self.membership_id = None
+
+    def create(self, check=True):
+        response = self.user.post(
+            f"/api/v1/clubs/{self.club.club_id}/memberships",
+            json={
+                "name": self.name,
+                "description": self.description,
+                "price": self.price,
+                "currency": self.currency,
+                "duration": self.duration,
+                "duration_unit": self.duration_unit.value,
+                "session_count": self.session_count,
+            },
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["price"] == self.price
+            assert response.json()["currency"] == self.currency
+            assert response.json()["duration"] == self.duration
+            assert response.json()["duration_unit"] == self.duration_unit.value
+            assert response.json()["session_count"] == self.session_count
+            self.membership_id = response.json()["id"]
+        self.club.memberships.append(self)
+
+    def get(self, check=True):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/memberships/{self.membership_id}",
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["id"] == self.membership_id
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["price"] == self.price
+            assert response.json()["currency"] == self.currency
+            assert response.json()["duration"] == self.duration
+            assert response.json()["duration_unit"] == self.duration_unit.value
+            assert response
