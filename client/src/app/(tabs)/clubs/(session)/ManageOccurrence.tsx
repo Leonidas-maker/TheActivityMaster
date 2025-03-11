@@ -7,7 +7,7 @@ import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput"
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 
-const ClubManageTrainer = () => {
+const ManageOccurrence = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");
 
@@ -21,6 +21,6 @@ const ClubManageTrainer = () => {
             </View>
         </ScrollView>
     );
-};
+}
 
-export default ClubManageTrainer;
+export default ManageOccurrence;

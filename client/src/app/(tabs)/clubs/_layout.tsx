@@ -64,12 +64,6 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="(session)/ClubManageTrainer"
-        options={{
-          headerTitle: t("clubs_manage_trainer_header"),
-        }}
-      />
-      <Stack.Screen
         name="(program)/ClubManagePrograms"
         options={{
           headerTitle: t("clubs_manage_programs_header"),
@@ -176,8 +170,28 @@ export default function OverviewLayout() {
       <Stack.Screen
         name="(session)/ManageSession"
         options={{
-          presentation: "modal",
           headerTitle: t("clubs_manage_session_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(session)/ManageCourse"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_course_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(session)/ManageEvent"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_event_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(session)/ManageOccurrence"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_occurence_header"),
         }}
       />
     </Stack>

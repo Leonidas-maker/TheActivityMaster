@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Button } from "react-native";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";

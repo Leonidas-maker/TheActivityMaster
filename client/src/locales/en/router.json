@@ -53,5 +53,7 @@
     "clubs_update_program_header": "Update Program",
     "clubs_manage_program_header": "Manage Program",
     "clubs_add_session_header": "Create Session",
-    "clubs_manage_sessions_header": "Session Overview"
+    "clubs_manage_sessions_header": "Session Overview",
+    "clubs_manage_event_header": "Manage Event",
+    "clubs_manage_session_header": "Manage Course"
 }

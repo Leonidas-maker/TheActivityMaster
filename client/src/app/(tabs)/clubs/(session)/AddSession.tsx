@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScrollView, View, Pressable, useColorScheme, TouchableWithoutFeedback, Platform, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { TimePickerTrigger, InlineTimePopover } from '@/src/components/picker/TimePicker';
-import { DatePickerTrigger, InlineDatePopover } from '@/src/components/picker/DatePicker';
+import DateTimePicker from '@/src/components/picker/DateTimePicker';
 import Heading from '@/src/components/textFields/Heading';
 import Dropdown from '@/src/components/dropdown/Dropdown';
 import DefaultTextFieldInput from '@/src/components/textInputs/DefaultTextInput';
@@ -24,7 +23,7 @@ interface Address {
     country: string;
 }
 
-interface sessions {
+interface SessionData {
     session_type: string;
     capacity: number | null;
     price: number | null;
@@ -38,71 +37,61 @@ interface sessions {
     address: Address | null;
 }
 
-//! This component is somehow very slow in responing (needs sometimes more then one press to respond)
-//TODO: Check why this is so slow
+//! On iOS this screen is very slow to respond to clicks, I am not sure why
+//TODO: Look into why this screen is slow to respond to clicks on iOS
 const AddSession = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const { t, i18n } = useTranslation('clubs');
     const { club_id, program_id, pricing_model } = useLocalSearchParams();
 
+    // Input state variables
     const [price, setPrice] = useState('');
-    const [priceError, setPriceError] = useState(false);
     const [capacity, setCapacity] = useState('');
-    const [capacityError, setCapacityError] = useState(false);
+    const [sessionType, setSessionType] = useState('');
+    const [selectedWeekday, setSelectedWeekday] = useState('');
     const [differentAddress, setDifferentAddress] = useState(false);
-    const [sessionType, setSessionType] = useState("");
-    const [selectedWeekday, setSelectedWeekday] = useState("");
+    const [country, setCountry] = useState('');
+    const [street, setStreet] = useState('');
+    const [city, setCity] = useState('');
+    const [zip, setZip] = useState('');
+    const [stateVal, setStateVal] = useState(''); // renamed from "state" to avoid confusion
+
+    // Error state variables
+    const [priceError, setPriceError] = useState(false);
+    const [capacityError, setCapacityError] = useState(false);
     const [sessionTypeError, setSessionTypeError] = useState(false);
-
-    const [country, setCountry] = useState("");
-    const [street, setStreet] = useState("");
-    const [city, setCity] = useState("");
-    const [zip, setZip] = useState("");
-    const [state, setState] = useState("");
-    // Note: Address will be conditionally sent so we keep it separate
-    const [address, setAddress] = useState<Address | null>(null);
-
-    // Error states for the fields.
-    const [nameError, setNameError] = useState(false);
-    const [descriptionError, setDescriptionError] = useState(false);
     const [streetError, setStreetError] = useState(false);
     const [cityError, setCityError] = useState(false);
     const [zipError, setZipError] = useState(false);
     const [stateError, setStateError] = useState(false);
     const [addressError, setAddressError] = useState(false);
 
-    // States for the two time pickers
+    // Date and time state variables
     const [startEventTime, setStartEventTime] = useState(new Date());
     const [endEventTime, setEndEventTime] = useState(new Date());
-
-    // State to track which TimePicker is active ("start" or "end")
-    const [activeTimePicker, setActiveTimePicker] = useState<null | 'start' | 'end'>(null);
-    const [timePopoverVisible, setTimePopoverVisible] = useState(false);
-
-    // States for the DatePickers
-    // Separate states for event date and course end date
     const [eventDate, setEventDate] = useState(new Date());
     const [courseEndDate, setCourseEndDate] = useState(new Date());
-    // Active date picker: either 'event' or 'courseEnd'
-    const [activeDatePicker, setActiveDatePicker] = useState<null | 'event' | 'courseEnd'>(null);
-    const [datePopoverVisible, setDatePopoverVisible] = useState(false);
-
-    // New state: whether the user wants to set an end_date for a course
     const [setCourseEndDateOption, setSetCourseEndDateOption] = useState(false);
 
-    // State to hold full countries list from the API
+    // Countries data
     const [fetchedCountries, setFetchedCountries] = useState<any[]>([]);
-    // State to track the selected country's ISO2 code from the dropdown
-    const [selectedCountryKey, setSelectedCountryKey] = useState("");
+    const [selectedCountryKey, setSelectedCountryKey] = useState('');
 
-    // Fetch the countries and store the full response in state.
+    // Theme state
+    const [isLight, setIsLight] = useState(false);
+    const colorScheme = useColorScheme();
+    useEffect(() => {
+        setIsLight(colorScheme === 'light');
+    }, [colorScheme]);
+    const iconColor = isLight ? '#000000' : '#FFFFFF';
+
+    // Fetch countries on mount
     useEffect(() => {
         async function fetchCountries() {
             try {
                 const data = await getCountries();
                 setFetchedCountries(data.countries);
-                // Optionally, set a default country if needed.
             } catch (error) {
                 console.error("Error fetching countries", error);
             }
@@ -110,7 +99,7 @@ const AddSession = () => {
         fetchCountries();
     }, []);
 
-    // Update the country state whenever the selected country changes.
+    // Update country when selectedCountryKey changes
     useEffect(() => {
         if (selectedCountryKey) {
             const selected = fetchedCountries.find((c) => c.iso2 === selectedCountryKey);
@@ -120,68 +109,58 @@ const AddSession = () => {
         }
     }, [selectedCountryKey, fetchedCountries]);
 
-    // Build dropdown list using the current language for display.
-    const dropdownOptions = fetchedCountries.map((c) => {
-        const translatedName = c.translations[i18n.language] || c.name;
-        return { key: c.iso2, value: translatedName };
-    });
+    // Memoize dropdown options for countries
+    const dropdownOptions = useMemo(
+        () =>
+            fetchedCountries.map((c) => {
+                const translatedName = c.translations[i18n.language] || c.name;
+                return { key: c.iso2, value: translatedName };
+            }),
+        [fetchedCountries, i18n.language]
+    );
 
-    // State for theme (light or dark)
-    const [isLight, setIsLight] = useState(false);
-    const colorScheme = useColorScheme();
-    useEffect(() => {
-        setIsLight(colorScheme === 'light');
-    }, [colorScheme]);
-    const iconColor = isLight ? '#000000' : '#FFFFFF';
+    // Calculate minimum dates:
+    // Tomorrow for the start date.
+    const tomorrow = useMemo(() => {
+        const date = new Date();
+        date.setDate(date.getDate() + 1);
+        return date;
+    }, []);
+    // For course end date, at least one day after the selected start date.
+    const minCourseEndDate = useMemo(() => {
+        const date = new Date(eventDate);
+        date.setDate(date.getDate() + 1);
+        return date;
+    }, [eventDate]);
 
-    // Handler to dismiss the screen
-    const handleDismissPress = () => {
+    // Generic handler for text input changes that resets error if text is non-empty
+    const createTextChangeHandler = (
+        setter: React.Dispatch<React.SetStateAction<string>>,
+        errorSetter: React.Dispatch<React.SetStateAction<boolean>>
+    ) => (text: string) => {
+        setter(text);
+        if (text.trim()) {
+            errorSetter(false);
+        }
+    };
+
+    // Dismiss handler wrapped with useCallback
+    const handleDismissPress = useCallback(() => {
         router.dismiss();
-    };
+    }, [router]);
 
-    // Handler when the time popover closes
-    const handleTimePopoverClose = (time: Date) => {
-        if (activeTimePicker === 'start') {
-            setStartEventTime(time);
-        } else if (activeTimePicker === 'end') {
-            setEndEventTime(time);
-        }
-        setActiveTimePicker(null);
-        setTimePopoverVisible(false);
-    };
-
-    // Handler when the date popover closes.
-    // Updates the appropriate state based on the active date picker.
-    const handleDatePopoverClose = (
-        selected: Date | { startDate: Date; endDate: Date }
-    ) => {
-        if (selected instanceof Date) {
-            if (activeDatePicker === 'event') {
-                setEventDate(selected);
-            } else if (activeDatePicker === 'courseEnd') {
-                setCourseEndDate(selected);
-            }
-        }
-        setActiveDatePicker(null);
-        setDatePopoverVisible(false);
-    };
-
-    // Set custom header with a dismiss button
+    // Set custom header with dismiss button
     useEffect(() => {
         navigation.setOptions({
             headerLeft: () => (
                 <Pressable onPress={handleDismissPress}>
-                    <Icon
-                        name="close"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: 'auto', marginRight: 15 }}
-                    />
+                    <Icon name="close" size={30} color={iconColor} style={{ marginLeft: 'auto', marginRight: 15 }} />
                 </Pressable>
             ),
         });
-    }, [navigation, iconColor]);
+    }, [navigation, iconColor, handleDismissPress]);
 
+    // Weekday options for courses
     const weekValues = [
         { key: 'Monday', value: t('monday') },
         { key: 'Tuesday', value: t('tuesday') },
@@ -192,21 +171,15 @@ const AddSession = () => {
         { key: 'Sunday', value: t('sunday') },
     ];
 
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const minCourseEndDate = new Date(eventDate);
-    minCourseEndDate.setDate(minCourseEndDate.getDate() + 1);
-
-    const handleCreatePress = async () => {
+    // Validate all input fields; returns true if any error is found
+    const validateInputs = () => {
         let errorFound = false;
 
-        // Validate session type
         if (!sessionType.trim()) {
             setSessionTypeError(true);
             errorFound = true;
         }
 
-        // Validate pricing_model specific fields (per_session)
         if (pricing_model === "per_session") {
             if (!price.trim()) {
                 setPriceError(true);
@@ -218,37 +191,34 @@ const AddSession = () => {
             }
         }
 
-        // Validate that start time is before end time for both event and course
         if (startEventTime >= endEventTime) {
             Toast.show({
                 type: "error",
                 text1: t("inputError_text"),
-                text2: t("Start time must be before end time")
+                text2: t("Start time must be before end time"),
             });
             errorFound = true;
         }
 
-        // Additional validations for course session type
         if (sessionType === "course") {
             if (!selectedWeekday.trim()) {
                 Toast.show({
                     type: "error",
                     text1: t("inputError_text"),
-                    text2: t("Please select a weekday for the course")
+                    text2: t("Please select a weekday for the course"),
                 });
                 errorFound = true;
             }
-            if (setCourseEndDateOption && (new Date(courseEndDate) <= new Date(eventDate))) {
+            if (setCourseEndDateOption && new Date(courseEndDate) <= new Date(eventDate)) {
                 Toast.show({
                     type: "error",
                     text1: t("inputError_text"),
-                    text2: t("Course end date must be after the course start date")
+                    text2: t("Course end date must be after the course start date"),
                 });
                 errorFound = true;
             }
         }
 
-        // Validate address fields if a different address is required
         if (differentAddress) {
             if (!street.trim()) {
                 setStreetError(true);
@@ -262,7 +232,7 @@ const AddSession = () => {
                 setCityError(true);
                 errorFound = true;
             }
-            if (!state.trim()) {
+            if (!stateVal.trim()) {
                 setStateError(true);
                 errorFound = true;
             }
@@ -272,67 +242,69 @@ const AddSession = () => {
             }
         }
 
-        // If any validation failed, show a generic error message and exit
         if (errorFound) {
             Toast.show({
                 type: "error",
                 text1: t("inputError_text"),
                 text2: t("inputError_subtext"),
             });
-            return;
         }
 
-        try {
-            const formattedStartTime = startEventTime.toISOString().split("T")[1].split(".")[0];
-            const formattedEndTime = endEventTime.toISOString().split("T")[1].split(".")[0];
+        return errorFound;
+    };
 
-            const eventStartDateTime = new Date(
+    // Build session data for the API request
+    const buildSessionData = (): SessionData => {
+        const formattedStartTime = startEventTime.toISOString().split("T")[1].split(".")[0];
+        const formattedEndTime = endEventTime.toISOString().split("T")[1].split(".")[0];
+
+        const eventStartDateTime = new Date(
+            Date.UTC(
                 eventDate.getFullYear(),
                 eventDate.getMonth(),
                 eventDate.getDate(),
                 startEventTime.getHours(),
                 startEventTime.getMinutes(),
                 startEventTime.getSeconds()
-            );
-
-            const eventEndDateTime = new Date(
+            )
+        );
+        const eventEndDateTime = new Date(
+            Date.UTC(
                 eventDate.getFullYear(),
                 eventDate.getMonth(),
                 eventDate.getDate(),
                 endEventTime.getHours(),
                 endEventTime.getMinutes(),
                 endEventTime.getSeconds()
-            );
+            )
+        );
 
+        return {
+            session_type: sessionType,
+            capacity: pricing_model === "per_session" ? parseInt(capacity) : null,
+            price: pricing_model === "per_session" ? parseInt(price) : null,
+            start_datetime: sessionType === "event" ? eventStartDateTime.toISOString() : null,
+            end_datetime: sessionType === "event" ? eventEndDateTime.toISOString() : null,
+            day_of_week: sessionType === "course" ? selectedWeekday : null,
+            start_time: sessionType === "course" ? formattedStartTime : null,
+            end_time: sessionType === "course" ? formattedEndTime : null,
+            start_date: sessionType === "course" ? eventDate.toISOString().split("T")[0] : null,
+            end_date:
+                sessionType === "course"
+                    ? setCourseEndDateOption
+                        ? courseEndDate.toISOString().split("T")[0]
+                        : null
+                    : null,
+            address: differentAddress ? { street, postal_code: zip, city, state: stateVal, country } : null,
+        };
+    };
 
-            // Build sessionData based on sessionType and pricing_model
-            const sessionData: sessions = {
-                session_type: sessionType,
-                // If pricing_model is per_session, use provided values, else set to null
-                capacity: pricing_model === "per_session" ? parseInt(capacity) : null,
-                price: pricing_model === "per_session" ? parseInt(price) : null,
-                // For events, send start_datetime and end_datetime, otherwise null
-                start_datetime: sessionType === "event" ? eventStartDateTime.toISOString() : null,
-                end_datetime: sessionType === "event" ? eventEndDateTime.toISOString() : null,
-                // For courses, send day_of_week, start_time, end_time, start_date and optionally end_date
-                day_of_week: sessionType === "course" ? selectedWeekday : null,
-                start_time: sessionType === "course" ? formattedStartTime : null,
-                end_time: sessionType === "course" ? formattedEndTime : null,
-                start_date: sessionType === "course" ? eventDate.toISOString().split("T")[0] : null,
-                end_date: sessionType === "course"
-                    ? (setCourseEndDateOption ? courseEndDate.toISOString().split("T")[0] : null)
-                    : null,
-                // Send the address if differentAddress is true, otherwise null
-                address: differentAddress
-                    ? {
-                        street,
-                        postal_code: zip,
-                        city,
-                        state,
-                        country,
-                    }
-                    : null,
-            };
+    // Handle session creation
+    const handleCreatePress = async () => {
+        if (validateInputs()) return;
+
+        try {
+            const sessionData = buildSessionData();
             await createSession(club_id, program_id, sessionData);
             router.back();
         } catch (error) {
@@ -342,26 +314,22 @@ const AddSession = () => {
                 text1: t("roleManageError"),
                 text2: t("roleManageErrorDescription"),
             });
-            return;
         }
     };
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }} // Ensure the KeyboardAvoidingView fills the screen
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <View style={{ flex: 1 }} pointerEvents="box-none">
                     <ScrollView
-                        scrollEnabled={!(timePopoverVisible || datePopoverVisible)}
+                        scrollEnabled
                         keyboardShouldPersistTaps="always"
                         contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
                         style={{ flex: 1 }}
-                        className='bg-light_primary dark:bg-dark_primary'
+                        className="bg-light_primary dark:bg-dark_primary"
                     >
-                        <View className='justify-center items-center'>
-                            <View className='py-4'>
+                        <View className="justify-center items-center">
+                            <View className="py-4">
                                 <Heading text={t('create_session_header')} />
                             </View>
                             {pricing_model === "per_session" && (
@@ -369,23 +337,13 @@ const AddSession = () => {
                                     <DefaultTextFieldInput
                                         placeholder={t("program_price_placeholder")}
                                         value={price}
-                                        onChangeText={(text) => {
-                                            setPrice(text);
-                                            if (text.trim()) {
-                                                setPriceError(false);
-                                            }
-                                        }}
+                                        onChangeText={createTextChangeHandler(setPrice, setPriceError)}
                                         hasError={priceError}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("program_capacity_placeholder")}
                                         value={capacity}
-                                        onChangeText={(text) => {
-                                            setCapacity(text);
-                                            if (text.trim()) {
-                                                setCapacityError(false);
-                                            }
-                                        }}
+                                        onChangeText={createTextChangeHandler(setCapacity, setCapacityError)}
                                         hasError={capacityError}
                                     />
                                 </>
@@ -397,72 +355,47 @@ const AddSession = () => {
                                 }}
                                 values={[
                                     { key: "course", value: t("course") },
-                                    { key: "event", value: t("event") }
+                                    { key: "event", value: t("event") },
                                 ]}
                                 placeholder={t("selectSessionType_placeholder")}
                                 save="key"
                             />
-                            <DefaultText text={t("event_start_date")} />
-                            {/* Time picker for event start time */}
-                            <TimePickerTrigger
-                                selectedTime={startEventTime}
-                                onPress={() => {
-                                    setActiveTimePicker('start');
-                                    setTimePopoverVisible(true);
-                                }}
-                            />
-                            <DefaultText text={t("event_end_date")} />
-                            {/* Time picker for event end time */}
-                            <TimePickerTrigger
-                                selectedTime={endEventTime}
-                                onPress={() => {
-                                    setActiveTimePicker('end');
-                                    setTimePopoverVisible(true);
-                                }}
-                            />
-                            {sessionType === "course" ? (
-                                <DefaultText text={t("course_start_date")} />
-                            ) : (
-                                <DefaultText text={t("event_date")} />
-                            )}
-                            {/* Date picker trigger for the event date */}
-                            <DatePickerTrigger
-                                selectedDate={eventDate}
-                                onPress={() => {
-                                    setActiveDatePicker('event');
-                                    setDatePopoverVisible(true);
-                                }}
-                            />
+                            <View className='w-full justify-center items-center'>
+                                <DefaultText text={t("event_start_date")} />
+                                <DateTimePicker mode="time" value={startEventTime} onConfirm={setStartEventTime} />
+                                <DefaultText text={t("event_end_date")} />
+                                <DateTimePicker mode="time" value={endEventTime} onConfirm={setEndEventTime} />
+                                <DefaultText text={sessionType === "course" ? t("course_start_date") : t("event_date")} />
+                                <DateTimePicker
+                                    mode="date"
+                                    value={eventDate}
+                                    onConfirm={setEventDate}
+                                    minimumDate={tomorrow}
+                                />
+                            </View>
                             {sessionType === "course" && (
                                 <>
-                                    {/* OptionSwitch to decide if an end_date should be set */}
                                     <OptionSwitch
                                         title={t("set_course_end_date")}
                                         texts={[t("enable_course_end_date")]}
                                         iconNames={["calendar-today"]}
                                         values={[setCourseEndDateOption]}
-                                        onValueChanges={[
-                                            () => setSetCourseEndDateOption(prev => !prev)
-                                        ]}
+                                        onValueChanges={[() => setSetCourseEndDateOption((prev) => !prev)]}
                                     />
                                     {setCourseEndDateOption && (
                                         <>
                                             <DefaultText text={t("course_end_date")} />
-                                            {/* Date picker trigger for the course end date */}
-                                            <DatePickerTrigger
-                                                selectedDate={courseEndDate}
-                                                onPress={() => {
-                                                    setActiveDatePicker('courseEnd');
-                                                    setDatePopoverVisible(true);
-                                                }}
+                                            <DateTimePicker
+                                                mode="date"
+                                                value={courseEndDate}
+                                                onConfirm={setCourseEndDate}
+                                                minimumDate={minCourseEndDate}
                                             />
                                         </>
                                     )}
                                     <DefaultText text={t("course_weekday")} />
                                     <Dropdown
-                                        setSelected={(selected) => {
-                                            setSelectedWeekday(selected);
-                                        }}
+                                        setSelected={setSelectedWeekday}
                                         values={weekValues}
                                         placeholder={t("selectWeekday_placeholder")}
                                         save="key"
@@ -474,58 +407,36 @@ const AddSession = () => {
                                 texts={[t("different_address_enabled")]}
                                 iconNames={["person"]}
                                 values={[differentAddress]}
-                                onValueChanges={[
-                                    () => setDifferentAddress(prev => !prev)
-                                ]}
+                                onValueChanges={[() => setDifferentAddress((prev) => !prev)]}
                             />
                             {differentAddress && (
                                 <>
                                     <DefaultTextFieldInput
                                         placeholder={t("street_placeholder")}
                                         value={street}
-                                        onChangeText={(text) => {
-                                            setStreet(text);
-                                            if (text.trim()) {
-                                                setStreetError(false);
-                                            }
-                                        }}
+                                        onChangeText={createTextChangeHandler(setStreet, setStreetError)}
                                         hasError={streetError}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("zip_placeholder")}
                                         value={zip}
-                                        onChangeText={(text) => {
-                                            setZip(text);
-                                            if (text.trim()) {
-                                                setZipError(false);
-                                            }
-                                        }}
+                                        onChangeText={createTextChangeHandler(setZip, setZipError)}
                                         hasError={zipError}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("city_placeholder")}
                                         value={city}
-                                        onChangeText={(text) => {
-                                            setCity(text);
-                                            if (text.trim()) {
-                                                setCityError(false);
-                                            }
-                                        }}
+                                        onChangeText={createTextChangeHandler(setCity, setCityError)}
                                         hasError={cityError}
                                     />
                                     <DefaultTextFieldInput
                                         placeholder={t("state_placeholder")}
-                                        value={state}
-                                        onChangeText={(text) => {
-                                            setState(text);
-                                            if (text.trim()) {
-                                                setStateError(false);
-                                            }
-                                        }}
+                                        value={stateVal}
+                                        onChangeText={createTextChangeHandler(setStateVal, setStateError)}
                                         hasError={stateError}
                                     />
                                     <Dropdown
-                                        search={true}
+                                        search
                                         setSelected={setSelectedCountryKey}
                                         values={dropdownOptions}
                                         placeholder={t("country_placeholder")}
@@ -533,22 +444,11 @@ const AddSession = () => {
                                     />
                                 </>
                             )}
-                            <View className='justify-center items-center w-full pb-4'>
+                            <View className="justify-center items-center w-full pb-4">
                                 <DefaultButton text={t("create_session_btn")} onPress={handleCreatePress} />
                             </View>
                         </View>
                     </ScrollView>
-                    {/* Render a single InlineTimePopover which updates based on the activeTimePicker */}
-                    {timePopoverVisible && (
-                        <InlineTimePopover onClose={handleTimePopoverClose} />
-                    )}
-                    {/* Render a single InlineDatePopover which updates based on the activeDatePicker */}
-                    {datePopoverVisible && (
-                        <InlineDatePopover
-                            minimumDate={activeDatePicker === 'courseEnd' ? minCourseEndDate : tomorrow}
-                            onClose={handleDatePopoverClose}
-                        />
-                    )}
                 </View>
             </TouchableWithoutFeedback>
             <DefaultToast />

@@ -114,7 +114,7 @@
     "descriptionError_subtext": "Die Beschreibung muss mindestens 10 Zeichen lang sein",
     "pricingModelError_text": "Fehler im Preismodell",
     "pricingModelError_subtext": "Bitte wählen Sie ein Preismodell aus",
-    "program_price_placeholder": "Preis in Euro",
+    "program_price_placeholder": "Preis in Cents",
     "program_capacity_placeholder": "Maximale Teilnehmer",
     "programs_manage_navigator_title": "Programme verwalten",
     "programs_manage_update_program": "Programm aktualisieren",
@@ -157,5 +157,14 @@
     "events_navigator_title": "Veranstaltungsübersicht",
     "courses_navigator_title": "Kursübersicht",
     "eventOn": "Veranstaltung am:",
-    "courseOn": "Kurs am:"
+    "courseOn": "Kurs am:",
+    "update_event": "Veranstaltung aktualisieren",
+    "save_session_btn": "Termin aktualisieren",
+    "delete_event": "Termin löschen",
+    "session_delete_note_placeholder": "Notiz für die Löschung",
+    "delete_session_btn": "Termin löschen",
+    "manageCourse_navigationTitle": "Kurs verwalten",
+    "update_course": "Kurs aktualisieren",
+    "occurrences_navigationTitle": "Termine Übersicht",
+    "occurrenceOn": "Termin am:"
 }

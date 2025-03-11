@@ -14,6 +14,12 @@ interface TimePickerTriggerProps {
     onPress: () => void;
 }
 
+interface InlineTimePickerProps {
+    initialTime: Date;
+    onConfirm: (selectedTime: Date) => void;
+    onCancel: () => void;
+}
+
 export const InlineTimePopover: React.FC<InlineTimePopoverProps> = ({ onClose }) => {
     const [time, setTime] = useState(new Date());
     const { t } = useTranslation("clubs");
@@ -100,5 +106,51 @@ export const TimePickerTrigger: React.FC<TimePickerTriggerProps> = ({ selectedTi
         <TouchableOpacity className="justify-center items-center bg-light_secondary dark:bg-dark_secondary w-3/4 m-2 p-4 rounded-xl shadow-lg" onPress={onPress}>
             <DefaultText text={formatTime(selectedTime)} />
         </TouchableOpacity>
+    );
+};
+
+export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({ initialTime, onConfirm, onCancel }) => {
+    const [time, setTime] = useState(initialTime);
+    const { t } = useTranslation("clubs");
+
+    // Determine theme based on the current color scheme
+    const colorScheme = useColorScheme();
+    const isLight = colorScheme === "light";
+    const themeVariant = isLight ? "light" : "dark";
+
+    const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+        if (selectedDate) {
+            setTime(selectedDate);
+        }
+    };
+
+    return (
+        <View
+            // Container styling for the inline picker
+            className="bg-light_secondary dark:bg-dark_secondary p-4 rounded-xl shadow-lg my-2"
+        >
+            <Text className="text-lg text-black dark:text-white font-bold mb-2 text-center">
+                {t("select_time")}
+            </Text>
+            <DateTimePicker
+                value={time}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                style={{ width: '100%' }}
+                themeVariant={themeVariant}
+            />
+            <View className='flex-row justify-center mt-2'>
+                <DefaultButton
+                    text={t("confirm_btn")}
+                    onPress={() => onConfirm(time)}
+                />
+                {/* Optionally, include a cancel button */}
+                <DefaultButton
+                    text={t("cancel_btn")}
+                    onPress={onCancel}
+                />
+            </View>
+        </View>
     );
 };

@@ -118,7 +118,7 @@
     "descriptionError_subtext": "Description needs to be at least 10 characters",
     "pricingModelError_text": "Pricing Model error",
     "pricingModelError_subtext": "Please select a pricing model",
-    "program_price_placeholder": "Price in Euro",
+    "program_price_placeholder": "Price in Cents",
     "program_capacity_placeholder": "Maximum participants",
     "programs_manage_navigator_title": "Manage Programs",
     "programs_manage_update_program": "Update Program",
@@ -161,5 +161,14 @@
     "events_navigator_title": "Event Overview",
     "courses_navigator_title": "Course Overview",
     "eventOn": "Event on:",
-    "courseOn": "Course on:"
+    "courseOn": "Course on:",
+    "update_event": "Update Event",
+    "save_session_btn": "Update Session",
+    "delete_event": "Delete Session",
+    "session_delete_note_placeholder": "Note for the deletion",
+    "delete_session_btn": "Delete Session",
+    "manageCourse_navigationTitle": "Manage Course",
+    "update_course": "Update Course",
+    "occurrences_navigationTitle": "Occurrences Overview",
+    "occurrenceOn": "Occurrence on:"
 }

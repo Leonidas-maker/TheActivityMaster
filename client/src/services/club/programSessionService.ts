@@ -57,16 +57,16 @@ export const createSession = async (
 };
 
 export const updateSession = async (
-  club_id: string,
-  program_id: string,
-  session_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
+  session_id: string | string[],
   session: sessions,
   null_end_date: boolean,
   refresh_future_occurrences: boolean
 ) => {
   try {
     const requestBody = {
-      session,
+      ...session,
       null_end_date,
       refresh_future_occurrences,
     };
@@ -83,9 +83,9 @@ export const updateSession = async (
 };
 
 export const deleteSession = async (
-  club_id: string,
-  program_id: string,
-  session_id: string,
+  club_id: string | string[],
+  program_id: string | string[],
+  session_id: string | string[],
   message: string
 ) => {
   try {

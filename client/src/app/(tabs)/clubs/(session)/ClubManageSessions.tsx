@@ -35,6 +35,7 @@ interface Session {
     start_time?: string;
     end_time?: string;
     start_date?: string;
+    end_date?: string;
     occurrences?: any[];
 }
 
@@ -115,7 +116,7 @@ const ClubManageSessions = () => {
         return `${t("eventOn")} ${formatDate(startDate.toISOString())} ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
     });
     const eventOnPressFunctions = eventSessions.map(event => () => {
-        router.push(`/(tabs)/clubs/(session)/ManageSession?club_id=${club_id}&program_id=${program_id}&session_id=${event.id}`);
+        router.push(`/(tabs)/clubs/(session)/ManageEvent?club_id=${club_id}&program_id=${program_id}&session_id=${event.id}&pricing_model=${pricing_model}&start_date=${event.start_datetime}&end_date=${event.end_datetime}&capacity_event=${event.capacity}&price_event=${event.price}`);
     });
     const eventIconNames = eventSessions.map(() => "event");
 
@@ -129,7 +130,8 @@ const ClubManageSessions = () => {
         return `${t("courseOn")} ${formattedDate} (${translatedDay}) ${formattedTime}`;
     });
     const courseOnPressFunctions = courseSessions.map(course => () => {
-        router.push(`/(tabs)/clubs/(session)/ManageSession?club_id=${club_id}&program_id=${program_id}&session_id=${course.id}`);
+        const encodedOccurrences = encodeURIComponent(JSON.stringify(course.occurrences));
+        router.push(`/(tabs)/clubs/(session)/ManageSession?club_id=${club_id}&program_id=${program_id}&session_id=${course.id}&pricing_model=${pricing_model}&day_of_week=${course.day_of_week}&start_time=${course.start_time}&end_time=${course.end_time}&start_date=${course.start_date}&end_date=${course.end_date}&occurrences=${encodedOccurrences}&capacity_event=${course.capacity}&price_event=${course.price}`);
     });
     const courseIconNames = courseSessions.map(() => "school");
 

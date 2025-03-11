@@ -53,5 +53,7 @@
     "clubs_update_program_header": "Programm aktualisieren",
     "clubs_manage_program_header": "Programm verwalten",
     "clubs_add_session_header": "Termin erstellen",
-    "clubs_manage_sessions_header": "Termin Übersicht"
+    "clubs_manage_sessions_header": "Termin Übersicht",
+    "clubs_manage_event_header": "Veranstaltung verwalten",
+    "clubs_manage_session_header": "Kurs verwalten"
 }
