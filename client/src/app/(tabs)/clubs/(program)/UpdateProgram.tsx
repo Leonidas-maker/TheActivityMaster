@@ -18,7 +18,6 @@ import { getSessions } from "@/src/services/club/programSessionService";
 import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 //TODO: Add change currency option
-//TODO: Add getSessions and update the pricing and capacity if change between pricing model is made
 const UpdateProgram = () => {
     const router = useRouter();
     const navigation = useNavigation();
@@ -245,16 +244,38 @@ const UpdateProgram = () => {
             return;
         }
 
-        if (status === "active") {
-            try {
-                const sessions = await getSessions(club_id, program_id);
-                if (sessions.length === 0) {
+        let session_data = null;
+        if (pricingModel === "package") {
+            if (status === "active") {
+                try {
+                    const sessions = await getSessions(club_id, program_id);
+                    if (sessions.length === 0) {
+                        Toast.show({
+                            type: "error",
+                            text1: t("sessionError_text"),
+                            text2: t("sessionError_subtext")
+                        });
+                        return;
+                    }
+                } catch (error) {
                     Toast.show({
                         type: "error",
-                        text1: t("sessionError_text"),
-                        text2: t("sessionError_subtext")
+                        text1: t("roleManageError"),
+                        text2: t("roleManageErrorDescription")
                     });
                     return;
+                }
+            }
+        } else if (pricingModel === "per_session" && initialStatus === "draft" && (status === "active" || status === "inactive")) {
+            try {
+                const programDetails = await getProgram(club_id, program_id);
+                if (programDetails.sessions && programDetails.sessions.length > 0) {
+                    const sessionDataConstruct: { [key: string]: [number | null, number | null] } = {};
+                    programDetails.sessions.forEach((session: any) => {
+                        // Use the session id as the key and assign an array with price and capacity
+                        sessionDataConstruct[session.id] = [session.price, session.capacity];
+                    });
+                    session_data = sessionDataConstruct;
                 }
             } catch (error) {
                 Toast.show({
@@ -267,7 +288,6 @@ const UpdateProgram = () => {
         }
 
         try {
-            const session_data = null;
             const statusValue = status?.trim() && status === "draft" ? undefined : status;
             await updateProgram(
                 club_id,

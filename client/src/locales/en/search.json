@@ -17,5 +17,14 @@
     "permissionDeniedDescription": "Please enter a search term.",
     "noInputError": "Search error",
     "noInputErrorDescription": "Please provide a search term",
-    "noMoreResults": "No more results"
+    "noMoreResults": "No more results",
+    "minPrice": "Min Price",
+    "maxPrice": "Max Price",
+    "minPrice_placeholder": "Enter min price in Euro",
+    "maxPrice_placeholder": "Enter max price in Euro",
+    "none": "None",
+    "course": "Course",
+    "event": "Event",
+    "selectSessionType_placeholder": "Select session type",
+    "selectProgramCategory_placeholder": "Select program category"
   }

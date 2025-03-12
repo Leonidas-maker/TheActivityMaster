@@ -91,7 +91,6 @@ export const getProgram = async (club_id: string | string[], program_id: string 
   }
 };
 
-//TODO: Check for session_data
 export const updateProgram = async (
   club_id: string | string[],
   program_id: string | string[],
@@ -103,7 +102,7 @@ export const updateProgram = async (
   capacity: number | null,
   membership_required: boolean,
   categories: number[],
-  session_data: string | null,
+  session_data: Record<string, [number | null, number | null]> | null,
   status?: string,
 ) => {
   try {
@@ -152,7 +151,7 @@ export const searchPrograms = async (
   category_id: number | null = null,
   min_price: number | null = null,
   max_price: number | null = null,
-  session_type: "course" | "event" | null = null,
+  session_type: string | null = null,
 ) => {
   try {
     const params = new URLSearchParams();

@@ -23,9 +23,11 @@ import { useRouter } from "expo-router";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Toast from "react-native-toast-message";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
+import Dropdown from "@/src/components/dropdown/Dropdown";
 
 import { searchClubs } from "@/src/services/club/clubService";
-import { searchPrograms } from "@/src/services/club/programService";
+import { searchPrograms, getProgramCategories } from "@/src/services/club/programService";
+import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
 
 interface Club {
     name: string;
@@ -56,7 +58,7 @@ interface Program {
 }
 
 export default function SearchScreen() {
-    const { t } = useTranslation("search");
+    const { t, i18n } = useTranslation("search");
     const router = useRouter();
 
     const [isLight, setIsLight] = useState(false);
@@ -88,7 +90,27 @@ export default function SearchScreen() {
     const [pageSize, setPageSize] = useState(10);
     const [pageSizeText, setPageSizeText] = useState("10");
 
-    const resultsFound = (showClubs && clubs.length > 0) || (showPrograms && programs.length > 0);
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
+    const [sessionType, setSessionType] = useState("");
+    const [selectedProgramCategory, setSelectedProgramCategory] = useState("");
+    const [searchProgramCategories, setSearchProgramCategories] = useState<{ key: string; value: string }[]>([]);
+
+    useEffect(() => {
+        if (showPrograms) {
+            getProgramCategories(i18n.language)
+                .then((response) => {
+                    const categoriesOptions = response.map((category: { id: number; name: string; description: string }) => ({
+                        key: category.id.toString(),
+                        value: category.name,
+                    }));
+                    setSearchProgramCategories(categoriesOptions);
+                })
+                .catch((err) => {
+                    console.error("Error fetching program categories:", err);
+                });
+        }
+    }, [showPrograms, i18n.language]);
 
     const handleSearch = async () => {
         if (!query.trim()) {
@@ -110,7 +132,11 @@ export default function SearchScreen() {
                 setClubs([]);
             }
             if (showPrograms) {
-                const programsData = await searchPrograms(query, 1, pageSize);
+                const category_id = selectedProgramCategory ? Number(selectedProgramCategory) : null;
+                const min_price = minPrice ? Number(minPrice) * 100 : null;
+                const max_price = maxPrice ? Number(maxPrice) * 100 : null;
+                const session_type = sessionType ? sessionType : null;
+                const programsData = await searchPrograms(query, 1, pageSize, category_id, min_price, max_price, session_type);
                 setPrograms(programsData);
                 setProgramsPage(1);
             } else {
@@ -168,7 +194,11 @@ export default function SearchScreen() {
             // Next page requested
             setLoading(true);
             try {
-                const programsData = await searchPrograms(query, page, pageSize);
+                const category_id = selectedProgramCategory ? Number(selectedProgramCategory) : null;
+                const min_price = minPrice ? Number(minPrice) * 100 : null;
+                const max_price = maxPrice ? Number(maxPrice) * 100 : null;
+                const session_type = sessionType ? sessionType : null;
+                const programsData = await searchPrograms(query, page, pageSize, category_id, min_price, max_price, session_type);
                 if (!programsData || programsData.length === 0) {
                     Toast.show({ type: 'info', text1: t('noMoreResults') });
                     // Do not update page if no results
@@ -185,7 +215,11 @@ export default function SearchScreen() {
             // Previous page requested
             setLoading(true);
             try {
-                const programsData = await searchPrograms(query, page, pageSize);
+                const category_id = selectedProgramCategory ? Number(selectedProgramCategory) : null;
+                const min_price = minPrice ? Number(minPrice) * 100 : null;
+                const max_price = maxPrice ? Number(maxPrice) * 100 : null;
+                const session_type = sessionType ? sessionType : null;
+                const programsData = await searchPrograms(query, page, pageSize, category_id, min_price, max_price, session_type);
                 setPrograms(programsData);
                 setProgramsPage(page);
             } catch (error) {
@@ -426,6 +460,59 @@ export default function SearchScreen() {
                                         </TouchableOpacity>
                                     </View>
                                 </View>
+
+                                {showPrograms && (
+                                    <View className="mb-4">
+                                        <View className="mb-2">
+                                            <Text className="text-black dark:text-white">{t("minPrice")}</Text>
+                                            <View className="w-full justify-center items-center">
+                                                <DefaultTextFieldInput
+                                                    value={minPrice}
+                                                    onChangeText={setMinPrice}
+                                                    placeholder={t("minPrice_placeholder")}
+                                                    keyboardType="numeric"
+                                                />
+                                            </View>
+                                        </View>
+                                        <View className="mb-2">
+                                            <Text className="text-black dark:text-white">{t("maxPrice")}</Text>
+                                            <View className="w-full justify-center items-center">
+                                                <DefaultTextFieldInput
+                                                    value={maxPrice}
+                                                    onChangeText={setMaxPrice}
+                                                    placeholder={t("maxPrice_placeholder")}
+                                                    keyboardType="numeric"
+                                                />
+                                            </View>
+                                        </View>
+                                        <View className="w-full justify-center items-center">
+                                            <Dropdown
+                                                setSelected={setSessionType}
+                                                values={[
+                                                    { key: "", value: t("selectSessionType_placeholder") },
+                                                    { key: "course", value: t("course") },
+                                                    { key: "event", value: t("event") }
+                                                ]}
+                                                defaultOption={{ key: sessionType, value: sessionType ? t(sessionType) : t("selectSessionType_placeholder") }}
+                                                placeholder={t("selectSessionType_placeholder")}
+                                                save="key"
+                                            />
+                                            <Dropdown
+                                                setSelected={setSelectedProgramCategory}
+                                                values={[
+                                                    { key: "", value: t("selectProgramCategory_placeholder") },
+                                                    ...searchProgramCategories
+                                                ]}
+                                                defaultOption={{
+                                                    key: selectedProgramCategory,
+                                                    value: selectedProgramCategory ? (searchProgramCategories.find(cat => cat.key === selectedProgramCategory)?.value || "") : t("selectProgramCategory_placeholder")
+                                                }}
+                                                placeholder={t("selectProgramCategory_placeholder")}
+                                                save="key"
+                                            />
+                                        </View>
+                                    </View>
+                                )}
                                 <View className="w-full items-center justify-center">
                                     <DefaultButton text={t("applyButton")} onPress={handleApplyFilter} />
                                 </View>

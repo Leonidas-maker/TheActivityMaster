@@ -17,5 +17,14 @@
     "permissionDeniedDescription": "Bitte geben Sie einen Suchbegriff ein.",
     "noInputError": "Suchfehler",
     "noInputErrorDescription": "Bitte geben Sie einen Suchbegriff ein",
-    "noMoreResults": "Keine weiteren Ergebnisse"
+    "noMoreResults": "Keine weiteren Ergebnisse",
+    "minPrice": "Mindestpreis",
+    "maxPrice": "Höchstpreis",
+    "minPrice_placeholder": "Mindestpreis in Euro",
+    "maxPrice_placeholder": "Höchster Preis in Euro",
+    "none": "Keine",
+    "course": "Kurs",
+    "event": "Veranstaltung",
+    "selectSessionType_placeholder": "Sitzungstyp auswählen",
+    "selectProgramCategory_placeholder": "Programmkategorie auswählen"
   }
