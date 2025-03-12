@@ -55,13 +55,13 @@ export const getClubs = async (
 };
 
 export const searchClubs = async (
-  query: string,
+  search_query: string,
   page: number,
   page_size: number
 ) => {
   try {
     const response = await axiosInstance.get(
-      `/clubs/search?query=${query}&page=${page}&page_size=${page_size}`
+      `/clubs/search?search_query=${search_query}&page=${page}&page_size=${page_size}`
     );
     return response.data;
   } catch (error) {

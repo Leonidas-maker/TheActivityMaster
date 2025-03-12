@@ -66,5 +66,6 @@
     "clubs_delete_membership_header": "Delete Membership",
     "clubs_membership_access_overview_header": "Membership Access Overview",
     "clubs_add_program_membership_access_header": "Create Membership Access",
-    "clubs_manage_program_membership_access_header": "Manage Membership Access"
+    "clubs_manage_program_membership_access_header": "Manage Membership Access",
+    "search_tab": "Search"
 }

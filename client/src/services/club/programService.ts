@@ -146,23 +146,42 @@ export const deleteProgram = async (club_id: string | string[], program_id: stri
 };
 
 export const searchPrograms = async (
-    query: string,
-    category_id: number,
-    min_price: number,
-    max_price: number,
-    session_type: "course" | "event",
-    page: number,
-    page_size: number,
+  search_query: string,
+  page: number,
+  page_size: number,
+  category_id: number | null = null,
+  min_price: number | null = null,
+  max_price: number | null = null,
+  session_type: "course" | "event" | null = null,
 ) => {
-    try {
-        const response = await axiosInstance.get(
-            `/clubs/programs/search?query=${query}&category_id=${category_id}&min_price=${min_price}&max_price=${max_price}&session_type=${session_type}&page=${page}&page_size=${page_size}`
-        );
-        return response.data;
-    } catch (error) {
-        console.error("Error during searchPrograms call:", error);
-        throw error;
+  try {
+    const params = new URLSearchParams();
+
+    params.append("search_query", search_query);
+    params.append("page", page.toString());
+    params.append("page_size", page_size.toString());
+
+    if (category_id !== null) {
+      params.append("category_id", category_id.toString());
     }
+    if (min_price !== null) {
+      params.append("min_price", min_price.toString());
+    }
+    if (max_price !== null) {
+      params.append("max_price", max_price.toString());
+    }
+    if (session_type !== null) {
+      params.append("session_type", session_type);
+    }
+
+    const response = await axiosInstance.get(
+      `/clubs/programs/search?${params.toString()}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error during searchPrograms call:", error);
+    throw error;
+  }
 };
 
 export const getProgramCategories = async (

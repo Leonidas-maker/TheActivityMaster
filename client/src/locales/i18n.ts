@@ -21,6 +21,8 @@ import enAdmin from './en/admin.json';
 import deAdmin from './de/admin.json';
 import enClubs from './en/clubs.json';
 import deClubs from './de/clubs.json';
+import enSearch from './en/search.json';
+import deSearch from './de/search.json';
 
 const resources = {
   en: {
@@ -33,6 +35,7 @@ const resources = {
     billing: enBilling,
     admin: enAdmin,
     clubs: enClubs,
+    search: enSearch,
   },
   de: {
     discover: deDiscover,
@@ -44,6 +47,7 @@ const resources = {
     billing: deBilling,
     admin: deAdmin,
     clubs: deClubs,
+    search: deSearch,
   },
 };
 
@@ -79,7 +83,7 @@ const saveLanguage = async (language: string): Promise<void> => {
       resources,
       lng: initialLanguage,
       fallbackLng: 'en',
-      ns: ['discover', 'settings', 'calendar', 'overview', 'router', 'auth', 'billing', 'admin', "clubs"],
+      ns: ['discover', 'settings', 'calendar', 'overview', 'router', 'auth', 'billing', 'admin', "clubs", "search"],
       interpolation: {
         escapeValue: false, 
       },

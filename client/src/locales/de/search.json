@@ -1,0 +1,21 @@
+{
+    "searchPlaceholder": "Suchen...",
+    "searchError": "Suche fehlgeschlagen:",
+    "filterOptions": "Filteroptionen",
+    "showClubs": "Vereine anzeigen",
+    "showPrograms": "Programme anzeigen",
+    "pageSize": "Seitengröße",
+    "applyButton": "Anwenden",
+    "clubs": "Vereine",
+    "noClubsFound": "Keine Vereine gefunden",
+    "programs": "Programme",
+    "noProgramsFound": "Keine Programme gefunden",
+    "previousPage": "Zurück",
+    "nextPage": "Weiter",
+    "pageCount": "Seite {{currentPage}} von {{totalPages}}",
+    "permissionError": "Fehler",
+    "permissionDeniedDescription": "Bitte geben Sie einen Suchbegriff ein.",
+    "noInputError": "Suchfehler",
+    "noInputErrorDescription": "Bitte geben Sie einen Suchbegriff ein",
+    "noMoreResults": "Keine weiteren Ergebnisse"
+  }

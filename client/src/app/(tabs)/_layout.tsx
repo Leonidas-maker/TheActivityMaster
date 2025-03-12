@@ -13,6 +13,8 @@ import { asyncLoadData } from '@/src/services/asyncStorageService';
 import { useAuth } from '@/src/provider/AuthContextProvider';
 import ActiveClubSVG from '@/public/images/navigatorIcons/active/ActiveClubSVG';
 import ClubSVG from '@/public/images/navigatorIcons/inactive/ClubSVG';
+import ActiveSearchSVG from '@/public/images/navigatorIcons/active/ActiveSearchSVG';
+import SearchSVG from '@/public/images/navigatorIcons/inactive/SearchSVG';
 
 export default function TabLayout() {
     const [isLight, setIsLight] = useState(false);
@@ -81,6 +83,20 @@ export default function TabLayout() {
                                 <ActiveCalendarSVG width={size} height={size} fill={color} />
                             ) : (
                                 <CalendarSVG width={size} height={size} fill={color} />
+                            ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="Search"
+                    options={{
+                        headerTitle: t("search_tab"),
+                        tabBarLabel: t("search_tab"),
+                        headerShown: true,
+                        tabBarIcon: ({ color, size, focused }) =>
+                            focused ? (
+                                <ActiveSearchSVG width={size} height={size} fill={color} />
+                            ) : (
+                                <SearchSVG width={size} height={size} fill={color} />
                             ),
                     }}
                 />

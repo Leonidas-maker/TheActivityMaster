@@ -66,5 +66,6 @@
     "clubs_delete_membership_header": "Mitgliedschaft löschen",
     "clubs_membership_access_overview_header": "Mitgliedschaftszugriff Übersicht",
     "clubs_add_program_membership_access_header": "Mitgliedschaftszugriff erstellen",
-    "clubs_manage_program_membership_access_header": "Mitgliedschaftszugriff verwalten"
+    "clubs_manage_program_membership_access_header": "Mitgliedschaftszugriff verwalten",
+    "search_tab": "Suche"
 }

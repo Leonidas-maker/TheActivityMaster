@@ -1,0 +1,21 @@
+{
+    "searchPlaceholder": "Search...",
+    "searchError": "Search error:",
+    "filterOptions": "Filter Options",
+    "showClubs": "Show Clubs",
+    "showPrograms": "Show Programs",
+    "pageSize": "Page Size",
+    "applyButton": "Apply",
+    "clubs": "Clubs",
+    "noClubsFound": "No clubs found",
+    "programs": "Programs",
+    "noProgramsFound": "No programs found",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "pageCount": "Page {{currentPage}} of {{totalPages}}",
+    "permissionError": "Error",
+    "permissionDeniedDescription": "Please enter a search term.",
+    "noInputError": "Search error",
+    "noInputErrorDescription": "Please provide a search term",
+    "noMoreResults": "No more results"
+  }
