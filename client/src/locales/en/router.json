@@ -58,5 +58,13 @@
     "clubs_manage_session_header": "Manage Course",
     "clubs_manage_course_header": "Manage Course",
     "clubs_manage_occurence_header": "Manage Occurrence",
-    "clubs_manage_trainer_header": "Manage Trainers"
+    "clubs_manage_trainer_header": "Manage Trainers",
+    "clubs_manage_memberships_header": "Manage Memberships",
+    "clubs_add_membership_header": "Create Membership",
+    "clubs_manage_membership_header": "Manage Membership",
+    "clubs_update_membership_header": "Update Membership",
+    "clubs_delete_membership_header": "Delete Membership",
+    "clubs_membership_access_overview_header": "Membership Access Overview",
+    "clubs_add_program_membership_access_header": "Create Membership Access",
+    "clubs_manage_program_membership_access_header": "Manage Membership Access"
 }

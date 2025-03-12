@@ -58,5 +58,13 @@
     "clubs_manage_session_header": "Kurs verwalten",
     "clubs_manage_course_header": "Kurs verwalten",
     "clubs_manage_occurence_header": "Termin verwalten",
-    "clubs_manage_trainer_header": "Trainer verwalten"
+    "clubs_manage_trainer_header": "Trainer verwalten",
+    "clubs_manage_memberships_header": "Mitgliedschaften verwalten",
+    "clubs_add_membership_header": "Mitgliedschaft erstellen",
+    "clubs_manage_membership_header": "Mitgliedschaft verwalten",
+    "clubs_update_membership_header": "Mitgliedschaft aktualisieren",
+    "clubs_delete_membership_header": "Mitgliedschaft löschen",
+    "clubs_membership_access_overview_header": "Mitgliedschaftszugriff Übersicht",
+    "clubs_add_program_membership_access_header": "Mitgliedschaftszugriff erstellen",
+    "clubs_manage_program_membership_access_header": "Mitgliedschaftszugriff verwalten"
 }

@@ -31,12 +31,15 @@ const ClubManagement = () => {
     const handleDeletePress = () => {
         router.navigate(`/(tabs)/clubs/ClubDelete?club_id=${club_id}`);
     };
+    const handleManageMembershipsPress = () => {
+        router.navigate(`/(tabs)/clubs/(membership)/ClubManageMemberships?club_id=${club_id}`);
+    };
 
     const manageClubTitle = t("manageClub_navigator_title");
     
-    const createClubTexts = [t("club_view_page"), t("club_manage_employee_btn"), t("club_manage_programs_btn"), t("club_manage_roles_btn"), t("club_manage_booking_subscription"), t("club_update_btn"), t("club_delete_btn")];
-    const createClubIcons = ["home", "badge", "category", "manage-accounts", "account-balance-wallet", "edit", "delete"];
-    const onPressCreateClubFunctions = [handleViewPagePress, handleManageEmployeePress, handleManageProgramsPress, handleManageRolesPress, handleManageBookingSubscriptionPress, handleUpdatePress, handleDeletePress];
+    const createClubTexts = [t("club_view_page"), t("club_manage_employee_btn"), t("club_manage_programs_btn"), t("club_manage_memberships_btn"), t("club_manage_roles_btn"), t("club_manage_booking_subscription"), t("club_update_btn"), t("club_delete_btn")];
+    const createClubIcons = ["home", "badge", "category", "card-membership", "manage-accounts", "account-balance-wallet", "edit", "delete"];
+    const onPressCreateClubFunctions = [handleViewPagePress, handleManageEmployeePress, handleManageProgramsPress, handleManageMembershipsPress, handleManageRolesPress, handleManageBookingSubscriptionPress, handleUpdatePress, handleDeletePress];
 
     return (
         <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">

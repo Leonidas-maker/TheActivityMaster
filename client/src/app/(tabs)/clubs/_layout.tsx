@@ -201,6 +201,59 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_manage_trainer_header"),
         }}
       />
+      <Stack.Screen
+        name="(membership)/AddMembership"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_add_membership_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(membership)/ManageMembership"
+        options={{
+          headerTitle: t("clubs_manage_membership_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(membership)/ClubManageMemberships"
+        options={{
+          headerTitle: t("clubs_manage_memberships_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(membership)/UpdateMembership"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_update_membership_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(membership)/MembershipAccessOverview"
+        options={{
+          headerTitle: t("clubs_membership_access_overview_header"),
+        }}
+      />
+      <Stack.Screen
+       name="(membership)/AddProgramMembershipAccess"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_add_program_membership_access_header"),
+        }}
+      />
+      <Stack.Screen
+      name="(membership)/ManageProgramMembershipAccess"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_manage_program_membership_access_header"),
+        }}
+      />
+      <Stack.Screen
+      name="(membership)/DeleteMembership"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_delete_membership_header"),
+        }}
+      />
     </Stack>
   );
 }

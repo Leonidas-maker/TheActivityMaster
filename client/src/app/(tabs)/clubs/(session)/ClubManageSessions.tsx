@@ -80,8 +80,8 @@ const ClubManageSessions = () => {
                 } catch (error) {
                     Toast.show({
                         type: "error",
-                        text1: t("sessionFetchError"),
-                        text2: t("sessionFetchErrorDescription")
+                        text1: t("roleManageError"),
+                        text2: t("roleManageErrorDescription")
                     });
                 }
             };
