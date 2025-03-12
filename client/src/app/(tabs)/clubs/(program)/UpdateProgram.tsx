@@ -15,6 +15,7 @@ import Dropdown from "@/src/components/dropdown/Dropdown";
 import MultiDropdown from "@/src/components/dropdown/MultiDropdown";
 import OptionSwitch from "@/src/components/optionSwitch/OptionSwitch";
 import { getSessions } from "@/src/services/club/programSessionService";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 //TODO: Add change currency option
 //TODO: Add getSessions and update the pricing and capacity if change between pricing model is made
@@ -24,6 +25,7 @@ const UpdateProgram = () => {
     const { t, i18n } = useTranslation("clubs");
     const language = i18n.language;
     const { club_id, program_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     const [name, setName] = useState("");
     const [initialName, setInitialName] = useState("");
@@ -164,14 +166,16 @@ const UpdateProgram = () => {
                 </Pressable>
             ),
             headerRight: () => (
-                <Pressable onPress={handleDeletePress}>
-                    <Icon
-                        name="delete"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: "auto", marginRight: 15 }}
-                    />
-                </Pressable>
+                hasPermission("club_delete_programs") ? (
+                    <Pressable onPress={handleDeletePress}>
+                        <Icon
+                            name="delete"
+                            size={30}
+                            color={iconColor}
+                            style={{ marginLeft: "auto", marginRight: 15 }}
+                        />
+                    </Pressable>
+                ) : null
             )
         });
     }, [navigation, iconColor]);

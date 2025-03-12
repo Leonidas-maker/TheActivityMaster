@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from "react";
-import { ScrollView, View, useColorScheme, Pressable } from "react-native";
+import { ScrollView, useColorScheme, Pressable } from "react-native";
 import DefaultButton from "@/src/components/buttons/DefaultButton";
 import DefaultText from "@/src/components/textFields/DefaultText";
 import Heading from "@/src/components/textFields/Heading";
@@ -9,6 +9,8 @@ import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from "
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import { getEmployees } from "@/src/services/club/employeeService";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import Toast from "react-native-toast-message";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 interface Employee {
     first_name: string;
@@ -24,9 +26,11 @@ const ClubManagementEmployees = () => {
     const navigation = useNavigation();
     const { t } = useTranslation("clubs");
     const { club_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     const [employees, setEmployees] = useState<EmployeesResponse>({});
 
+    // Fetch employees on focus
     useFocusEffect(
         useCallback(() => {
             const fetchEmployees = async () => {
@@ -41,7 +45,7 @@ const ClubManagementEmployees = () => {
         }, [club_id])
     );
 
-    // State to track if the theme is light
+    // Track light theme
     const [isLight, setIsLight] = useState(false);
     const colorScheme = useColorScheme();
     useEffect(() => {
@@ -49,26 +53,29 @@ const ClubManagementEmployees = () => {
     }, [colorScheme]);
     const iconColor = isLight ? "#000000" : "#FFFFFF";
 
+    // Handle adding a new employee
     const handleAddPress = () => {
         router.push(`/(tabs)/clubs/(employee)/AddEmployee?club_id=${club_id}`);
     };
 
+    // Set headerRight only if user has "club_create_employees" permission
     useEffect(() => {
         navigation.setOptions({
-            headerRight: () => (
-                <Pressable onPress={handleAddPress}>
-                    <Icon
-                        name="add"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: "auto", marginRight: 15 }}
-                    />
-                </Pressable>
-            ),
+            headerRight: () =>
+                hasPermission("club_create_employees") ? (
+                    <Pressable onPress={handleAddPress}>
+                        <Icon
+                            name="add"
+                            size={30}
+                            color={iconColor}
+                            style={{ marginLeft: "auto", marginRight: 15 }}
+                        />
+                    </Pressable>
+                ) : null
         });
-    }, [navigation, iconColor]);
+    }, [navigation, iconColor, hasPermission]);
 
-    // Combine employees from all roles into one array with proper type annotation
+    // Combine employees from all roles into one array
     const allEmployees: Employee[] = [];
     Object.keys(employees).forEach((role) => {
         if (Array.isArray(employees[role])) {
@@ -76,13 +83,24 @@ const ClubManagementEmployees = () => {
         }
     });
 
-    // Map employee objects to their display name, onPress functions and icon names
+    // Prepare display names for employees
     const employeeNames = allEmployees.map(
         (emp) => `${emp.first_name} ${emp.last_name}`
     );
 
+    // Map each employee to its onPress function with permission check for "club_update_employees"
     const employeeOnPress = allEmployees.map((emp) => () => {
-        router.navigate(`/(tabs)/clubs/(employee)/ManageEmployee?user_id=${emp.id}&club_id=${club_id}`);
+        if (!hasPermission("club_update_employees")) {
+            // Show Toast message if permission is missing
+            Toast.show({
+                type: "info",
+                text1: t("permissionError"),
+                text2: t("permissionErrorDescription"),
+            });
+        } else {
+            // Navigate if permission exists
+            router.navigate(`/(tabs)/clubs/(employee)/ManageEmployee?user_id=${emp.id}&club_id=${club_id}`);
+        }
     });
 
     const employeeIconNames = allEmployees.map(() => "person");

@@ -54,7 +54,11 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
         try {
             const data: SelfClubRole = await getSelfClubRole(clubId);
-            const permNames = data.permissions.map((perm: Permission) => perm.name);
+            let permNames = data.permissions.map((perm: Permission) => perm.name);
+            // If the role level is 0, add the "club_owner" permission
+            if (data.level === 0 && !permNames.includes("club_owner")) {
+                permNames.push("club_owner");
+            }
             setPermissions(permNames);
             lastFetchedRef.current = now;
         } catch (error) {

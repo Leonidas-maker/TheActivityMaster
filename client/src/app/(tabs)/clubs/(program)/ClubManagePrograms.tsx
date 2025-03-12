@@ -20,12 +20,14 @@ import { getPrograms } from "@/src/services/club/programService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 const ClubManagePrograms = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");
     const navigation = useNavigation();
     const { club_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     // State for available programs
     const [programs, setPrograms] = useState<any[]>([]);
@@ -64,25 +66,19 @@ const ClubManagePrograms = () => {
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <Pressable onPress={handleAddPress}>
-                    <Icon
-                        name="add"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: "auto", marginRight: 15 }}
-                    />
-                </Pressable>
+                hasPermission("club_create_programs") ? (
+                    <Pressable onPress={handleAddPress}>
+                        <Icon
+                            name="add"
+                            size={30}
+                            color={iconColor}
+                            style={{ marginLeft: "auto", marginRight: 15 }}
+                        />
+                    </Pressable>
+                ) : null
             ),
         });
     }, [navigation, iconColor]);
-
-    // Prepare arrays for the "All Programs" PageNavigator props
-    const programNames = programs.map((program) => program.name);
-    const onPressFunctions = programs.map((program) => () =>
-        router.push(`/(tabs)/clubs/(program)/ManageProgram?club_id=${club_id}&program_id=${program.id}`)
-    );
-    // For the left icons we use a common icon for all programs, e.g., "event"
-    const iconNames = programs.map(() => "event");
 
     // Prepare filtered arrays for each status
     const draftPrograms = programs.filter((program) => program.status === "draft");

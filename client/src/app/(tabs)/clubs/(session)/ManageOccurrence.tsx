@@ -22,6 +22,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { cancelOccurrence, reinstateOccurrence, rescheduleOccurrence } from "@/src/services/club/programSessionOccurrenceService";
 import DateTimePicker from "@/src/components/picker/DateTimePicker";
 import Subheading from "@/src/components/textFields/Subheading";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 // Helper function to extract string value from a parameter
 const getParamValue = (param: string | string[] | undefined): string => {
@@ -48,6 +49,8 @@ const ManageOccurrence = () => {
         end_datetime,
         note
     } = useLocalSearchParams();
+
+    const { hasPermission } = usePermissionContext();
 
     // Extract and set default parameter values
     const occurrenceStatus = getParamValue(occurrence_status);
@@ -84,17 +87,16 @@ const ManageOccurrence = () => {
     const [rescheduleEndTime, setRescheduleEndTime] = useState(defaultEnd);
     // For reschedule note, default is empty
     const [rescheduleNote, setRescheduleNote] = useState(
-        (occurrenceStatus === "rescheduled") ? defaultNote : ""
+        occurrenceStatus === "rescheduled" ? defaultNote : ""
     );
 
     // State for cancellation and reinstatement notes
     // For cancel note, default is empty
     const [cancelNote, setCancelNote] = useState(
-        (occurrenceStatus === "cancelled") ? defaultNote : ""
+        occurrenceStatus === "cancelled" ? defaultNote : ""
     );
     // For reinstate note, default is set to defaultNote only when status is scheduled or rescheduled.
     const [reinstateNote, setReinstateNote] = useState("");
-
 
     // Handler for rescheduling occurrence with validation
     const handleRescheduleOccurrence = async () => {
@@ -137,7 +139,7 @@ const ManageOccurrence = () => {
                 newEnd.toISOString()
             );
             for (let i = 0; i < 2; i++) {
-                router.back()
+                router.back();
             }
         } catch (error) {
             Toast.show({
@@ -164,7 +166,7 @@ const ManageOccurrence = () => {
                         try {
                             await cancelOccurrence(club_id, program_id, session_id, occurrence_id, cancelNote.trim());
                             for (let i = 0; i < 2; i++) {
-                                router.back()
+                                router.back();
                             }
                         } catch (error) {
                             Toast.show({
@@ -184,7 +186,7 @@ const ManageOccurrence = () => {
         try {
             await reinstateOccurrence(club_id, program_id, session_id, occurrence_id, reinstateNote.trim());
             for (let i = 0; i < 2; i++) {
-                router.back()
+                router.back();
             }
         } catch (error) {
             Toast.show({
@@ -248,18 +250,20 @@ const ManageOccurrence = () => {
                             </>
                         )}
 
-                        {/* Cancellation Section: shown for 'scheduled' and 'rescheduled' statuses */}
-                        {(occurrenceStatus === "scheduled" || occurrenceStatus === "rescheduled") && (
-                            <>
-                                <Subheading text={t("cancel_occurrence")} />
-                                <DefaultTextFieldInput
-                                    placeholder={t("enter_note_cancellation")}
-                                    value={cancelNote}
-                                    onChangeText={(text) => setCancelNote(text)}
-                                />
-                                <DefaultButton text={t("cancel_occurrence")} onPress={handleCancelOccurrence} />
-                            </>
-                        )}
+                        {/* Cancellation Section: only rendered if user has the permission "club_delete_programs" */}
+                        {(occurrenceStatus === "scheduled" || occurrenceStatus === "rescheduled") &&
+                            hasPermission("club_delete_programs") && (
+                                <>
+                                    <Subheading text={t("cancel_occurrence")} />
+                                    <DefaultTextFieldInput
+                                        placeholder={t("enter_note_cancellation")}
+                                        value={cancelNote}
+                                        onChangeText={(text) => setCancelNote(text)}
+                                    />
+                                    <DefaultButton text={t("cancel_occurrence")} onPress={handleCancelOccurrence} />
+                                </>
+                            )
+                        }
 
                         <DefaultToast />
                     </View>

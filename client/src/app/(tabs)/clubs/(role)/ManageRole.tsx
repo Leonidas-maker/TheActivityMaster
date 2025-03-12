@@ -30,12 +30,14 @@ import Dropdown from "@/src/components/dropdown/Dropdown";
 import MultiDropdown from "@/src/components/dropdown/MultiDropdown";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
 import Subheading from "@/src/components/textFields/Subheading";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 const ManageRole = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const { t } = useTranslation("clubs");
     const { club_id, role_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     // States for text fields
     const [roleName, setRoleName] = useState("");
@@ -281,6 +283,7 @@ const ManageRole = () => {
                 </Pressable>
             ),
             headerRight: () => (
+                hasPermission("club_delete_roles") ? (
                 <Pressable onPress={handleDeletePress}>
                     <Icon
                         name="delete"
@@ -289,6 +292,7 @@ const ManageRole = () => {
                         style={{ marginLeft: "auto", marginRight: 15 }}
                     />
                 </Pressable>
+                ) : null
             )
         });
     }, [navigation, iconColor]);

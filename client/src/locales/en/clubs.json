@@ -234,5 +234,7 @@
     "manage_program_access_heading": "Manage Program Access",
     "update_fees_btn": "Update Fees",
     "delete_access": "Delete Access",
-    "confirm_delete_access": "Are you sure you want to delete this access?"
+    "confirm_delete_access": "Are you sure you want to delete this access?",
+    "permissionError": "Permission Error",
+    "permissionErrorDescription": "You do not have enough permissions to perform this action."
 }

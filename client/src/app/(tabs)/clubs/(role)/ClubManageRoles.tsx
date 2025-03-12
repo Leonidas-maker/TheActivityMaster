@@ -77,12 +77,21 @@ const ClubManageRoles = () => {
         }, [club_id]));
 
     const texts = roles.map((role) => role.name);
-    const onPressFunctions = roles.map(
-        (role) => () =>
-            router.push(
-                `/(tabs)/clubs/(role)/ManageRole?club_id=${club_id}&role_id=${role.id}`
-            )
-    );
+    // Create onPress functions for each role with permission check
+    const onPressFunctions = roles.map((role) => () => {
+        // Check for permission "club_update_roles"
+        if (!hasPermission("club_update_roles")) {
+            // Show Toast message if permission is missing
+            Toast.show({
+                type: "info",
+                text1: t("permissionError"),
+                text2: t("permissionErrorDescription"),
+            });
+        } else {
+            // Navigate to ManageRole screen if permission exists
+            router.push(`/(tabs)/clubs/(role)/ManageRole?club_id=${club_id}&role_id=${role.id}`);
+        }
+    });
     const iconNames = roles.map(() => "person-search");
 
     return (

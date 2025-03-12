@@ -22,6 +22,7 @@ import Subheading from "@/src/components/textFields/Subheading";
 import { updateSession, deleteSession } from "@/src/services/club/programSessionService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 // Helper function to extract a string value from a search param that could be a string or string[]
 const getParamValue = (param: string | string[] | undefined): string => {
@@ -48,6 +49,8 @@ const ManageEvent = () => {
         capacity_event,
         price_event
     } = useLocalSearchParams();
+
+    const { hasPermission } = usePermissionContext();
 
     // Use the query parameters for date/time values
     const startDateStr = getParamValue(start_date);
@@ -149,7 +152,7 @@ const ManageEvent = () => {
             // Call deleteSession with the note.
             await deleteSession(club_id, program_id, session_id, note);
             for (let i = 0; i < 2; i++) {
-                router.back()
+                router.back();
             }
         } catch (error) {
             Toast.show({
@@ -298,19 +301,23 @@ const ManageEvent = () => {
                             minimumDate={tomorrow}
                         />
                         <DefaultButton text={t("save_session_btn")} onPress={handleUpdatePress} />
-                        <Subheading text={t("delete_event")} />
-                        <DefaultTextFieldInput
-                            placeholder={t("session_delete_note_placeholder")}
-                            value={note}
-                            onChangeText={(text) => {
-                                setNote(text);
-                                if (text.trim()) {
-                                    setNoteError(false);
-                                }
-                            }}
-                            hasError={noteError}
-                        />
-                        <DefaultButton text={t("delete_session_btn")} onPress={handleDeletePress} />
+                        {hasPermission("club_delete_programs") && (
+                            <>
+                                <Subheading text={t("delete_event")} />
+                                <DefaultTextFieldInput
+                                    placeholder={t("session_delete_note_placeholder")}
+                                    value={note}
+                                    onChangeText={(text) => {
+                                        setNote(text);
+                                        if (text.trim()) {
+                                            setNoteError(false);
+                                        }
+                                    }}
+                                    hasError={noteError}
+                                />
+                                <DefaultButton text={t("delete_session_btn")} onPress={handleDeletePress} />
+                            </>
+                        )}
                     </View>
                 </ScrollView>
             </TouchableWithoutFeedback>

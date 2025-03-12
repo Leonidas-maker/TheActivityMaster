@@ -1,35 +1,43 @@
 import React from "react";
-import { ScrollView, View } from "react-native";
-import DefaultButton from "@/src/components/buttons/DefaultButton";
-import DefaultText from "@/src/components/textFields/DefaultText";
-import Heading from "@/src/components/textFields/Heading";
-import DefaultTextFieldInput from "@/src/components/textInputs/DefaultTextInput";
+import { ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 const ManageMembership = () => {
     const router = useRouter();
     const { t } = useTranslation("clubs");
     const { club_id, membership_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
-    const handleMembershipUpdatePress = () => {
-        router.navigate(`/(tabs)/clubs/(membership)/UpdateMembership?club_id=${club_id}&membership_id=${membership_id}`);
+    // Create lists for navigator options
+    const pressFunctions = [];
+    const navigatorTexts = [];
+    const navigatorIcons = [];
+
+    // Always add Membership Access Overview option
+    pressFunctions.push(() =>
+        router.navigate(`/(tabs)/clubs/(membership)/MembershipAccessOverview?club_id=${club_id}&membership_id=${membership_id}`)
+    );
+    navigatorTexts.push(t("membershipAccessOverview"));
+    navigatorIcons.push("add-circle");
+
+    // Always add Update Membership option
+    pressFunctions.push(() =>
+        router.navigate(`/(tabs)/clubs/(membership)/UpdateMembership?club_id=${club_id}&membership_id=${membership_id}`)
+    );
+    navigatorTexts.push(t("updateMembership"));
+    navigatorIcons.push("edit");
+
+    // Conditionally add Delete Membership option if the permission is present
+    if (hasPermission("club_delete_memberships")) {
+        pressFunctions.push(() =>
+            router.navigate(`/(tabs)/clubs/(membership)/DeleteMembership?club_id=${club_id}&membership_id=${membership_id}`)
+        );
+        navigatorTexts.push(t("deleteMembership"));
+        navigatorIcons.push("delete");
     }
-
-    const handleMembershipAccessOverviewPress = () => {
-        router.navigate(`/(tabs)/clubs/(membership)/MembershipAccessOverview?club_id=${club_id}&membership_id=${membership_id}`);
-    }
-
-    const handleDeleteMembershipPress = () => {
-        router.navigate(`/(tabs)/clubs/(membership)/DeleteMembership?club_id=${club_id}&membership_id=${membership_id}`);
-    }
-
-    const pressFunctions = [handleMembershipAccessOverviewPress, handleMembershipUpdatePress, handleDeleteMembershipPress];
-
-    const navigatorTexts = [t("membershipAccessOverview"), t("updateMembership"), t("deleteMembership")];
-
-    const navigatorIcons = ["add-circle", "edit", "delete"];
 
     return (
         <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
@@ -41,6 +49,6 @@ const ManageMembership = () => {
             />
         </ScrollView>
     );
-}
+};
 
 export default ManageMembership;

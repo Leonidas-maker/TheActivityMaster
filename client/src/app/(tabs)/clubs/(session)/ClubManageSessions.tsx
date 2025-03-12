@@ -21,6 +21,7 @@ import { getSessions } from "@/src/services/club/programSessionService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 // Define a Session interface based on the expected data structure
 interface Session {
@@ -53,6 +54,7 @@ const ClubManageSessions = () => {
     const navigation = useNavigation();
     const { t } = useTranslation("clubs");
     const { club_id, program_id, pricing_model } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     // State to hold sessions data with proper typing
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -93,17 +95,19 @@ const ClubManageSessions = () => {
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <Pressable onPress={handleAddPress}>
-                    <Icon
-                        name="add"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: "auto", marginRight: 15 }}
-                    />
-                </Pressable>
+                hasPermission("club_create_programs") ? (
+                    <Pressable onPress={handleAddPress}>
+                        <Icon
+                            name="add"
+                            size={30}
+                            color={iconColor}
+                            style={{ marginLeft: "auto", marginRight: 15 }}
+                        />
+                    </Pressable>
+                ) : null
             )
         });
-    }, [navigation, iconColor]);
+    }, [navigation, iconColor, hasPermission]);
 
     // Split sessions into events and courses
     const eventSessions = sessions.filter(session => session.session_type === "event");
@@ -116,7 +120,15 @@ const ClubManageSessions = () => {
         return `${t("eventOn")} ${formatDate(startDate.toISOString())} ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
     });
     const eventOnPressFunctions = eventSessions.map(event => () => {
-        router.push(`/(tabs)/clubs/(session)/ManageEvent?club_id=${club_id}&program_id=${program_id}&session_id=${event.id}&pricing_model=${pricing_model}&start_date=${event.start_datetime}&end_date=${event.end_datetime}&capacity_event=${event.capacity}&price_event=${event.price}`);
+        if (hasPermission("club_update_programs")) {
+            router.push(`/(tabs)/clubs/(session)/ManageEvent?club_id=${club_id}&program_id=${program_id}&session_id=${event.id}&pricing_model=${pricing_model}&start_date=${event.start_datetime}&end_date=${event.end_datetime}&capacity_event=${event.capacity}&price_event=${event.price}`);
+        } else {
+            Toast.show({
+                type: "error",
+                text1: t("permissionError"),
+                text2: t("permissionErrorDescription")
+            });
+        }
     });
     const eventIconNames = eventSessions.map(() => "event");
 

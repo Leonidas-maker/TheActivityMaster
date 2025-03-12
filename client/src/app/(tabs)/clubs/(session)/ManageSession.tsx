@@ -11,6 +11,7 @@ import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 interface Occurrence {
     id: string;
@@ -32,7 +33,6 @@ const formatDate = (dateStr: string): string => {
 };
 
 // Function to format a time string to "HH:MM"
-// It checks if the time string includes a "T" (ISO format) and uses Date if so
 const formatTime = (timeStr: string): string => {
     if (timeStr.includes("T")) {
         const date = new Date(timeStr);
@@ -40,7 +40,6 @@ const formatTime = (timeStr: string): string => {
         const mm = date.getMinutes().toString().padStart(2, "0");
         return `${hh}:${mm}`;
     }
-    // Otherwise, assume the format is "HH:MM:SS" and take the first 5 characters
     return timeStr.slice(0, 5);
 };
 
@@ -63,6 +62,8 @@ const ManageSession = () => {
         price_event
     } = useLocalSearchParams();
 
+    const { hasPermission } = usePermissionContext();
+
     // State to hold the parsed occurrences array
     const [occurrenceList, setOccurrenceList] = useState<Occurrence[]>([]);
 
@@ -77,7 +78,7 @@ const ManageSession = () => {
             ? JSON.parse(decodeURIComponent(occurrencesStr))
             : [];
         setOccurrenceList(parsedOccurrences);
-    }, [occurrences,]);
+    }, [occurrences]);
 
     const handleCourseUpdatePress = () => {
         router.navigate(
@@ -87,12 +88,15 @@ const ManageSession = () => {
 
     return (
         <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
-            <PageNavigator
-                title={t("manageCourse_navigationTitle")}
-                texts={[t("update_course")]}
-                iconNames={["edit"]}
-                onPressFunctions={[handleCourseUpdatePress]}
-            />
+            {/* Render update navigator only if the user has the required permission */}
+            {hasPermission("club_update_programs") && (
+                <PageNavigator
+                    title={t("manageCourse_navigationTitle")}
+                    texts={[t("update_course")]}
+                    iconNames={["edit"]}
+                    onPressFunctions={[handleCourseUpdatePress]}
+                />
+            )}
             {/* Occurrences Navigator */}
             {occurrenceList.length > 0 && (
                 <PageNavigator
@@ -108,12 +112,21 @@ const ManageSession = () => {
                     })}
                     iconNames={occurrenceList.map(() => "calendar-today")}
                     onPressFunctions={occurrenceList.map((occurrence: Occurrence) => () => {
-                        router.navigate(
-                            `/(tabs)/clubs/(session)/ManageOccurrence?club_id=${club_id}&program_id=${program_id}&session_id=${session_id}&occurrence_id=${occurrence.id}&occurrence_status=${occurrence.status}&start_datetime=${occurrence.start_datetime}&end_datetime=${occurrence.end_datetime}&note=${occurrence.note}`
-                        );
+                        if (hasPermission("club_update_programs")) {
+                            router.navigate(
+                                `/(tabs)/clubs/(session)/ManageOccurrence?club_id=${club_id}&program_id=${program_id}&session_id=${session_id}&occurrence_id=${occurrence.id}&occurrence_status=${occurrence.status}&start_datetime=${occurrence.start_datetime}&end_datetime=${occurrence.end_datetime}&note=${occurrence.note}`
+                            );
+                        } else {
+                            Toast.show({
+                                type: "error",
+                                text1: t("permissionError"),
+                                text2: t("permissionErrorDescription")
+                            });
+                        }
                     })}
                 />
             )}
+            <DefaultToast />
         </ScrollView>
     );
 };

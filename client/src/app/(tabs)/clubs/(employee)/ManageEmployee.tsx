@@ -13,6 +13,7 @@ import { getUserData } from "@/src/services/user/userService";
 import { getEmployee, updateEmployee, deleteEmployee } from "@/src/services/club/employeeService";
 import { getClubRoles } from "@/src/services/club/roleService";
 import Subheading from "@/src/components/textFields/Subheading";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 interface UserData {
     username: string;
@@ -58,6 +59,7 @@ const ManageEmployee = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const { user_id, club_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     // State to track if the theme is light
     const [isLight, setIsLight] = useState(false);
@@ -158,9 +160,14 @@ const ManageEmployee = () => {
                     />
                 </Pressable>
             ),
-            // Only render headerRight if employee and user exist and their ids differ
             headerRight: () => {
-                if (user && employee && employee.id !== user.id && employee.role_level !== 0) {
+                if (
+                    hasPermission("club_delete_employees") &&
+                    user &&
+                    employee &&
+                    employee.id !== user.id &&
+                    employee.role_level !== 0
+                ) {
                     return (
                         <Pressable onPress={handleDeletePress}>
                             <Icon
@@ -175,7 +182,7 @@ const ManageEmployee = () => {
                 return null;
             },
         });
-    }, [navigation, iconColor, user, employee]);
+    }, [navigation, iconColor, user, employee, hasPermission]);
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">

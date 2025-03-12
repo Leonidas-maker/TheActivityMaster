@@ -8,6 +8,7 @@ import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Heading from "@/src/components/textFields/Heading";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 const ClubManageMemberships = () => {
     const router = useRouter();
@@ -17,6 +18,7 @@ const ClubManageMemberships = () => {
     const colorScheme = useColorScheme();
     const isLight = colorScheme === "light";
     const iconColor = isLight ? "#000000" : "#FFFFFF";
+    const { hasPermission } = usePermissionContext();
 
     const [memberships, setMemberships] = useState<any[]>([]);
 
@@ -44,18 +46,32 @@ const ClubManageMemberships = () => {
 
     useEffect(() => {
         navigation.setOptions({
-            headerRight: () => (
-                <Pressable onPress={handleAddPress}>
-                    <Icon
-                        name="add"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: "auto", marginRight: 15 }}
-                    />
-                </Pressable>
-            ),
+            headerRight: () =>
+                hasPermission("club_create_memberships") ? (
+                    <Pressable onPress={handleAddPress}>
+                        <Icon
+                            name="add"
+                            size={30}
+                            color={iconColor}
+                            style={{ marginLeft: "auto", marginRight: 15 }}
+                        />
+                    </Pressable>
+                ) : null,
         });
-    }, [navigation, iconColor]);
+    }, [navigation, iconColor, hasPermission]);
+
+    // Prepare onPress function with permission check for updating memberships
+    const createMembershipOnPress = (membership: any) => () => {
+        if (hasPermission("club_update_memberships")) {
+            router.push(`/(tabs)/clubs/(membership)/ManageMembership?club_id=${club_id}&membership_id=${membership.id}`);
+        } else {
+            Toast.show({
+                type: "error",
+                text1: t("permissionError"),
+                text2: t("permissionDeniedDescription"),
+            });
+        }
+    };
 
     // Filter memberships by status
     const draftMemberships = memberships.filter(
@@ -76,9 +92,7 @@ const ClubManageMemberships = () => {
                         <PageNavigator
                             title={t("draftMemberships")}
                             texts={draftMemberships.map((membership) => membership.name)}
-                            onPressFunctions={draftMemberships.map((membership) => () =>
-                                router.push(`/(tabs)/clubs/(membership)/ManageMembership?club_id=${club_id}&membership_id=${membership.id}`)
-                            )}
+                            onPressFunctions={draftMemberships.map(createMembershipOnPress)}
                             iconNames={draftMemberships.map(() => "event")}
                         />
                     )}
@@ -86,9 +100,7 @@ const ClubManageMemberships = () => {
                         <PageNavigator
                             title={t("bookableMemberships")}
                             texts={bookableMemberships.map((membership) => membership.name)}
-                            onPressFunctions={bookableMemberships.map((membership) => () =>
-                                router.push(`/(tabs)/clubs/(membership)/ManageMembership?club_id=${club_id}&membership_id=${membership.id}`)
-                            )}
+                            onPressFunctions={bookableMemberships.map(createMembershipOnPress)}
                             iconNames={bookableMemberships.map(() => "event")}
                         />
                     )}
@@ -96,9 +108,7 @@ const ClubManageMemberships = () => {
                         <PageNavigator
                             title={t("notBookableMemberships")}
                             texts={notBookableMemberships.map((membership) => membership.name)}
-                            onPressFunctions={notBookableMemberships.map((membership) => () =>
-                                router.push(`/(tabs)/clubs/(membership)/ManageMembership?club_id=${club_id}&membership_id=${membership.id}`)
-                            )}
+                            onPressFunctions={notBookableMemberships.map(createMembershipOnPress)}
                             iconNames={notBookableMemberships.map(() => "event")}
                         />
                     )}

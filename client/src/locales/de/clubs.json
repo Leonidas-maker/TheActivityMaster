@@ -230,5 +230,7 @@
     "manage_program_access_heading": "Programmzugang verwalten",
     "update_fees_btn": "Gebühren aktualisieren",
     "delete_access": "Zugang löschen",
-    "confirm_delete_access": "Sind Sie sicher, dass Sie diesen Zugang löschen möchten?"
+    "confirm_delete_access": "Sind Sie sicher, dass Sie diesen Zugang löschen möchten?",
+    "permissionError": "Berechtigungsfehler",
+    "permissionErrorDescription": "Sie haben nicht genügend Berechtigungen, um diese Aktion auszuführen."
 }
