@@ -1,6 +1,6 @@
-// AuthContextProvider.tsx
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { asyncLoadData } from '../services/asyncStorageService';
+import { useClubContext } from "./ClubProvider";
 
 interface AuthState {
   isLoggedIn: boolean;
@@ -38,6 +38,7 @@ export const getGlobalLogout = () => globalLogout;
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>(defaultAuthState);
   const [loading, setLoading] = useState(true);
+  const { setClubId } = useClubContext();
 
   useEffect(() => {
     const loadAuthState = async () => {
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setAuthState(defaultAuthState);
+    setClubId(null); // Clear the club id when logging out
   };
 
   const updateVerified = (isVerified: boolean) => {

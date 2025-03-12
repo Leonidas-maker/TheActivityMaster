@@ -8,6 +8,7 @@ import { useRouter, useNavigation, useFocusEffect } from "expo-router";
 import { getUserClubs } from "@/src/services/user/userService";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Heading from "@/src/components/textFields/Heading";
+import { useClubContext } from "@/src/provider/ClubProvider";
 
 // Updated Club interface to match the service response
 interface Club {
@@ -49,8 +50,10 @@ const ClubOverview = () => {
     }, [])
   );
 
-  // Navigate to club details using the club id
+  // Navigate to club details using the club id and update the global club context.
+  const { setClubId } = useClubContext();
   const handleClubDetails = (club_id: string) => {
+    setClubId(club_id);
     router.navigate(`/(tabs)/clubs/ClubManagement?club_id=${club_id}`);
   };
 

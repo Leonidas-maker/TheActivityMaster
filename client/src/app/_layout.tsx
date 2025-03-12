@@ -8,6 +8,8 @@ import { useState, useEffect } from "react";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "../provider/AuthContextProvider";
+import { PermissionProvider } from "../provider/PermissionProvider";
+import { ClubProvider } from "../provider/ClubProvider";
 
 import "../custom_logger/custom_logger";
 import "../locales/i18n";
@@ -37,31 +39,35 @@ export default function RootLayout() {
   const headerTintColor = isLight ? "#171717" : "#E0E2DB";
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <GestureHandlerRootView>
-          <SafeAreaProvider>
-            <StatusBar style="auto" />
-            <Stack
-              initialRouteName="(tabs)"
-              screenOptions={{
-                headerShown: true,
-                headerStyle: {
-                  backgroundColor: backgroundColor,
-                },
-                headerTintColor: headerTintColor,
-              }}
-            >
-              {/* Tabs-Navigation */}
-              <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
+    <ClubProvider>
+      <AuthProvider>
+        <PermissionProvider>
+          <ThemeProvider>
+            <GestureHandlerRootView>
+              <SafeAreaProvider>
+                <StatusBar style="auto" />
+                <Stack
+                  initialRouteName="(tabs)"
+                  screenOptions={{
+                    headerShown: true,
+                    headerStyle: {
+                      backgroundColor: backgroundColor,
+                    },
+                    headerTintColor: headerTintColor,
+                  }}
+                >
+                  {/* Tabs-Navigation */}
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
 
-              {/* Zusätzliche Screens */}
-              <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
-            </Stack>
-          </SafeAreaProvider>
-        </GestureHandlerRootView>
-      </ThemeProvider>
-    </AuthProvider>
+                  {/* Zusätzliche Screens */}
+                  <Stack.Screen name="auth" options={{ headerShown: false, gestureEnabled: false }} />
+                </Stack>
+              </SafeAreaProvider>
+            </GestureHandlerRootView>
+          </ThemeProvider>
+        </PermissionProvider>
+      </AuthProvider>
+    </ClubProvider>
   );
 }
 

@@ -12,6 +12,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { getClubPermissions } from "@/src/services/club/roleService";
 import { getClubRoles } from "@/src/services/club/roleService";
 import PageNavigator from "@/src/components/pageNavigator/PageNavigator";
+import { usePermissionContext } from "@/src/provider/PermissionProvider";
 
 interface Role {
     id: number;
@@ -29,6 +30,7 @@ const ClubManageRoles = () => {
     const { t } = useTranslation("clubs");
     const navigation = useNavigation();
     const { club_id } = useLocalSearchParams();
+    const { hasPermission } = usePermissionContext();
 
     const [roles, setRoles] = useState<Role[]>([]);
 
@@ -46,18 +48,19 @@ const ClubManageRoles = () => {
 
     useEffect(() => {
         navigation.setOptions({
-            headerRight: () => (
-                <Pressable onPress={handleAddPress}>
-                    <Icon
-                        name="add"
-                        size={30}
-                        color={iconColor}
-                        style={{ marginLeft: "auto", marginRight: 15 }}
-                    />
-                </Pressable>
-            ),
+            headerRight: () =>
+                hasPermission("club_create_roles") ? (
+                    <Pressable onPress={handleAddPress}>
+                        <Icon
+                            name="add"
+                            size={30}
+                            color={iconColor}
+                            style={{ marginLeft: "auto", marginRight: 15 }}
+                        />
+                    </Pressable>
+                ) : null,
         });
-    }, [navigation, iconColor]);
+    }, [navigation, iconColor, hasPermission]);
 
     useFocusEffect(
         useCallback(() => {

@@ -15,10 +15,12 @@ import {
 import { router } from "expo-router";
 import { asyncRemoveData } from "./asyncStorageService";
 import { getGlobalLogout } from "../provider/AuthContextProvider";
+import { triggerPermissionRefresh } from "../permissions/PermissionRefreshHandler";
 
 // Extended request configuration interface with custom flags
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean; // Flag to avoid infinite loops during token refresh
+  _retry403?: boolean; // Counter for 403 errors
   skipAuth?: boolean; // Flag to skip attaching the access token
 }
 
@@ -66,6 +68,12 @@ let failedQueue: Array<{
 }> = [];
 
 // Process queued requests after token refresh attempt
+// Variables to handle permissions refresh process for 403 errors
+let isRefreshingPermissions = false;
+let failedPermissionQueue: Array<{
+  resolve: (shouldRetry: boolean) => void;
+  reject: (error: any) => void;
+}> = [];
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -179,6 +187,54 @@ axiosInstance.interceptors.response.use(
           .finally(() => {
             isRefreshing = false;
           });
+      });
+    }
+
+    if (error.response && error.response.status === 403) {
+      const originalRequest = error.config as CustomAxiosRequestConfig;
+      // If the request has already been retried once, redirect to clubs index
+      if (originalRequest._retry403) {
+        router.dismissAll();
+        router.replace("/(tabs)/clubs");
+        return Promise.reject(error);
+      }
+      originalRequest._retry403 = true;
+
+      if (isRefreshingPermissions) {
+        return new Promise<boolean>((resolve, reject) => {
+          failedPermissionQueue.push({ resolve, reject });
+        }).then((shouldRetry: boolean) => {
+          if (shouldRetry) {
+            return axiosInstance(originalRequest);
+          } else {
+            router.dismissAll();
+            router.replace("/(tabs)/clubs");
+            return Promise.reject(error);
+          }
+        });
+      }
+
+      isRefreshingPermissions = true;
+
+      return new Promise((resolve, reject) => {
+        // Trigger forced permissions refresh
+        triggerPermissionRefresh();
+        // Wait for the permissions refresh to complete (adjust the timeout if needed)
+        setTimeout(() => {
+          isRefreshingPermissions = false;
+          // Process any queued requests
+          failedPermissionQueue.forEach(prom => prom.resolve(true));
+          failedPermissionQueue = [];
+          // Retry the original request
+          axiosInstance(originalRequest)
+            .then(resolve)
+            .catch(err => {
+              // If still failing with 403, redirect to clubs index
+              router.dismissAll();
+              router.replace("/(tabs)/clubs");
+              reject(err);
+            });
+        }, 1000);
       });
     }
 
