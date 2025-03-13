@@ -69,5 +69,6 @@
     "clubs_manage_program_membership_access_header": "Mitgliedschaftszugriff verwalten",
     "search_tab": "Suche",
     "clubs_view_page_header": "Vereinsdetails",
-    "clubs_membership_page_header": "Mitgliedschaftsdetails"
+    "clubs_membership_page_header": "Mitgliedschaftsdetails",
+    "clubs_program_page_header": "Programmdetails"
 }

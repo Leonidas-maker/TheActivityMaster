@@ -52,8 +52,8 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
             .catch(() => {
                 Toast.show({
                     type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription"),
                 });
             })
             .finally(() => setLoadingClub(false));
@@ -64,8 +64,8 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
             .catch(() => {
                 Toast.show({
                     type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription"),
                 });
             })
             .finally(() => setLoadingPrograms(false));
@@ -76,8 +76,8 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
             .catch(() => {
                 Toast.show({
                     type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription"),
                 });
             })
             .finally(() => setLoadingMemberships(false));
@@ -131,8 +131,6 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
                             <Subheading text={t("noProgramsAvailable")} />
                         ) : (
                             <>
-                                {/* The new getProgramsDetails response includes additional fields such as sessions, currency, pricing_model, and membership_ids. */}
-                                {/* The onPress function now checks if membership is required and if membership_ids contains at least one id. */}
                                 <Carousel
                                     ref={refPrograms}
                                     width={screenWidth * 0.9}
@@ -149,11 +147,13 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
                                         <TouchableOpacity
                                             key={index}
                                             onPress={() => {
+                                                // Check if membership is required
+                                                // If yes check if the program is part of any membership, if not show Toast message
                                                 if (item.membership_required) {
                                                     if (item.membership_ids && item.membership_ids.length > 0) {
                                                         // TODO: If more than one membership is available, consider showing a selection UI to let the user choose
                                                         // @ts-ignore
-                                                        router.navigate(`/(tabs)/${route_name}/(view)/MembershipPage?club_id=${club_id}&membership_id=${item.membership_ids[0]}`);
+                                                        router.navigate(`/(tabs)/${route_name}/(view)/ProgramPage?club_id=${club_id}&program_id=${item.id}`);
                                                     } else {
                                                         Toast.show({
                                                             type: "info",
@@ -162,7 +162,8 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
                                                         });
                                                     }
                                                 } else {
-                                                    router.navigate("/");
+                                                    // @ts-ignore
+                                                    router.navigate(`/(tabs)/${route_name}/(view)/ProgramPage?club_id=${club_id}&program_id=${item.id}`);
                                                 }
                                             }}
                                             className={`mx-2 ${item.membership_required ? "bg-gray-300 dark:bg-gray-500" : "bg-light_secondary dark:bg-dark_secondary"} rounded-xl p-4`}

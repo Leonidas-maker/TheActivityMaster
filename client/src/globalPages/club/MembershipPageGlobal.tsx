@@ -40,8 +40,8 @@ const MembershipPageGlobal = ({ club_id, membership_id, route_name }: { club_id:
             .catch(() => {
                 Toast.show({
                     type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription"),
                 });
             })
             .finally(() => setLoadingMembership(false));
@@ -52,8 +52,8 @@ const MembershipPageGlobal = ({ club_id, membership_id, route_name }: { club_id:
             .catch(() => {
                 Toast.show({
                     type: "error",
-                    text1: t("inputError_text"),
-                    text2: t("inputError_subtext"),
+                    text1: t("roleManageError"),
+                    text2: t("roleManageErrorDescription"),
                 });
             })
             .finally(() => setLoadingPrograms(false));
@@ -116,7 +116,8 @@ const MembershipPageGlobal = ({ club_id, membership_id, route_name }: { club_id:
                                     return (
                                         <TouchableOpacity
                                             key={index}
-                                            onPress={() => router.navigate("/")} // Adjust navigation if needed
+                                            // @ts-ignore
+                                            onPress={() => router.navigate(`/(tabs)/${route_name}/(view)/ProgramPage?club_id=${club_id}&program_id=${item.program_id}`)} 
                                             className="mx-2 bg-light_secondary dark:bg-dark_secondary rounded-xl p-4"
                                         >
                                             {/* Program Picture Placeholder */}
