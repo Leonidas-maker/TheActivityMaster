@@ -250,5 +250,12 @@
     "noMembershipsAvailable": "Keine Mitgliedschaften verfügbar",
     "club_details": "Vereinsdetails",
     "club_address": "Vereinsadresse:",
-    "club_description": "Vereinsbeschreibung:"
+    "club_description": "Vereinsbeschreibung:",
+    "membershipRequired": "Mitgliedschaft erforderlich",
+    "membershipRequiredDescription": "Für die Buchung dieses Programms ist eine Mitgliedschaft erforderlich",
+    "membership_details": "Mitgliedschaftsdetails",
+    "programsAccessTitle": "Zugriff auf Programme",
+    "programNameUnavailable": "Program Name nicht verfügbar",
+    "program_free": "Programm ist kostenfrei verfügbar",
+    "priceLabelFee": "Zustzliche Gebühr: {{price}}"
 }

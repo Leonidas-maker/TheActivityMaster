@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getClub } from "@/src/services/club/clubService";
 import { getMemberships } from "@/src/services/club/membershipService";
-import { getPrograms } from "@/src/services/club/programService";
+import { getProgramsDetails } from "@/src/services/club/programService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Subheading from "@/src/components/textFields/Subheading";
@@ -59,7 +59,7 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
             .finally(() => setLoadingClub(false));
 
         // Fetch programs (fixed to 50 programs)
-        getPrograms(club_id, 1, 50)
+        getProgramsDetails(club_id, 1, 50)
             .then((data) => setPrograms(data))
             .catch(() => {
                 Toast.show({
@@ -91,147 +91,171 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
     };
 
     return (
-        <ScrollView className="bg-light_primary dark:bg-dark_primary">
-            <View className="p-4">
-                {/* Club Information */}
-                {loadingClub ? (
-                    <ActivityIndicator size="large" color="#000" />
-                ) : (
-                    <View>
-                        {/* Club Picture Placeholder */}
-                        <View className="w-full h-52 bg-gray-300 dark:bg-gray-700 justify-center items-center mb-4 rounded-xl">
-                            <DefaultText text={t("clubPicturePlaceholder")} />
-                        </View>
-                        <Heading text={clubData?.name || ""} />
-                        <Subheading text={t("club_details")} />
-                        <View className="py-2">
-                            <DefaultText text={t("club_description")} />
-                            <DefaultText text={truncate(clubData?.description || "", 100)} />
-                        </View>
-                        <View className="py-2">
-                            <DefaultText text={t("club_address")} />
-                            <DefaultText text={`${clubData?.address?.street}, ${clubData?.address?.city}, ${clubData?.address?.state}, ${clubData?.address?.postal_code}, ${clubData?.address?.country}`} />
-                        </View>
+        <>
+            <ScrollView className="bg-light_primary dark:bg-dark_primary">
+                <View className="p-4">
+                    {/* Club Information */}
+                    {loadingClub ? (
+                        <ActivityIndicator size="large" color="#000" />
+                    ) : (
                         <View>
-                            <DefaultText text={t("ownersLabel")} />
-                            {clubData?.owners?.map((owner: any, index: number) => (
-                                <DefaultText key={index} text={`${owner.first_name} ${owner.last_name} (${owner.email})`} />
-                            ))}
+                            {/* Club Picture Placeholder */}
+                            <View className="w-full h-52 bg-gray-300 dark:bg-gray-700 justify-center items-center mb-4 rounded-xl">
+                                <DefaultText text={t("clubPicturePlaceholder")} />
+                            </View>
+                            <Heading text={clubData?.name || ""} />
+                            <Subheading text={t("club_details")} />
+                            <View className="py-2">
+                                <DefaultText text={t("club_description")} />
+                                <DefaultText text={truncate(clubData?.description || "", 100)} />
+                            </View>
+                            <View className="py-2">
+                                <DefaultText text={t("club_address")} />
+                                <DefaultText text={`${clubData?.address?.street}, ${clubData?.address?.city}, ${clubData?.address?.state}, ${clubData?.address?.postal_code}, ${clubData?.address?.country}`} />
+                            </View>
+                            <View>
+                                <DefaultText text={t("ownersLabel")} />
+                                {clubData?.owners?.map((owner: any, index: number) => (
+                                    <DefaultText key={index} text={`${owner.first_name} ${owner.last_name} (${owner.email})`} />
+                                ))}
+                            </View>
                         </View>
+                    )}
+
+                    {/* Programs Carousel */}
+                    <View className="mt-8">
+                        <Heading text={t("programsTitle")} />
+                        {loadingPrograms ? (
+                            <ActivityIndicator size="large" color="#000" />
+                        ) : programs.length === 0 ? (
+                            <Subheading text={t("noProgramsAvailable")} />
+                        ) : (
+                            <>
+                                {/* The new getProgramsDetails response includes additional fields such as sessions, currency, pricing_model, and membership_ids. */}
+                                {/* The onPress function now checks if membership is required and if membership_ids contains at least one id. */}
+                                <Carousel
+                                    ref={refPrograms}
+                                    width={screenWidth * 0.9}
+                                    height={185}
+                                    data={programs}
+                                    scrollAnimationDuration={1000}
+                                    mode="parallax"
+                                    modeConfig={{
+                                        parallaxScrollingScale: 0.9,
+                                        parallaxScrollingOffset: 50,
+                                    }}
+                                    onProgressChange={progressPrograms}
+                                    renderItem={({ item, index }) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            onPress={() => {
+                                                if (item.membership_required) {
+                                                    if (item.membership_ids && item.membership_ids.length > 0) {
+                                                        // TODO: If more than one membership is available, consider showing a selection UI to let the user choose
+                                                        // @ts-ignore
+                                                        router.navigate(`/(tabs)/${route_name}/(view)/MembershipPage?club_id=${club_id}&membership_id=${item.membership_ids[0]}`);
+                                                    } else {
+                                                        Toast.show({
+                                                            type: "info",
+                                                            text1: t("membershipRequired"),
+                                                            text2: t("membershipRequiredDescription")
+                                                        });
+                                                    }
+                                                } else {
+                                                    router.navigate("/");
+                                                }
+                                            }}
+                                            className={`mx-2 ${item.membership_required ? "bg-gray-300 dark:bg-gray-500" : "bg-light_secondary dark:bg-dark_secondary"} rounded-xl p-4`}
+                                        >
+                                            {/* Program Picture Placeholder */}
+                                            <View className="w-full h-24 bg-gray-200 dark:bg-gray-600 justify-center items-center mb-2 rounded-xl">
+                                                <DefaultText text={t("programPicturePlaceholder")} />
+                                            </View>
+                                            {item.membership_required && (
+                                                <DefaultText text={t("membershipRequired")} />
+                                            )}
+                                            <DefaultText text={item.name} />
+                                            <DefaultText text={truncate(item.description, 50)} />
+                                            {item.price > 0 ? (
+                                                <DefaultText text={t("priceLabel", { price: `€${(item.price / 100).toFixed(2)}` })} />
+                                            ) : (
+                                                <DefaultText text={t("pricingPerSession")} />
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                                <Pagination.Basic<{ color: string }>
+                                    progress={progressPrograms}
+                                    data={programs}
+                                    dotStyle={dotStyle}
+                                    activeDotStyle={activeDotStyle}
+                                    containerStyle={containerStyle}
+                                    horizontal
+                                    onPress={(index) => {
+                                        refPrograms.current?.scrollTo({ count: index - progressPrograms.value, animated: true });
+                                    }}
+                                />
+                            </>
+                        )}
                     </View>
-                )}
 
-                {/* Programs Carousel */}
-                <View className="mt-8">
-                    <Heading text={t("programsTitle")} />
-                    {loadingPrograms ? (
-                        <ActivityIndicator size="large" color="#000" />
-                    ) : programs.length === 0 ? (
-                        <Subheading text={t("noProgramsAvailable")} />
-                    ) : (
-                        <>
-                            <Carousel
-                                ref={refPrograms}
-                                width={screenWidth * 0.9}
-                                height={200}
-                                data={programs}
-                                scrollAnimationDuration={1000}
-                                mode="parallax"
-                                modeConfig={{
-                                    parallaxScrollingScale: 0.9,
-                                    parallaxScrollingOffset: 50,
-                                }}
-                                onProgressChange={progressPrograms}
-                                renderItem={({ item, index }) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        onPress={() => router.navigate("/")}
-                                        className="mx-2 bg-light_secondary dark:bg-dark_secondary rounded-xl p-4"
-                                    >
-                                        {/* Program Picture Placeholder */}
-                                        <View className="w-full h-24 bg-gray-200 dark:bg-gray-600 justify-center items-center mb-2 rounded-xl">
-                                            <DefaultText text={t("programPicturePlaceholder")} />
-                                        </View>
-                                        <DefaultText text={item.name} />
-                                        <DefaultText text={truncate(item.description, 50)} />
-                                        {item.price > 0 ? (
+                    {/* Memberships Carousel */}
+                    <View className="mt-8 mb-8">
+                        <Heading text={t("membershipsTitle")} />
+                        {loadingMemberships ? (
+                            <ActivityIndicator size="large" color="#000" />
+                        ) : memberships.length === 0 ? (
+                            <Subheading text={t("noMembershipsAvailable")} />
+                        ) : (
+                            <>
+                                <Carousel
+                                    ref={refMemberships}
+                                    width={screenWidth * 0.9}
+                                    height={200}
+                                    data={memberships}
+                                    scrollAnimationDuration={1000}
+                                    mode="parallax"
+                                    modeConfig={{
+                                        parallaxScrollingScale: 0.9,
+                                        parallaxScrollingOffset: 50,
+                                    }}
+                                    onProgressChange={progressMemberships}
+                                    renderItem={({ item, index }) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            // @ts-ignore
+                                            onPress={() => router.navigate(`/(tabs)/${route_name}/(view)/MembershipPage?club_id=${club_id}&membership_id=${item.id}`)}
+                                            className="mx-2 bg-light_secondary dark:bg-dark_secondary rounded-xl p-4"
+                                        >
+                                            {/* Membership Picture Placeholder */}
+                                            <View className="w-full h-24 bg-gray-200 dark:bg-gray-600 justify-center items-center mb-2 rounded-xl">
+                                                <DefaultText text={t("membershipPicturePlaceholder")} />
+                                            </View>
+                                            <DefaultText text={item.name} />
+                                            <DefaultText text={truncate(item.description, 50)} />
                                             <DefaultText text={t("priceLabel", { price: `€${(item.price / 100).toFixed(2)}` })} />
-                                        ) : (
-                                            <DefaultText text={t("pricingPerSession")} />
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                            />
-                            <Pagination.Basic<{ color: string }>
-                                progress={progressPrograms}
-                                data={programs}
-                                dotStyle={dotStyle}
-                                activeDotStyle={activeDotStyle}
-                                containerStyle={containerStyle}
-                                horizontal
-                                onPress={(index) => {
-                                    refPrograms.current?.scrollTo({ count: index - progressPrograms.value, animated: true });
-                                }}
-                            />
-                        </>
-                    )}
+                                            <DefaultText text={t("durationLabel", { duration: item.duration, durationUnit: item.duration_unit })} />
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                                <Pagination.Basic<{ color: string }>
+                                    progress={progressMemberships}
+                                    data={memberships}
+                                    dotStyle={dotStyle}
+                                    activeDotStyle={activeDotStyle}
+                                    containerStyle={containerStyle}
+                                    horizontal
+                                    onPress={(index) => {
+                                        refMemberships.current?.scrollTo({ count: index - progressMemberships.value, animated: true });
+                                    }}
+                                />
+                            </>
+                        )}
+                    </View>
                 </View>
-
-                {/* Memberships Carousel */}
-                <View className="mt-8 mb-8">
-                    <Heading text={t("membershipsTitle")} />
-                    {loadingMemberships ? (
-                        <ActivityIndicator size="large" color="#000" />
-                    ) : memberships.length === 0 ? (
-                        <Subheading text={t("noMembershipsAvailable")} />
-                    ) : (
-                        <>
-                            <Carousel
-                                ref={refMemberships}
-                                width={screenWidth * 0.9}
-                                height={200}
-                                data={memberships}
-                                scrollAnimationDuration={1000}
-                                mode="parallax"
-                                modeConfig={{
-                                    parallaxScrollingScale: 0.9,
-                                    parallaxScrollingOffset: 50,
-                                }}
-                                onProgressChange={progressMemberships}
-                                renderItem={({ item, index }) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        onPress={() => router.navigate(`/(tabs)/${route_name}/(view)/MembershipPage`)}
-                                        className="mx-2 bg-light_secondary dark:bg-dark_secondary rounded-xl p-4"
-                                    >
-                                        {/* Membership Picture Placeholder */}
-                                        <View className="w-full h-24 bg-gray-200 dark:bg-gray-600 justify-center items-center mb-2 rounded-xl">
-                                            <DefaultText text={t("membershipPicturePlaceholder")} />
-                                        </View>
-                                        <DefaultText text={item.name} />
-                                        <DefaultText text={truncate(item.description, 50)} />
-                                        <DefaultText text={t("priceLabel", { price: `€${(item.price / 100).toFixed(2)}` })} />
-                                        <DefaultText text={t("durationLabel", { duration: item.duration, durationUnit: item.duration_unit })} />
-                                    </TouchableOpacity>
-                                )}
-                            />
-                            <Pagination.Basic<{ color: string }>
-                                progress={progressMemberships}
-                                data={memberships}
-                                dotStyle={dotStyle}
-                                activeDotStyle={activeDotStyle}
-                                containerStyle={containerStyle}
-                                horizontal
-                                onPress={(index) => {
-                                    refMemberships.current?.scrollTo({ count: index - progressMemberships.value, animated: true });
-                                }}
-                            />
-                        </>
-                    )}
-                </View>
-            </View>
+            </ScrollView>
             <DefaultToast />
-        </ScrollView>
+        </>
     );
 };
 

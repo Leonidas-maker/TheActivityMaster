@@ -374,6 +374,38 @@ export default function SearchScreen() {
                                                     )}
                                                 </TouchableOpacity>
                                             ))}
+                                            {programs.map((program) => (
+                                                <TouchableOpacity
+                                                    key={program.id}
+                                                    onPress={() => {
+                                                        if (program.membership_required) {
+                                                            // If membership is required, navigate to the ClubPage
+                                                            router.push(`/(tabs)/search/(view)/ClubPage?club_id=${program.club_id}`);
+
+                                                            Toast.show({
+                                                                type: "info",
+                                                                text1: t("membershipRequired"),
+                                                                text2: t("membershipRequiredDescription"),
+                                                            });
+                                                        }
+                                                    }}
+                                                    className={`p-4 m-2 rounded-lg shadow-md ${
+                                                        program.membership_required
+                                                            ? "bg-gray-300 dark:bg-gray-500"
+                                                            : "bg-light_secondary dark:bg-dark_secondary"
+                                                    }`}
+                                                >
+                                                    <DefaultText text={program.name} />
+                                                    <DefaultText text={program.description} />
+                                                    {program.price ? (
+                                                        // If price is available, show formatted price and currency
+                                                        <DefaultText text={`${(program.price / 100).toFixed(2)} ${program.currency}`} />
+                                                    ) : (
+                                                        // If price is not available, show translation text for pricing per session
+                                                        <DefaultText text={t("pricingPerSession")} />
+                                                    )}
+                                                </TouchableOpacity>
+                                            ))}
                                         </View>
                                         {renderPagination(programsPage, handleProgramsPageChange, programs.length)}
                                     </>

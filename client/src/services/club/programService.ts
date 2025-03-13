@@ -39,6 +39,23 @@ export const getPrograms = async (
   }
 };
 
+export const getProgramsDetails = async (
+  club_id: string | string[],
+  page: number,
+  page_size: number
+) => {
+  try {
+    const response = await axiosInstance.get(
+      `/clubs/${club_id}/programs/details?page=${page}&page_size=${page_size}`
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getProgramsDetails call:", error);
+    throw error;
+  }
+};
+
 export const createProgram = async (
   club_id: string | string[],
   name: string,

@@ -250,5 +250,12 @@
     "noMembershipsAvailable": "No memberships available",
     "club_details": "Club Details",
     "club_address": "Club Address:",
-    "club_description": "Club Description:"
+    "club_description": "Club Description:",
+    "membershipRequired": "Membership Required",
+    "membershipRequiredDescription": "You need to have a membership to book this program",
+    "membership_details": "Membership Details",
+    "programsAccessTitle": "Programs Access",
+    "programNameUnavailable": "Program name unavailable",
+    "program_free": "Program is available for free",
+    "priceLabelFee": "Additional Fee: {{price}}"
 }

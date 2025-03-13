@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { getClub } from "@/src/services/club/clubService";
 import { getMemberships } from "@/src/services/club/membershipService";
-import { getPrograms } from "@/src/services/club/programService";
+import { getProgram } from "@/src/services/club/programService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Subheading from "@/src/components/textFields/Subheading";
