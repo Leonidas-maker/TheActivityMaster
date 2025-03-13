@@ -207,24 +207,22 @@ async def get_user_booked_sessions(db: AsyncSession, user_id: uuid.UUID):
         joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences),
         joinedload(m_club.Program.memberships_access).load_only(m_club.MembershipAccess.membership_id),
         with_loader_criteria(
-            m_club.Session, 
-            lambda s: s.bookings.any(m_payment.Booking.user_id == user_id), 
-            include_aliases=True
+            m_club.Session,
+            lambda s: s.bookings.any(
+                and_(
+                    m_payment.Booking.user_id == user_id, m_payment.Booking.status == m_payment.BookingStatus.CONFIRMED
+                )
+            ),
+            include_aliases=True,
         ),
     ]
 
-    # Filter, dass nur Programme mit mehr als einer Session zurückgegeben werden
     session_count_filter = (
-        select(func.count(m_club.Session.id))
-        .where(m_club.Session.program_id == m_club.Program.id)
-        .scalar_subquery() > 1
+        select(func.count(m_club.Session.id)).where(m_club.Session.program_id == m_club.Program.id).scalar_subquery()
+        > 0
     )
 
-    res = await db.execute(
-        select(m_club.Program)
-        .options(*query_options)
-        .filter(session_count_filter)
-    )
+    res = await db.execute(select(m_club.Program).options(*query_options).filter(session_count_filter))
     return list(res.unique().scalars().all())
 
 

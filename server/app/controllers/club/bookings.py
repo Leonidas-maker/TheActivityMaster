@@ -40,7 +40,7 @@ def add_to_transaction_data(
 
         if session.program.club_id not in transaction_data:
             transaction_data[session.program.club_id] = s_payment.TransactionData(
-                stripe_account_id=session.program.club.stripe_account_id,
+                stripe_account_id=session.program.club.stripe_account_id, # type: ignore
                 total_amount=session.price if membership_fee is None else membership_fee,
                 currency=session.program.currency,
             )
@@ -57,7 +57,7 @@ def add_to_transaction_data(
 
         if program.club_id not in transaction_data:
             transaction_data[program.club_id] = s_payment.TransactionData(
-                stripe_account_id=program.club.stripe_account_id,
+                stripe_account_id=program.club.stripe_account_id, # type: ignore
                 total_amount=program.price if membership_fee is None else membership_fee,
                 currency=program.currency,
             )
@@ -111,7 +111,7 @@ async def create_bookings(
         raise HTTPException(status_code=400, detail="User has already booked some of the sessions")
 
     # Step 2: Check which is bookable or free for the user
-    user_memberships = await club_crud.get_user_active_membership_subscriptions(db, user_id)
+    user_memberships = await club_crud.get_user_membership_subscriptions(db, user_id, only_active=True)
     user_memberships_dict = {membership.membership_id: membership for membership in user_memberships}
 
     transaction_data: Dict[uuid.UUID, s_payment.TransactionData] = {}

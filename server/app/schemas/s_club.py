@@ -387,13 +387,16 @@ class SessionCreate(SessionBase):
     @classmethod
     def ensure_timezone(cls, value):
         today = datetime.datetime.now(tz=DEFAULT_TIMEZONE)
-        if isinstance(value, datetime.datetime) and value.tzinfo is None:
-            new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
+        if isinstance(value, datetime.datetime):
+            new_value = value
+            if value.tzinfo is None:
+                new_value = value.replace(tzinfo=DEFAULT_TIMEZONE)
             if new_value < today:
                 raise ValueError("Time must be in the future.")
             return new_value
         elif isinstance(value, datetime.time) and value.tzinfo is None:
             return value.replace(tzinfo=DEFAULT_TIMEZONE)
+
         return value
 
 
