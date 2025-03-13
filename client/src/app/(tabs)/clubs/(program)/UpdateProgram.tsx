@@ -266,24 +266,52 @@ const UpdateProgram = () => {
                     return;
                 }
             }
-        } else if (pricingModel === "per_session" && initialStatus === "draft" && (status === "active" || status === "inactive")) {
-            try {
-                const programDetails = await getProgram(club_id, program_id);
-                if (programDetails.sessions && programDetails.sessions.length > 0) {
+        } else if (pricingModel === "per_session") {
+            // If converting from package to per_session, apply the package price and capacity to all sessions
+            if (initialPricingModel === "package") {
+                try {
+                    const sessions = await getSessions(club_id, program_id);
+                    if (sessions.length === 0) {
+                        Toast.show({
+                            type: "error",
+                            text1: t("sessionError_text"),
+                            text2: t("sessionError_subtext")
+                        });
+                        return;
+                    }
                     const sessionDataConstruct: { [key: string]: [number | null, number | null] } = {};
-                    programDetails.sessions.forEach((session: any) => {
-                        // Use the session id as the key and assign an array with price and capacity
-                        sessionDataConstruct[session.id] = [session.price, session.capacity];
+                    sessions.forEach((session: any) => {
+                        // Set each session's price and capacity to the package values using the session's id
+                        sessionDataConstruct[session.id] = [Number(price), Number(capacity)];
                     });
                     session_data = sessionDataConstruct;
+                } catch (error) {
+                    Toast.show({
+                        type: "error",
+                        text1: t("roleManageError"),
+                        text2: t("roleManageErrorDescription")
+                    });
+                    return;
                 }
-            } catch (error) {
-                Toast.show({
-                    type: "error",
-                    text1: t("roleManageError"),
-                    text2: t("roleManageErrorDescription")
-                });
-                return;
+            } else if (initialStatus === "draft" && (status === "active" || status === "inactive")) {
+                // Existing logic for per_session when not converting from package
+                try {
+                    const programDetails = await getProgram(club_id, program_id);
+                    if (programDetails.sessions && programDetails.sessions.length > 0) {
+                        const sessionDataConstruct: { [key: string]: [number | null, number | null] } = {};
+                        programDetails.sessions.forEach((session: any) => {
+                            sessionDataConstruct[session.id] = [session.price, session.capacity];
+                        });
+                        session_data = sessionDataConstruct;
+                    }
+                } catch (error) {
+                    Toast.show({
+                        type: "error",
+                        text1: t("roleManageError"),
+                        text2: t("roleManageErrorDescription")
+                    });
+                    return;
+                }
             }
         }
 
