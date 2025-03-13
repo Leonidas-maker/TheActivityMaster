@@ -19,7 +19,7 @@ from core import transactions as transactions_core, email as email_core
 
 from config.permissions import ClubPermissions  #
 
-from .program_offerings import active_sessions_db_condition, program_exists
+from .program_offerings import active_sessions_db_condition, program_exists, authorized_read_program_db_condition
 
 
 ###########################################################################
@@ -75,7 +75,7 @@ async def create_membership(
     club = await club_crud.get_club(db, club_id)
 
     stripe_product, stripe_price = transactions_core.create_membership(
-        club.stripe_account_id, # type: ignore
+        club.stripe_account_id,  # type: ignore
         new_membership.name,
         new_membership.description,
         new_membership.price,
@@ -168,6 +168,7 @@ async def get_user_viewable_membership_by_id(
                 m_club.Membership.id == membership_id,
                 m_club.Membership.club_id == club_id,
                 m_club.Membership.status == m_club.MembershipStatus.BOOKABLE,
+                m_club.Program.status == m_club.ProgramStatus.ACTIVE,
             )
         )
 
@@ -204,6 +205,7 @@ async def get_user_viewable_membership_by_id(
                     m_club.Membership.status == m_club.MembershipStatus.BOOKABLE,
                     permission_exists,
                     subscription_exists,
+                    authorized_read_program_db_condition(user_id, club_id),
                 ),
             )
         )
@@ -300,12 +302,12 @@ async def update_membership(
 
     if name_description_updated:
         transactions_core.modify_membership_name_description(
-            membership.club.stripe_account_id, membership.stripe_product_id, membership.name, membership.description # type: ignore
+            membership.club.stripe_account_id, membership.stripe_product_id, membership.name, membership.description  # type: ignore
         )
 
     if cancel_subscriptions:
         new_stripe_price = transactions_core.modify_membership_price_duration(
-            membership.club.stripe_account_id, # type: ignore
+            membership.club.stripe_account_id,  # type: ignore
             membership.price,
             membership.currency,
             membership_duration_to_stripe_duration(membership.duration, membership.duration_unit),
@@ -482,7 +484,7 @@ async def create_membership_subscription(
         await db.flush()
 
     stripe_subscription = transactions_core.create_subscription(
-        membership.club.stripe_account_id, user.stripe_customer_id, membership.stripe_price_id # type: ignore
+        membership.club.stripe_account_id, user.stripe_customer_id, membership.stripe_price_id  # type: ignore
     )
 
     subscription = m_payment.MembershipSubscription(
@@ -497,6 +499,28 @@ async def create_membership_subscription(
     db.add(subscription)
     await db.flush()
     return subscription, stripe_subscription
+
+async def get_membership_users(
+    db: AsyncSession, club_id: uuid.UUID, membership_id: uuid.UUID
+) -> List[uuid.UUID]:
+    """
+    Retrieve the users who have an active subscription to a specific membership.
+
+    :param db: The database session
+    :param club_id: The ID of the club
+    :param membership_id: The ID of the membership
+    :return: A list of users who have an active subscription
+    """
+    res = await db.execute(
+        select(m_payment.MembershipSubscription.user_id)
+        .join(m_club.Membership)
+        .filter(
+            m_club.Membership.club_id == club_id,
+            m_payment.MembershipSubscription.membership_id == membership_id,
+            m_payment.MembershipSubscription.end_datetime > datetime.datetime.now(),
+        )
+    )
+    return list(res.unique().scalars().all())
 
 
 async def get_membership_subscription_by_user(
@@ -523,36 +547,28 @@ async def get_membership_subscription_by_user(
 
 
 async def get_user_membership_subscriptions(
-    db: AsyncSession, user_id: uuid.UUID
+    db: AsyncSession, user_id: uuid.UUID, only_active: bool = False
 ) -> List[m_payment.MembershipSubscription]:
     """
-    Retrieve the memberships associated with a specific user.
+    Retrieve the membership subscriptions associated with a specific user.
 
     :param db: The database session
     :param user_id: The ID of the user whose memberships are to be retrieved
     :return: A list of memberships for the user
     """
-    memberships = await db.execute(
-        select(m_payment.MembershipSubscription).filter(m_payment.MembershipSubscription.user_id == user_id)
-    )
-    return list(memberships.unique().scalars().all())
-
-
-async def get_user_active_membership_subscriptions(
-    db: AsyncSession, user_id: uuid.UUID
-) -> List[m_payment.MembershipSubscription]:
-    """
-    Retrieve the active memberships associated with a specific user.
-
-    :param db: The database session
-    :param user_id: The ID of the user whose memberships are to be retrieved
-    :return: A list of active memberships for the user
-    """
-    memberships = await db.execute(
-        select(m_payment.MembershipSubscription).filter(
-            m_payment.MembershipSubscription.user_id == user_id,
+    conditions = [m_payment.MembershipSubscription.user_id == user_id]
+    if only_active:
+        conditions.append(
             m_payment.MembershipSubscription.end_datetime > datetime.datetime.now(),
         )
+
+    memberships = await db.execute(
+        select(m_payment.MembershipSubscription)
+        .options(
+            joinedload(m_payment.MembershipSubscription.membership),
+            joinedload(m_payment.MembershipSubscription.membership).undefer(m_club.Membership.description),
+        )
+        .filter(and_(*conditions))
     )
     return list(memberships.unique().scalars().all())
 
@@ -609,7 +625,7 @@ async def cancel_all_membership_subscriptions_by_user(
     :param user_id: The ID of the user whose memberships are to be cancelled
     :return: A list of memberships that were cancelled
     """
-    memberships = await get_user_active_membership_subscriptions(db, user_id)
+    memberships = await get_user_membership_subscriptions(db, user_id, only_active=True)
     for membership in memberships:
         membership.status = m_payment.MembershipSubscriptionStatus.CANCELLED
     return memberships
@@ -647,6 +663,27 @@ async def cancel_membership_subscriptions(
     await db.flush()
     return subscriptions
 
+async def has_user_active_membership_subscription(
+    db: AsyncSession, user_id: uuid.UUID, club_id: uuid.UUID
+) -> bool:
+    """
+    Check if a user has an active membership subscription for a specific club.
+
+    :param db: The database session
+    :param user_id: The ID of the user
+    :param club_id: The ID of the club
+    :return: Whether the user has an active membership subscription
+    """
+    res = await db.execute(
+        select(1)
+        .filter(
+            m_payment.MembershipSubscription.user_id == user_id,
+            m_payment.MembershipSubscription.club_id == club_id,
+            m_payment.MembershipSubscription.status == m_payment.MembershipSubscriptionStatus.ACTIVE,
+            m_payment.MembershipSubscription.end_datetime > datetime.datetime.now(),
+        )
+    )
+    return bool(res.scalar())
 
 ###########################################################################
 ############################## Recurring Task #############################
@@ -662,7 +699,7 @@ async def cancel_bookings_for_cancelled_membership_subscriptions(db: AsyncSessio
 
     try:
         res = await db.execute(
-            select(m_payment.MembershipSubscription).filter(
+            select(m_payment.MembershipSubscription).options(joinedload(m_payment.MembershipSubscription.membership)).filter(
                 or_(
                     m_payment.MembershipSubscription.status == m_payment.MembershipSubscriptionStatus.CANCELLED,
                     and_(
@@ -681,7 +718,7 @@ async def cancel_bookings_for_cancelled_membership_subscriptions(db: AsyncSessio
         for subscription in subscriptions:
             if subscription.status == m_payment.MembershipSubscriptionStatus.CANCELLED_BY_CLUB:
                 active_subscription = await get_user_active_membership_subscription_by_club(
-                    db, subscription.user_id, subscription.club_id
+                    db, subscription.user_id, subscription.membership.club_id
                 )
                 if active_subscription and active_subscription.membership_id == subscription.membership_id:
                     continue
@@ -700,7 +737,7 @@ async def cancel_bookings_for_cancelled_membership_subscriptions(db: AsyncSessio
                     m_payment.Booking.booking_type.in_(
                         [m_payment.BookingType.MEMBERSHIP, m_payment.BookingType.MEMBERSHIP_ACCESS]
                     ),
-                    m_club.Program.club_id == subscription.club_id,
+                    m_club.Program.club_id == subscription.membership.club_id,
                     active_sessions_db_condition(),
                 )
             )

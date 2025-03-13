@@ -24,7 +24,6 @@ from utils.exceptions import handle_exception
 from config.permissions import ClubPermissions
 
 router = APIRouter()
-router.include_router(club_id_router.router, prefix="/{club_id}")
 
 
 ###########################################################################
@@ -147,9 +146,17 @@ async def get_my_sessions_v1(
         await handle_exception(e, ep_context, "Failed to get user sessions")
 
 
-@router.get("/me/memberships", tags=["User"])
-async def get_my_memberships_v1():
-    pass
+@router.get("/me/memberships", response_model=List[s_club.MembershipSubscription], tags=["User"])
+async def get_my_memberships_v1(only_active: bool = Query(True, description="Filter by active memberships"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),):
+    try:
+        user_id = token_details.user_id
+        memberships = await club_crud.get_user_membership_subscriptions(ep_context.db, user_id, only_active=only_active)
+       
+        return [s_club.MembershipSubscription.model_validate(membership) for membership in memberships]
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get user memberships")
 
 
 @router.get("/me/booked", tags=["User"], response_model=List[s_payment.Booking], response_model_exclude_none=True)
@@ -405,3 +412,5 @@ async def update_club_stripe_account_v1(
         return await club_controller.update_club_stripe_account(ep_context, token_details, club_id, club_stripe_update.stripe_account_id)
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to update club stripe account")
+
+router.include_router(club_id_router.router, prefix="/{club_id}")

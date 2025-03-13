@@ -274,6 +274,25 @@ async def delete_session_v1(
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to delete session")
 
+@router.get(
+    "/{program_id}/sessions/{session_id}/users",
+    response_model=List[uuid.UUID],
+    tags=["Club - Program - Session"],
+    response_model_exclude_none=True,
+)
+async def get_session_users_v1(
+    club_id: uuid.UUID = Path(..., description="The ID of the club"),
+    program_id: uuid.UUID = Path(..., description="The ID of the program"),
+    session_id: uuid.UUID = Path(..., description="The ID of the session"),
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_PROGRAMS])),
+):
+    # TODO Rework (need more confedentiality)
+    try:
+        return await club_crud.get_session_users(ep_context.db, session_id)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get session users")
+
 
 # ======================================================== #
 # =================== SessionOccurrence ================== #

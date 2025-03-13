@@ -336,10 +336,15 @@ async def buy_membership(
     )
 
     if not membership:
+        print(membership)
         raise HTTPException(status_code=404, detail="Membership not found")
 
-    if membership.status != m_club.MembershipStatusPublic.BOOKABLE:
+    if membership.status != m_club.MembershipStatusPublic.BOOKABLE.to_internal():
+        print(membership.status)
         raise HTTPException(status_code=404, detail="Membership not found")
+    
+    if club_crud.has_user_active_membership_subscription(db, token_details.user_id, club_id):
+        raise HTTPException(status_code=409, detail="User already has an active membership subscription")
 
     user = await user_crud.get_user_by_id(db, token_details.user_id)
     if not user:

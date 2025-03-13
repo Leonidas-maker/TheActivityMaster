@@ -862,3 +862,30 @@ class MembershipUpdate(BaseModel):
         if self.status == m_club.MembershipStatusPublic.DRAFT:
             raise ValueError("Status cannot be set to 'draft'; please use 'not_bookable' instead.")
         return self
+
+class MembershipSubscription(BaseModel):
+    """
+    Model for a membership subscription.
+    
+    Fields:
+        - user_id: The unique identifier of the user.
+        - price: The subscription price (≥ 0).
+        - start_datetime: The start date of the subscription.
+        - end_datetime: (Optional) The end date of the subscription.
+        - status: The status of the subscription.
+        - active_subscription: Flag indicating if the subscription is currently active.
+        - membership: The membership details associated with the subscription.
+    """
+    model_config = ConfigDict(from_attributes=True)
+    user_id: uuid.UUID = Field(..., description="The unique identifier of the user.")
+    subscription_price: int = Field(..., ge=0, description="The price of the subscription (must be ≥ 0).")
+    stripe_subscription_id: str = Field(..., description="The Stripe subscription ID.")
+    start_datetime: datetime.datetime = Field(..., description="The start date of the subscription.")
+    end_datetime: Optional[datetime.datetime] = Field(None, description="The end date of the subscription.")
+    status: m_club.MembershipSubscriptionStatus = Field(
+        ..., description="The status of the subscription."
+    )
+
+    membership: Membership = Field(
+        ..., description="The membership details associated with the subscription."
+    )

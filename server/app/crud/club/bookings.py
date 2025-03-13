@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, update
+from sqlalchemy import select, delete, or_, exists, and_, ColumnElement, update, func
 from sqlalchemy.orm import undefer, joinedload, with_loader_criteria
 from typing import List, Tuple, Optional, Dict
 import uuid
@@ -205,12 +205,26 @@ async def get_user_booked_sessions(db: AsyncSession, user_id: uuid.UUID):
         undefer(m_club.Program.description),
         joinedload(m_club.Program.sessions),
         joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences),
+        joinedload(m_club.Program.memberships_access).load_only(m_club.MembershipAccess.membership_id),
         with_loader_criteria(
-            m_club.Session, lambda s: s.bookings.any(m_payment.Booking.user_id == user_id), include_aliases=True
+            m_club.Session, 
+            lambda s: s.bookings.any(m_payment.Booking.user_id == user_id), 
+            include_aliases=True
         ),
     ]
 
-    res = await db.execute(select(m_club.Program).options(*query_options))
+    # Filter, dass nur Programme mit mehr als einer Session zurückgegeben werden
+    session_count_filter = (
+        select(func.count(m_club.Session.id))
+        .where(m_club.Session.program_id == m_club.Program.id)
+        .scalar_subquery() > 1
+    )
+
+    res = await db.execute(
+        select(m_club.Program)
+        .options(*query_options)
+        .filter(session_count_filter)
+    )
     return list(res.unique().scalars().all())
 
 

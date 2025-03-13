@@ -534,6 +534,14 @@ async def get_authorized_sessions(
     res = await db.execute(query.options(*query_options).offset((page - 1) * page_size).limit(page_size))
     return list(res.unique().scalars().all())
 
+async def get_session_users(
+    db: AsyncSession, session_id: uuid.UUID) -> List[uuid.UUID]:
+    """Get users for a session"""
+    res = await db.execute(
+        select(m_payment.Booking.user_id)
+        .filter(m_payment.Booking.session_id == session_id, m_payment.Booking.status == m_payment.BookingStatus.CONFIRMED)
+    )
+    return list(res.unique().scalars().all())
 
 async def get_program_sessions(
     db: AsyncSession, program_id: uuid.UUID, session_ids: Optional[List[uuid.UUID]] = None

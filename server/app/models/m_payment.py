@@ -185,6 +185,10 @@ class MembershipSubscription(Base):
         Computed("CASE WHEN status = 'ACTIVE' THEN TRUE ELSE NULL END", persisted=True)
     )
 
+    @property
+    def subscription_price(self) -> int:
+        return self.price_snapshot
+
     user: Mapped["User"] = relationship("User", back_populates="membership_subscriptions", viewonly=True)  # type: ignore
     membership: Mapped["Membership"] = relationship("Membership", back_populates="user_subscriptions", viewonly=True)  # type: ignore
     club: Mapped["Club"] = relationship("Club", secondary="memberships", viewonly=True)  # type: ignore

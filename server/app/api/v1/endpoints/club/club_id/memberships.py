@@ -26,7 +26,7 @@ router = APIRouter()
 ###########################################################################
 ################################### Main ##################################
 ###########################################################################
-@router.get("", response_model=List[s_club.Membership], tags=["Club - Membership"])
+@router.get("", response_model=List[s_club.Membership], tags=["Club - Membership", "Hybrid"])
 async def get_memberships_v1(
     club_id: uuid.UUID,
     ep_context: EndpointContext = Depends(get_endpoint_context),
@@ -60,7 +60,7 @@ async def create_membership_v1(
         await handle_exception(e, ep_context, "Failed to create membership")
 
 
-@router.get("/{membership_id}", response_model=s_club.MembershipDetails, tags=["Club - Membership"])
+@router.get("/{membership_id}", response_model=s_club.Membership, tags=["Club - Membership"])
 async def get_membership_v1(
     club_id: uuid.UUID,
     membership_id: uuid.UUID,
@@ -115,6 +115,18 @@ async def delete_membership_v1(
         return s_generic.MessageResponse(message="Membership deleted")
     except Exception as e:
         await handle_exception(e, ep_context, "Failed to delete membership")
+
+@router.get("/{membership_id}/users", response_model=List[uuid.UUID], tags=["Club - Membership"])
+async def get_membership_users_v1(
+    club_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    ep_context: EndpointContext = Depends(get_endpoint_context),
+    token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker(club_permissions=[ClubPermissions.READ_MEMBERSHIPS]))
+):
+    try:
+        return await club_crud.get_membership_users(ep_context.db, club_id, membership_id)
+    except Exception as e:
+        await handle_exception(e, ep_context, "Failed to get membership users")
 
 
 # ======================================================== #
