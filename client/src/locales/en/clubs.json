@@ -247,5 +247,8 @@
     "membershipPicturePlaceholder": "Membership Picture",
     "durationLabel": "Duration: {{duration}} {{durationUnit}}",
     "noProgramsAvailable": "No programs available",
-    "noMembershipsAvailable": "No memberships available"
+    "noMembershipsAvailable": "No memberships available",
+    "club_details": "Club Details",
+    "club_address": "Club Address:",
+    "club_description": "Club Description:"
 }

@@ -67,5 +67,6 @@
     "clubs_membership_access_overview_header": "Mitgliedschaftszugriff Übersicht",
     "clubs_add_program_membership_access_header": "Mitgliedschaftszugriff erstellen",
     "clubs_manage_program_membership_access_header": "Mitgliedschaftszugriff verwalten",
-    "search_tab": "Suche"
+    "search_tab": "Suche",
+    "clubs_view_page_header": "Vereinsdetails"
 }

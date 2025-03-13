@@ -260,6 +260,24 @@ export default function OverviewLayout() {
           headerTitle: t("clubs_view_page_header"),
         }}
       />
+      <Stack.Screen
+        name="(view)/MembershipPage"
+        options={{
+          headerTitle: t("clubs_membership_page_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(view)/ProgramPage"
+        options={{
+          headerTitle: t("clubs_program_page_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(view)/SessionPage"
+        options={{
+          headerTitle: t("clubs_session_page_header"),
+        }}
+      />
     </Stack>
   );
 }

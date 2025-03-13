@@ -87,11 +87,11 @@ export default function TabLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="Search"
+                    name="search"
                     options={{
                         headerTitle: t("search_tab"),
                         tabBarLabel: t("search_tab"),
-                        headerShown: true,
+                        headerShown: false,
                         tabBarIcon: ({ color, size, focused }) =>
                             focused ? (
                                 <ActiveSearchSVG width={size} height={size} fill={color} />

@@ -321,8 +321,8 @@ export default function SearchScreen() {
                                                     key={club.id}
                                                     onPress={() =>
                                                         router.push({
-                                                            pathname: "/",
-                                                            params: { itemId: club.id },
+                                                            pathname: `/(tabs)/search/(view)/ClubPage`,
+                                                            params: { club_id: club.id },
                                                         })
                                                     }
                                                     className="bg-light_secondary dark:bg-dark_secondary p-4 m-2 rounded-lg shadow-md"
@@ -365,9 +365,13 @@ export default function SearchScreen() {
                                                 >
                                                     <DefaultText text={program.name} />
                                                     <DefaultText text={program.description} />
-                                                    <DefaultText
-                                                        text={`${(program.price / 100).toFixed(2)} ${program.currency}`}
-                                                    />
+                                                    {program.price ? (
+                                                        // If price is available, show formatted price and currency
+                                                        <DefaultText text={`${(program.price / 100).toFixed(2)} ${program.currency}`} />
+                                                    ) : (
+                                                        // If price is not available, show translation text for pricing per session
+                                                        <DefaultText text={t("pricingPerSession")} />
+                                                    )}
                                                 </TouchableOpacity>
                                             ))}
                                         </View>
