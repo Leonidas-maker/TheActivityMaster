@@ -906,6 +906,7 @@ async def get_authorized_programs(
         query_options.append(joinedload(m_club.Program.sessions))
         query_options.append(joinedload(m_club.Program.sessions).joinedload(m_club.Session.address))
         query_options.append(joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences))
+        query_options.append(joinedload(m_club.Program.memberships_access).load_only(m_club.MembershipAccess.membership_id))
 
     if user_id:
         conditions.append(
@@ -957,6 +958,7 @@ async def get_program(
         query_options.append(joinedload(m_club.Program.sessions))
         query_options.append(joinedload(m_club.Program.sessions, m_club.Session.address))
         query_options.append(joinedload(m_club.Program.sessions, m_club.Session.occurrences))
+        query_options.append(joinedload(m_club.Program.memberships_access).load_only(m_club.MembershipAccess.membership_id))
 
     if with_club:
         query_options.append(joinedload(m_club.Program.club))
@@ -1026,6 +1028,7 @@ async def get_authorized_program(
         query_options.append(joinedload(m_club.Program.sessions))
         query_options.append(joinedload(m_club.Program.sessions, m_club.Session.address))
         query_options.append(joinedload(m_club.Program.sessions, m_club.Session.occurrences))
+        query_options.append(joinedload(m_club.Program.memberships_access).load_only(m_club.MembershipAccess.membership_id))
 
     if user_id:
         query = select(m_club.Program).filter(

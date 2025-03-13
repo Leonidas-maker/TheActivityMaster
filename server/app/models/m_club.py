@@ -259,6 +259,10 @@ class Program(Base):
         Boolean, Computed("CASE WHEN status NOT IN ('deleted', 'force_deleted') THEN TRUE ELSE NULL END")
     )
 
+    @property
+    def membership_ids(self) -> List[uuid.UUID]:
+        return [ma.membership_id for ma in self.memberships_access]
+
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="program")
     club: Mapped["Club"] = relationship("Club", back_populates="programs")
     memberships_access: Mapped[List["MembershipAccess"]] = relationship("MembershipAccess", back_populates="program")

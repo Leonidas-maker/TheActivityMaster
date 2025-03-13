@@ -655,6 +655,7 @@ class ProgramDetails(Program):
       - sessions: A list of session details for the program.
     """
     sessions: List[Session]
+    membership_ids: List[uuid.UUID] = Field([], description="List of membership IDs required for the program.")
 
 
 class ProgramUpdate(BaseModel):
