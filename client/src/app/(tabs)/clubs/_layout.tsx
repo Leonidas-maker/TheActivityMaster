@@ -39,13 +39,13 @@ export default function OverviewLayout() {
       />
 
       <Stack.Screen
-        name="ClubManagement"
+        name="(manage)/ClubManagement"
         options={{
           headerTitle: t("clubs_management_header"),
         }}
       />
       <Stack.Screen
-        name="ClubCreate"
+        name="(manage)/ClubCreate"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_create_header"),
@@ -70,13 +70,13 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="ClubDelete"
+        name="(manage)/ClubDelete"
         options={{
           headerTitle: t("clubs_delete_header"),
         }}
       />
       <Stack.Screen
-        name="ClubUpdate"
+        name="(manage)/ClubUpdate"
         options={{
           headerTitle: t("clubs_update_header"),
         }}
@@ -94,13 +94,13 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="ClubUpdateName"
+        name="(manage)/ClubUpdateName"
         options={{
           headerTitle: t("clubs_update_name_header"),
         }}
       />
       <Stack.Screen
-        name="ClubUpdateAddress"
+        name="(manage)/ClubUpdateAddress"
         options={{
           headerTitle: t("clubs_update_address_header"),
         }}
@@ -234,24 +234,30 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-       name="(membership)/AddProgramMembershipAccess"
+        name="(membership)/AddProgramMembershipAccess"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_add_program_membership_access_header"),
         }}
       />
       <Stack.Screen
-      name="(membership)/ManageProgramMembershipAccess"
+        name="(membership)/ManageProgramMembershipAccess"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_manage_program_membership_access_header"),
         }}
       />
       <Stack.Screen
-      name="(membership)/DeleteMembership"
+        name="(membership)/DeleteMembership"
         options={{
           presentation: "modal",
           headerTitle: t("clubs_delete_membership_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(view)/ClubPage"
+        options={{
+          headerTitle: t("clubs_view_page_header"),
         }}
       />
     </Stack>

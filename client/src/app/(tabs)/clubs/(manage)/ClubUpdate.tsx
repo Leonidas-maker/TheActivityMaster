@@ -15,11 +15,11 @@ const ClubUpdate = () => {
     const { club_id } = useLocalSearchParams();
 
     const onPressUpdateName = () => {
-        router.navigate(`/(tabs)/clubs/ClubUpdateName?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(manage)/ClubUpdateName?club_id=${club_id}`);
     };
 
     const onPressUpdateAddress = () => {
-        router.navigate(`/(tabs)/clubs/ClubUpdateAddress?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(manage)/ClubUpdateAddress?club_id=${club_id}`);
     };
 
     const onPressFunctions = [onPressUpdateName, onPressUpdateAddress];

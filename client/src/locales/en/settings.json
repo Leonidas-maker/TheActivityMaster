@@ -61,7 +61,7 @@
     "error_change_email_failed_subheading": "Maybe the email is already taken or check password or try again later",
     "emailInvalidError_text": "Email invalid",
     "emailInvalidError_subtext": "Please enter a valid email address",
-    "userSettingsPageNavigator_subheading": "You can only your name, username, email, address and password every 30 minutes. Once you have changed one of the things you have to wait 30 minutes to change another one.",
+    "userSettingsPageNavigator_subheading": "You can only change your name, username, email, address and password every 30 minutes. Once you have changed one, you must wait 30 minutes before changing another.",
     "userSettingsPageNavigator_alert_heading": "User Settings Information",
     "settings_name_btn": "Change name",
     "change_name_heading": "Edit your name",
@@ -100,6 +100,7 @@
     "settings_activate_mfa_cant_scan": "Can't scan the QR code?",
     "settings_activate_mfa_manual": "Copy the key to clipboard",
     "settings_activate_mfa_next": "Enter the code from the authenticator app",
+    "settings_activate_mfa_success": "Multi-factor authentication successfully enabled",
     "settings_activate_mfa_secret_copied": "Key successfully copied!",
     "multi_factor_authentication_enable_title": "Enter the code from the authenticator app",
     "mfa_enable_button": "Enable multi-factor authentication",
@@ -108,7 +109,7 @@
     "mfa_enabled_error_empty": "Input error",
     "mfa_enabled_error_subheading_empty": "Please fill in all fields",
     "settings_deactivate_mfa_heading": "Deactivation of multi-factor authentication",
-    "settings_deactivate_mfa_description": "Enter you code from the authenticator app and your password",
+    "settings_deactivate_mfa_description": "Enter your code from the authenticator app and your password",
     "mfa_deactivate_password_textfield": "Password",
     "settings_deactivate_mfa_next": "Deactivate multi-factor authentication",
     "mfa_deactivate_error": "Error deactivating multi-factor authentication",
@@ -150,9 +151,9 @@
     "cancel": "Cancel",
     "delete_verification_alert_title": "Delete verification",
     "delete_verification_alert_text": "Are you sure you want to delete the verification?",
-    "verification_status_pending_text": "Your verfication is still pending. Please wait for the result. You can delete the verification at any time.",
     "delete_verification_button": "Delete verification",
-    "verification_status_approved_text": "Your verification has been approved! You have now access to all features. You can delete the verification at any time.",
+    "verification_status_pending_text": "Your verification is still pending. Please wait for the result. You can delete the verification at any time.",
+    "verification_status_approved_text": "Your verification has been approved! You now have access to all features. You can delete the verification at any time.",
     "verification_status_verified_at": "Verified at: ",
     "verification_status_expires_at": "Expires at: "
-}
+  }  

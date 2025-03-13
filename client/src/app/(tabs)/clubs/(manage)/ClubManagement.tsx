@@ -13,7 +13,7 @@ const ClubManagement = () => {
 
     // Navigation handler functions
     const handleViewPagePress = () => {
-        console.log("View page");
+        router.navigate(`/(tabs)/clubs/(view)/ClubPage?club_id=${club_id}`);
     };
 
     const handleManageEmployeePress = () => {
@@ -37,11 +37,11 @@ const ClubManagement = () => {
     };
 
     const handleUpdatePress = () => {
-        router.navigate(`/(tabs)/clubs/ClubUpdate?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(manage)/ClubUpdate?club_id=${club_id}`);
     };
 
     const handleDeletePress = () => {
-        router.navigate(`/(tabs)/clubs/ClubDelete?club_id=${club_id}`);
+        router.navigate(`/(tabs)/clubs/(manage)/ClubDelete?club_id=${club_id}`);
     };
 
     const manageClubTitle = t("manageClub_navigator_title");

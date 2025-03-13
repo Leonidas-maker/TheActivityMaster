@@ -9,8 +9,8 @@
     "reject_btn": "Ablehnen",
     "approve_btn": "Genehmigen",
     "reject_verification_alert_title": "Verifikation ablehnen",
-    "reject_verification_alert_message": "Sind Sie sicher, dass Sie diese Verifikation ablehnen möchten?",
+    "reject_verification_alert_message": "Bist du sicher, dass du diese Verifikation ablehnen möchtest?",
     "cancel_btn": "Abbrechen",
     "approve_verification_alert_title": "Verifikation genehmigen",
-    "approve_verification_alert_message": "Sind Sie sicher, dass Sie diese Verifikation genehmigen möchten?"
+    "approve_verification_alert_message": "Bist du sicher, dass du diese Verifikation genehmigen möchtest?"
 }
