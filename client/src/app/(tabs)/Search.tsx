@@ -325,7 +325,7 @@ export default function SearchScreen() {
                                                             params: { itemId: club.id },
                                                         })
                                                     }
-                                                    className="bg-white dark:bg-gray-800 p-4 m-2 rounded-lg shadow-md"
+                                                    className="bg-light_secondary dark:bg-dark_secondary p-4 m-2 rounded-lg shadow-md"
                                                 >
                                                     <DefaultText text={club.name} />
                                                     <DefaultText text={club.description} />
@@ -361,7 +361,7 @@ export default function SearchScreen() {
                                                             params: { itemId: program.id },
                                                         })
                                                     }
-                                                    className="bg-white dark:bg-gray-800 p-4 m-2 rounded-lg shadow-md"
+                                                    className="bg-light_secondary dark:bg-dark_secondary p-4 m-2 rounded-lg shadow-md"
                                                 >
                                                     <DefaultText text={program.name} />
                                                     <DefaultText text={program.description} />
@@ -393,7 +393,7 @@ export default function SearchScreen() {
                             <TouchableOpacity
                                 activeOpacity={1}
                                 onPress={(e) => e.stopPropagation()}
-                                className="bg-white dark:bg-gray-800 p-6 rounded-lg w-3/4"
+                                className="bg-light_primary dark:bg-dark_primary p-6 rounded-lg w-3/4"
                             >
                                 <Text className="text-lg mb-2 text-black dark:text-white">
                                     {t("filterOptions")}

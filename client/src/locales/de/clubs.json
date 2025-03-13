@@ -236,5 +236,16 @@
     "delete_access": "Zugang löschen",
     "confirm_delete_access": "Bist du sicher, dass du diesen Zugang löschen möchtest?",
     "permissionError": "Berechtigungsfehler",
-    "permissionErrorDescription": "Du hast nicht genügend Berechtigungen, um diese Aktion auszuführen."
+    "permissionErrorDescription": "Du hast nicht genügend Berechtigungen, um diese Aktion auszuführen.",
+    "clubPicturePlaceholder": "Vereins-Bild Platzhalter",
+    "ownersLabel": "Eigentümer:",
+    "programsTitle": "Programme",
+    "programPicturePlaceholder": "Programm-Bild",
+    "priceLabel": "Preis: {{price}}",
+    "pricingPerSession": "Preis pro Sitzung",
+    "membershipsTitle": "Mitgliedschaften",
+    "membershipPicturePlaceholder": "Mitgliedschaftsbild",
+    "durationLabel": "Dauer: {{duration}} {{durationUnit}}",
+    "noProgramsAvailable": "Keine Programme verfügbar",
+    "noMembershipsAvailable": "Keine Mitgliedschaften verfügbar"
 }

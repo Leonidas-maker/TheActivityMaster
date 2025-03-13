@@ -236,5 +236,16 @@
     "delete_access": "Delete Access",
     "confirm_delete_access": "Are you sure you want to delete this access?",
     "permissionError": "Permission Error",
-    "permissionErrorDescription": "You do not have enough permissions to perform this action."
+    "permissionErrorDescription": "You do not have enough permissions to perform this action.",
+    "clubPicturePlaceholder": "Club Picture Placeholder",
+    "ownersLabel": "Owners:",
+    "programsTitle": "Programs",
+    "programPicturePlaceholder": "Program Picture",
+    "priceLabel": "Price: {{price}}",
+    "pricingPerSession": "Pricing per session",
+    "membershipsTitle": "Memberships",
+    "membershipPicturePlaceholder": "Membership Picture",
+    "durationLabel": "Duration: {{duration}} {{durationUnit}}",
+    "noProgramsAvailable": "No programs available",
+    "noMembershipsAvailable": "No memberships available"
 }
