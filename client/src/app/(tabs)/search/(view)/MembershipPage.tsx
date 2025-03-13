@@ -4,7 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 const MembershipPage = () => {
     const { club_id, membership_id } = useLocalSearchParams();
 
-    return <MembershipPageGlobal club_id={club_id} membership_id={membership_id} route_name="clubs" />;
+    return <MembershipPageGlobal club_id={club_id} membership_id={membership_id} route_name="search" />;
 };
 
 export default MembershipPage;
