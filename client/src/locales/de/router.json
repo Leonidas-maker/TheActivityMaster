@@ -70,5 +70,7 @@
     "search_tab": "Suche",
     "clubs_view_page_header": "Vereinsdetails",
     "clubs_membership_page_header": "Mitgliedschaftsdetails",
-    "clubs_program_page_header": "Programmdetails"
+    "clubs_program_page_header": "Programmdetails",
+    "clubs_event_page_header": "Veranstaltungsdetails",
+    "clubs_course_page_header": "Kurs Details"
 }

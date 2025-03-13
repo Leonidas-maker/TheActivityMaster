@@ -27,5 +27,6 @@
   "event": "Event",
   "selectSessionType_placeholder": "Select session type",
   "selectProgramCategory_placeholder": "Select program category",
-  "pricingPerSession": "Pricing per session"
+  "pricingPerSession": "Pricing per session",
+  "membershipRequired": "Membership required"
 }

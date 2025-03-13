@@ -27,5 +27,6 @@
   "event": "Veranstaltung",
   "selectSessionType_placeholder": "Sitzungstyp auswählen",
   "selectProgramCategory_placeholder": "Programmkategorie auswählen",
-    "pricingPerSession": "Preis pro Sitzung"
+  "pricingPerSession": "Preis pro Sitzung",
+  "membershipRequired": "Mitgliedschaft erforderlich"
 }

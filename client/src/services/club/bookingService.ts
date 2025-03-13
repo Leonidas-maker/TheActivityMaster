@@ -2,14 +2,14 @@ import { axiosInstance } from "../api";
 
 export const createBooking = async (
   club_id: string,
-  program_ids: string[],
-  session_ids: string[]
+  program_ids?: string[],
+  session_ids?: string[]
 ) => {
   try {
     const requestBody = {
       club_id,
-      program_ids,
-      session_ids,
+      program_ids: program_ids || [],
+      session_ids: session_ids || [],
     };
 
     const response = await axiosInstance.post(`/clubs/book`, requestBody);
@@ -44,12 +44,16 @@ export const deleteBooking = async (booking_id: string[]) => {
 
 export const getBookings = async (
   club_id: string,
-  program_id: string,
-  session_id: string
+  program_id?: string,
+  session_id?: string
 ) => {
   try {
+    const queryParams = new URLSearchParams();
+    if (program_id) queryParams.append("program_id", program_id);
+    if (session_id) queryParams.append("session_id", session_id);
+
     const response = await axiosInstance.get(
-      `/clubs/${club_id}/bookings?program_id=${program_id}&session_id=${session_id}`
+      `/clubs/${club_id}/bookings?${queryParams.toString()}`
     );
     return response.data;
   } catch (error) {

@@ -195,3 +195,18 @@ export const deleteMembershipAccess = async (
     throw error;
   }
 }
+
+export const getMembershipUsers = async (
+  club_id: string | string[],
+  membership_id: string | string[]
+) => {
+  try {
+    const response = await axiosInstance.get(
+      `/clubs/${club_id}/memberships/${membership_id}/users`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error during getMembershipUsers call:", error);
+    throw error;
+  }
+}

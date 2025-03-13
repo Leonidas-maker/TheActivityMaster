@@ -14,5 +14,15 @@
     "admin_identity_overview_btn": "User Verifications Overview",
     "pageNavigator_title5": "Club Pages",
     "clubs_overview_btn": "Clubs Overview",
-    "billing_booked_btn": "Booking Overview"
+    "billing_booked_btn": "Booking Overview",
+    "pageNavigator_title6": "Info Pages",
+    "gitlab_btn": "Gitlab",
+    "github_btn": "Github",
+    "bug_report_btn": "Bug Report",
+    "responsible_disclosure_btn": "Responsible Disclosure",
+    "support_btn": "Support",
+    "imprint_btn": "Imprint",
+    "terms_of_service_btn": "Terms of Service",
+    "privacy_policy_btn": "Privacy Policy",
+    "licenses_btn": "Licenses"
 }
