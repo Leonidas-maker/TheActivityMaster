@@ -205,6 +205,7 @@ async def get_user_booked_sessions(db: AsyncSession, user_id: uuid.UUID):
         undefer(m_club.Program.description),
         joinedload(m_club.Program.sessions),
         joinedload(m_club.Program.sessions).joinedload(m_club.Session.occurrences),
+        joinedload(m_club.Program.sessions).joinedload(m_club.Session.address),
         joinedload(m_club.Program.memberships_access).load_only(m_club.MembershipAccess.membership_id),
         with_loader_criteria(
             m_club.Session,
