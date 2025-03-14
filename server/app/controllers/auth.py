@@ -469,6 +469,7 @@ async def forgot_password(
                 reset_password_url=f"theactivitymaster://auth/ResetPassword?{urlencode({'security_token': security_token})}",
             ),
         )
+        
 
     if ENVIRONMENT == "dev" and DEBUG:
         print(f"UserID: {user.id}, Security Token: {security_token}")
