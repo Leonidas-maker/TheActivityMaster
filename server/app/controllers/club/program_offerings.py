@@ -193,11 +193,15 @@ async def create_session(
 
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
-    if program.pricing_model == m_club.PriceType.PACKAGE and program.status == m_club.ProgramStatus.ACTIVE:
-        raise HTTPException(
-            status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
-        )
-
+    if program.pricing_model == m_club.PriceType.PACKAGE:
+        if program.status == m_club.ProgramStatus.ACTIVE:
+            raise HTTPException(
+                status_code=400, detail="Cannot create a session for an active program with pricing model 'package'"
+            )
+        if new_session.capacity is not None or new_session.price is not None:
+            raise HTTPException(
+                status_code=400, detail="No session should have a capacity or price if the pricing model is 'package'."
+            )
     if program.pricing_model == m_club.PriceType.PER_SESSION and (
         new_session.price is None or new_session.capacity is None
     ):

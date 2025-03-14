@@ -396,7 +396,9 @@ class SessionCreate(SessionBase):
             return new_value
         elif isinstance(value, datetime.time) and value.tzinfo is None:
             return value.replace(tzinfo=DEFAULT_TIMEZONE)
-
+        elif isinstance(value, datetime.date):
+            if value < today.date():
+                raise ValueError("Date must be in the future.")
         return value
 
 
