@@ -274,6 +274,9 @@ def open_new_terminal(command, cwd):
             console.print(command)
 
 
+###########################################################################
+################################# Testdata ################################
+###########################################################################
 def create_users(
     log_thread: DockerLogStreamer, progress: Progress, task, total_users: int
 ) -> List[testclasses.TestUser]:
@@ -308,9 +311,11 @@ def create_users(
         progress.advance(task)
     return users
 
+def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser):
+    for user in users:
+        user.submit_identity_verification()
+        admin.verify_identity(user.user_id) # type: ignore
 
-def create_users_batch(batch_size, log_thread, progress, task):
-    return create_users(log_thread, progress, task, batch_size)
 
 
 def create_test_data(server_dir):
@@ -338,19 +343,22 @@ def create_test_data(server_dir):
 
     admin = testclasses.AdminUser(request_client)  # type: ignore
 
+
+    # ======================================================== #
+    # ========================= Users ======================== #
+    # ======================================================== #
     task_users = progress.add_task("Creating users...", total=TOTAL_USERS)
     users: List[testclasses.TestUser] = []
 
-    batch_size = TOTAL_USERS // THREADS
-
+    user_batch_size = TOTAL_USERS // THREADS
     # Create separate progress tasks for each thread
     batches = []
     for i in range(THREADS):
-        batches.append((batch_size, log_thread, progress, task_users))
+        batches.append((log_thread, progress, task_users, user_batch_size))
 
     users = []
     with ThreadPoolExecutor(max_workers=THREADS) as executor:
-        futures = [executor.submit(create_users_batch, *batch) for batch in batches]
+        futures = [executor.submit(create_users, *batch) for batch in batches]
         for future in as_completed(futures):
             users.extend(future.result())
 
@@ -363,14 +371,23 @@ def create_test_data(server_dir):
 
     login_user(request_client, admin, log_thread)
 
-    task_clubs = progress.add_task("Verifying users...", total=TOTAL_CLUBS * 3)
+    
+    # ======================================================== #
+    # ================= IdentityVerification ================= #
+    # ======================================================== #
+
+    task_verify = progress.add_task("Verifying users...", total=TOTAL_CLUBS * 3)
     for user in verified_users:
         login_user(request_client, user, log_thread)	
         user.submit_identity_verification()
         admin.verify_identity(user.user_id) # type: ignore
-        progress.advance(task_clubs)
-
+        progress.advance(task_verify)
+    progress.update(task_verify, description="Users verified.")
     sys.exit(0)
+
+
+
+
 
     task_clubs = progress.add_task("Creating clubs...", total=5)
     clubs = []

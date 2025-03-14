@@ -52,7 +52,7 @@ class TestUser:
     def __get_email_code(capsys):
         captured = capsys.readouterr()
 
-        match = re.search(r"Email code:\s*(\d+)", captured.out)
+        match = re.search(r"Email Code:\s*(\d+)", captured.out)
         assert match, "Email code not found in captured output"
 
         code = match.group(1)

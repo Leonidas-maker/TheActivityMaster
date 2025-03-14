@@ -71,7 +71,7 @@ def get_security_token(capsys):
     captured = capsys.readouterr()
 
     # Define the regex pattern to extract security_token
-    pattern = r"security_token=([\w\.-]+)"
+    pattern = r"Security Token:\s*([\w\.-]+)"
 
     # Search for the pattern in captured output
     match = re.search(pattern, captured.out)
