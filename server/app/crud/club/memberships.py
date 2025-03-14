@@ -675,12 +675,19 @@ async def has_user_active_membership_subscription(
     :return: Whether the user has an active membership subscription
     """
     res = await db.execute(
-        select(1)
-        .filter(
-            m_payment.MembershipSubscription.user_id == user_id,
-            m_payment.MembershipSubscription.club_id == club_id,
-            m_payment.MembershipSubscription.status == m_payment.MembershipSubscriptionStatus.ACTIVE,
-            m_payment.MembershipSubscription.end_datetime > datetime.datetime.now(),
+        select(
+            exists(
+                select(1)
+                .select_from(m_payment.MembershipSubscription)
+                .join(m_club.Membership)
+                .filter(
+                    m_payment.MembershipSubscription.user_id == user_id,
+                    m_club.Membership.club_id == club_id,
+                    m_payment.MembershipSubscription.status
+                    == m_payment.MembershipSubscriptionStatus.ACTIVE,
+                    m_payment.MembershipSubscription.end_datetime > datetime.datetime.now(),
+                )
+            )
         )
     )
     return bool(res.scalar())
