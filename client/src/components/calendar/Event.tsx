@@ -36,6 +36,7 @@ const Event: React.FC<EventProps> = ({
   overlapCount = 1,
   overlapIndex = 0,
   isSaturday,
+  isSunday,
 }) => {
   // ====================================================== //
   // ======================= States ======================= //
@@ -125,7 +126,8 @@ const Event: React.FC<EventProps> = ({
   const MAX_EVENT_SUMMARY_LENGTH = 25;
 
   // Truncates the text if it is longer than the max length
-  const truncateText = (text: string, maxLength: number): string => {
+  const truncateText = (text: string | undefined, maxLength: number): string => {
+    if (!text) return "";
     return text.length > maxLength
       ? text.substring(0, maxLength - 3) + "..."
       : text;
@@ -134,25 +136,18 @@ const Event: React.FC<EventProps> = ({
   // Gets the color for the event based on the event type
   // TODO Implement more colors for different event types
   const getEventColor = () => {
-    if (isLight) {
-      if (event.description?.tags) {
-        if (event.description.tags.includes("exam")) {
-          return "bg-light_exam active:bg-light_exam_active";
-        } else if (event.description.tags.includes("online")) {
-          return "bg-light_online active:bg-light_online_active";
-        }
+    console.log(event.status)
+    if (event.session_type === "course") {
+      if (event.status === 'scheduled') {
+        return 'bg-light_course active:light_course_active dark:bg-dark_course dark:active:bg-dark_course_active';
+      } else if (event.status === 'rescheduled') {
+        return 'bg-light_course_rescheduled active:bg-light_course_rescheduled dark:bg-dark_course_rescheduled dark:active:bg-dark_course_rescheduled_active';
+      } else if (event.status === 'cancelled') {
+        return 'bg-light_course_cancelled active:bg-light_course_cancelled_active dark:bg-dark_cancelled_course dark:active:bg-dark_cancelled_course_active';
       }
-      return "bg-light_event active:bg-light_event_active";
-    } else {
-      if (event.description?.tags) {
-        if (event.description.tags.includes("exam")) {
-          return "bg-dark_exam active:bg-dark_exam_active";
-        } else if (event.description.tags.includes("online")) {
-          return "bg-dark_online active:bg-dark_online_active";
-        }
-      }
-      return "bg-dark_event active:bg-dark_event_active";
-    }
+    } else if (event.session_type === "event") {
+      return 'bg-light_event active:bg-light_event_active dark:bg-dark_event dark:active:bg-light_event_active';
+    } 
   };
 
   //TODO Better styling for event popup information
@@ -173,7 +168,7 @@ const Event: React.FC<EventProps> = ({
         }}
       >
         <Text className="text-white pt-2 px-1 text-sm font-bold">
-          {truncateText(event.summary, MAX_EVENT_SUMMARY_LENGTH)}
+          {truncateText(event.name, MAX_EVENT_SUMMARY_LENGTH)}
         </Text>
         {eventHeight > MIN_EVENT_HEIGHT_TIME &&
           overlapCount === 1 &&
@@ -185,7 +180,7 @@ const Event: React.FC<EventProps> = ({
         {eventHeight > MIN_EVENT_HEIGHT_LOCATION &&
           overlapCount === 1 &&
           overlapIndex === 0 &&
-          !isSaturday && (
+          !isSaturday && !isSunday && (
             <>
               <Text className="text-white px-1 text-xs absolute bottom-1">
                 {event.location}
@@ -210,11 +205,16 @@ const Event: React.FC<EventProps> = ({
             onStartShouldSetResponder={() => true}
           >
             <Text className="item-center pb-3 text-black dark:text-white">
-              {event.summary}
+              {event.name}
             </Text>
             <Text className="item-center font-bold text-black dark:text-white">{`Startzeit: ${startTimeString}`}</Text>
             <Text className="item-center font-bold text-black dark:text-white">{`Endzeit: ${endTimeString}`}</Text>
-            <Text className="item-center font-bold text-black dark:text-white">{`Ort: ${event.location}`}</Text>
+            {event.location && (
+              <Text className="item-center font-bold text-black dark:text-white">{`Ort: ${event.location}`}</Text>
+            )}
+            {event.note && (
+              <Text className="item-center font-bold text-black dark:text-white">{`Notiz: ${event.note}`}</Text>
+            )}
             {isWeb && (
               <>
                 <DefaultButton text="Schließen" />

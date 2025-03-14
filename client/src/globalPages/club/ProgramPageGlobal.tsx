@@ -7,6 +7,7 @@ import Heading from "@/src/components/textFields/Heading";
 import Subheading from "@/src/components/textFields/Subheading";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import { useAuth } from '@/src/provider/AuthContextProvider';
 
 // Import the services
 import { getProgram } from "@/src/services/club/programService";
@@ -72,6 +73,9 @@ interface MembershipResponse {
 const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: string | string[], program_id: string | string[], route_name: string | string[] }) => {
   const router = useRouter();
   const { t } = useTranslation("clubs");
+
+  const { authState } = useAuth();
+  const { isLoggedIn } = authState;
 
   const [programData, setProgramData] = useState<ProgramResponse | null>(null);
   const [membershipDetails, setMembershipDetails] = useState<MembershipResponse[]>([]);
@@ -154,7 +158,7 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
       })
       .finally(() => setLoadingProgram(false));
   }, [club_id, program_id, t]);
-  
+
   useEffect(() => {
     // If programData and membershipDetails are available, check if the user has an active membership
     // that qualifies for an additional fee price replacement
@@ -436,11 +440,12 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
             </View>
           ) : null}
         </View>
-        {programData && programData.pricing_model === "package" && (
+        {isLoggedIn && programData && programData.pricing_model === "package" && (
           <TouchableOpacity
-           // @ts-ignore
-           onPress={() => { if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&program_id=${programData.id}&price=${programData.price}&name=${programData.name}`); 
-           }}
+            onPress={() => {
+              // @ts-ignore
+              if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&program_id=${programData.id}&price=${programData.price}&name=${programData.name}`);
+            }}
             disabled={alreadyBooked}
             className={`mx-4 my-4 p-4 rounded-xl items-center justify-center ${alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')
               }`}

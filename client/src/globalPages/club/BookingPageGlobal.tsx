@@ -8,6 +8,7 @@ import { createBooking } from "@/src/services/club/bookingService";
 import { buyMembership } from "@/src/services/club/membershipService";
 import { useTranslation } from "react-i18next";
 import Subheading from "@/src/components/textFields/Subheading";
+import { useAuth } from '@/src/provider/AuthContextProvider';
 
 interface BookingPageGlobalProps {
     club_id: string | string[];
@@ -34,6 +35,8 @@ const BookingPageGlobal = ({
     const { t } = useTranslation("clubs");
     const colorScheme = useColorScheme();
     const [bookingLoading, setBookingLoading] = useState(false);
+    const { authState } = useAuth();
+    const { isLoggedIn } = authState;
 
     const handleBooking = async () => {
         setBookingLoading(true);

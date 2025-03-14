@@ -12,6 +12,7 @@ import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Subheading from "@/src/components/textFields/Subheading";
 import { getUserMemberships } from "@/src/services/user/userService";
+import { useAuth } from '@/src/provider/AuthContextProvider';
 
 const MembershipPageGlobal = ({ club_id, membership_id, route_name }: { club_id: string | string[], membership_id: string | string[], route_name: string | string[] }) => {
     const router = useRouter();
@@ -23,6 +24,9 @@ const MembershipPageGlobal = ({ club_id, membership_id, route_name }: { club_id:
     const [loadingMembership, setLoadingMembership] = useState<boolean>(true);
     const [loadingPrograms, setLoadingPrograms] = useState<boolean>(true);
     const [userMemberships, setUserMemberships] = useState<any[]>([]);
+
+    const { authState } = useAuth();
+    const { isLoggedIn } = authState;
 
     // Get screen width for carousel sizing
     const screenWidth = Dimensions.get("window").width;
@@ -158,10 +162,11 @@ const MembershipPageGlobal = ({ club_id, membership_id, route_name }: { club_id:
                         )}
                     </View>
                 </View>
-                {membershipData && (
+                {isLoggedIn && membershipData && (
                     <TouchableOpacity
-                        // @ts-ignore
-                        onPress={() => { if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&is_membership=true&membership_id=${membership_id}&price=${membershipData.price}&name=${membershipData.name}`); 
+                        onPress={() => {
+                            // @ts-ignore
+                            if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&is_membership=true&membership_id=${membership_id}&price=${membershipData.price}&name=${membershipData.name}`);
                         }}
                         disabled={alreadyBooked}
                         className={`mx-4 mb-4 p-4 rounded-xl items-center justify-center ${alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')

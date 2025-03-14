@@ -14,6 +14,7 @@ import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import { getUserSessions } from "@/src/services/user/userService";
 import { getUserMemberships } from '../../services/user/userService';
 import { getMembership } from "@/src/services/club/membershipService";
+import { useAuth } from '@/src/provider/AuthContextProvider';
 
 interface Session {
   session_type: string;
@@ -74,6 +75,9 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
   const { t } = useTranslation("clubs");
   const colorScheme = useColorScheme();
   const screenWidth = Dimensions.get("window").width;
+
+  const { authState } = useAuth();
+  const { isLoggedIn } = authState;
 
   // State for session details and program details
   const [sessionData, setSessionData] = useState<Session | null>(null);
@@ -311,15 +315,15 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
             </View>
           )}
         </View>
-        {programData && programData.pricing_model === "per_session" && sessionData && (
+        {isLoggedIn && programData && programData.pricing_model === "per_session" && sessionData && (
           <TouchableOpacity
             // @ts-ignore
-            onPress={() => { if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&session_id=${session_id}&price=${programData.price}`); }}
+            onPress={() => { if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&session_id=${session_id}&price=${sessionData.price}`); }}
             disabled={alreadyBooked}
             className={`mx-4 my-4 p-4 rounded-xl items-center justify-center ${alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')}`}
           >
             <Text className={alreadyBooked ? 'text-gray-600' : (colorScheme === 'dark' ? 'text-black' : 'text-white')}>
-              {alreadyBooked ? 'Already booked' : `Book for €${(programData.price / 100).toFixed(2)}`}
+              {alreadyBooked ? 'Already booked' : `Book for €${(sessionData.price / 100).toFixed(2)}`}
             </Text>
           </TouchableOpacity>
         )}

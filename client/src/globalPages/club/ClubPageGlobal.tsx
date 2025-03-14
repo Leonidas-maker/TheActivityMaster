@@ -12,6 +12,7 @@ import { getProgramsDetails } from "@/src/services/club/programService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import Subheading from "@/src/components/textFields/Subheading";
+import { useAuth } from '@/src/provider/AuthContextProvider';
 
 const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], route_name: string | string[] }) => {
     const router = useRouter();
@@ -23,6 +24,9 @@ const ClubPageGlobal = ({ club_id, route_name }: { club_id: string | string[], r
     const [loadingClub, setLoadingClub] = useState<boolean>(true);
     const [loadingPrograms, setLoadingPrograms] = useState<boolean>(true);
     const [loadingMemberships, setLoadingMemberships] = useState<boolean>(true);
+
+    const { authState } = useAuth();
+    const { isLoggedIn } = authState;
 
     // Create shared values and refs for pagination
     const progressPrograms = useSharedValue(0);

@@ -60,10 +60,11 @@ export default function TabLayout() {
                 }}
             >
                 <Tabs.Screen
-                    name="index"
+                    name="(discover)"
                     options={{
                         headerTitle: "TheActivityMaster",
                         tabBarLabel: t("discover_tab"),
+                        headerShown: false,
                         tabBarIcon: ({ color, size, focused }) =>
                             focused ? (
                                 <ActiveDiscoverSGV width={size} height={size} fill={color} />
@@ -78,6 +79,9 @@ export default function TabLayout() {
                         headerTitle: "TheActivityMaster",
                         tabBarLabel: t("calendar_tab"),
                         headerShown: true,
+                        tabBarItemStyle: {
+                            display: isLoggedIn ? "flex" : "none",
+                        },
                         tabBarIcon: ({ color, size, focused }) =>
                             focused ? (
                                 <ActiveCalendarSVG width={size} height={size} fill={color} />

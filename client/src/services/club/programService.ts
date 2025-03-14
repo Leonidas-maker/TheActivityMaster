@@ -67,7 +67,7 @@ export const createProgram = async (
   membership_required: boolean,
   categories: number[],
   status: "active" | "inactive" | "draft",
-  sessions?: sessions[],
+  sessions?: sessions[]
 ) => {
   try {
     const requestBody = {
@@ -95,7 +95,10 @@ export const createProgram = async (
   }
 };
 
-export const getProgram = async (club_id: string | string[], program_id: string | string[]) => {
+export const getProgram = async (
+  club_id: string | string[],
+  program_id: string | string[]
+) => {
   try {
     const response = await axiosInstance.get(
       `/clubs/${club_id}/programs/${program_id}`
@@ -120,7 +123,7 @@ export const updateProgram = async (
   membership_required: boolean,
   categories: number[],
   session_data: Record<string, [number | null, number | null]> | null,
-  status?: string,
+  status?: string
 ) => {
   try {
     const requestBody = {
@@ -148,7 +151,11 @@ export const updateProgram = async (
   }
 };
 
-export const deleteProgram = async (club_id: string | string[], program_id: string | string[], force: boolean = false) => {
+export const deleteProgram = async (
+  club_id: string | string[],
+  program_id: string | string[],
+  force: boolean = false
+) => {
   try {
     const response = await axiosInstance.delete(
       `/clubs/${club_id}/programs/${program_id}?force=${force}`
@@ -162,18 +169,21 @@ export const deleteProgram = async (club_id: string | string[], program_id: stri
 };
 
 export const searchPrograms = async (
-  search_query: string,
+  search_query: string | null,
   page: number,
   page_size: number,
   category_id: number | null = null,
   min_price: number | null = null,
   max_price: number | null = null,
-  session_type: string | null = null,
+  session_type: string | null = null
 ) => {
   try {
     const params = new URLSearchParams();
 
-    params.append("search_query", search_query);
+    if (search_query !== null) {
+      params.append("search_query", search_query.toString());
+    }
+
     params.append("page", page.toString());
     params.append("page_size", page_size.toString());
 
@@ -200,24 +210,22 @@ export const searchPrograms = async (
   }
 };
 
-export const getProgramCategories = async (
-    language: string
-) => {
-    try {
-        const config = {
-            headers: {
-                "Accept-Language": language,
-            },
-        }
+export const getProgramCategories = async (language: string) => {
+  try {
+    const config = {
+      headers: {
+        "Accept-Language": language,
+      },
+    };
 
-        const response = await axiosInstance.get(
-            `/clubs/program-categories`,
-            config
-        );
+    const response = await axiosInstance.get(
+      `/clubs/program-categories`,
+      config
+    );
 
-        return response.data;
-    } catch (error) {
-        console.error("Error during getProgramCategories call:", error);
-        throw error;
-    }
+    return response.data;
+  } catch (error) {
+    console.error("Error during getProgramCategories call:", error);
+    throw error;
+  }
 };

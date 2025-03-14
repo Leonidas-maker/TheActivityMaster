@@ -69,6 +69,7 @@ const Days: React.FC<{ currentDate: Date; events: Array<any> }> = ({
 
   // State to store if it is Saturday
   const [isSaturday, setIsSaturday] = useState(false);
+  const [isSunday, setIsSunday] = useState(false);
 
   // Calculates the calendar hours when the events or the current date changes
   useEffect(() => {
@@ -87,9 +88,12 @@ const Days: React.FC<{ currentDate: Date; events: Array<any> }> = ({
       }),
     );
 
-    // Sets calenderHours back to a default value if no events are found
+    // Sets calendarHours and resets weekDays if no events are found in the current week
     if (eventsThisWeek.length === 0) {
       setCalenderHours({ startHour: 8, endHour: 20 });
+      setWeekDays(5);
+      setIsSaturday(false);
+      setIsSunday(false);
       return;
     }
 
@@ -104,14 +108,37 @@ const Days: React.FC<{ currentDate: Date; events: Array<any> }> = ({
       earliestStartHour = Math.min(earliestStartHour, startHour);
       latestEndHour = Math.max(latestEndHour, endHour);
 
-      // Check if the event is on a Saturday and sets the number of week days to 6
-      //TODO: Also support Sunday
-      if (getDay(event.start) === 6) {
+      // Filters events that are within the current week
+      const eventsThisWeek = events.filter((event) =>
+        isWithinInterval(event.start, {
+          start: startOfWeekDate,
+          end: endOfWeekDate,
+        }),
+      );
+
+      // Compute the maximum day of the week for any event in this week
+      let maxDay = 0;
+      eventsThisWeek.forEach((event) => {
+        const day = getDay(event.start) === 0 ? 7 : getDay(event.start);
+        if (day > maxDay) {
+          maxDay = day;
+        }
+      });
+
+      // Set the weekDays state based on the maximum day found:
+      // Sunday (7) -> 7 days, Saturday (6) -> 6 days, otherwise default to 5 days.
+      if (maxDay === 7) {
+        setWeekDays(7);
+        setIsSunday(true);
+        setIsSaturday(false);
+      } else if (maxDay === 6) {
         setWeekDays(6);
         setIsSaturday(true);
+        setIsSunday(false);
       } else {
         setWeekDays(5);
         setIsSaturday(false);
+        setIsSunday(false);
       }
     });
 
@@ -215,6 +242,7 @@ const Days: React.FC<{ currentDate: Date; events: Array<any> }> = ({
                   overlapCount={event.overlapCount}
                   overlapIndex={event.overlapIndex}
                   isSaturday={isSaturday}
+                  isSunday={isSunday}
                 />
               ))}
               <View

@@ -41,7 +41,7 @@ const OverviewHome: React.FC = () => {
       if (globalLogout) {
         globalLogout();
       }
-      router.navigate("/(tabs)");
+      router.navigate("/");
     });
   };
 

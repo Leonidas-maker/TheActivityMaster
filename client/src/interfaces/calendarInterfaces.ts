@@ -38,13 +38,14 @@ interface CalculationEventHeightProps {
   
   interface EventProps {
     event: {
-      summary: string;
-      description?: {
-        tags?: string[];
-      };
+      name: string;
+      session_type: string;
+      description?: string;
       location?: string;
       start: Date;
       end: Date;
+      status?: string; // e.g., 'scheduled', 'rescheduled', 'cancelled'
+      note?: string;
     };
     hoursContainerHeight: number;
     containerHeight: number;
@@ -55,6 +56,7 @@ interface CalculationEventHeightProps {
     overlapCount: number;
     overlapIndex: number;
     isSaturday: boolean;
+    isSunday: boolean;
   }
   
   interface HoursProps {
