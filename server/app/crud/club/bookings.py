@@ -306,6 +306,7 @@ async def refresh_bookings_status(db: AsyncSession, console: Console) -> bool:
                     ),
                     and_(
                         m_club.Session.session_type == m_club.SessionType.EVENT,
+                        m_club.Session.end_datetime.isnot(None),
                         m_club.Session.end_datetime < datetime.datetime.now(tz=datetime.timezone.utc),
                     ),
                 ),
