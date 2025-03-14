@@ -300,12 +300,14 @@ async def refresh_bookings_status(db: AsyncSession, console: Console) -> bool:
                 m_payment.Booking.status == m_payment.BookingStatus.CONFIRMED,
                 m_payment.Booking.session_id == m_club.Session.id,
                 or_(
-                    m_club.Session.end_date < datetime.datetime.now(tz=datetime.timezone.utc),
-                    m_club.Session.end_date == None,
-                ),
-                or_(
-                    m_club.Session.end_datetime < datetime.datetime.now(tz=datetime.timezone.utc),
-                    m_club.Session.end_datetime == None,
+                    and_(
+                        m_club.Session.session_type == m_club.SessionType.COURSE,
+                        m_club.Session.end_date < datetime.datetime.now(tz=datetime.timezone.utc),
+                    ),
+                    and_(
+                        m_club.Session.session_type == m_club.SessionType.EVENT,
+                        m_club.Session.end_datetime < datetime.datetime.now(tz=datetime.timezone.utc),
+                    ),
                 ),
             )
         )
