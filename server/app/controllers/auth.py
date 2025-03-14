@@ -270,8 +270,8 @@ async def login(
                 ),
             )
 
-        if ENVIRONMENT == "dev":
-            print(f"Email code: {email_code}")
+        if ENVIRONMENT == "dev" and DEBUG:
+            print(f"UserID: {user.id}, Email Code: {email_code}")
 
     security_token = await create_security_token(ep_context, user.id, application_id, ["2fa"], ip_address)
     audit_logger.user_login(user.id, ip_address)
@@ -469,9 +469,10 @@ async def forgot_password(
                 reset_password_url=f"theactivitymaster://auth/ResetPassword?{urlencode({'security_token': security_token})}",
             ),
         )
+        
 
     if ENVIRONMENT == "dev" and DEBUG:
-        print(urlencode({"security_token": security_token}))
+        print(f"UserID: {user.id}, Security Token: {security_token}")
     audit_logger.user_forgot_password(user.id, ip_address)
     await db.commit()
 

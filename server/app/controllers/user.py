@@ -44,7 +44,11 @@ async def register_user(
     # Check if the user already exists
     user_db = await user_crud.get_user_by_ident(db, user.email)
     if user_db:
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise HTTPException(status_code=400, detail="Email already in use")
+    
+    user_db = await user_crud.get_user_by_ident(db, user.username)
+    if user_db:
+        raise HTTPException(status_code=400, detail="Username already in use")
 
     # Add audit logs
     audit_logger.sys_info("Registering a new user")

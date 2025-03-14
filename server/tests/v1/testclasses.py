@@ -52,7 +52,7 @@ class TestUser:
     def __get_email_code(capsys):
         captured = capsys.readouterr()
 
-        match = re.search(r"Email code:\s*(\d+)", captured.out)
+        match = re.search(r"Email Code:\s*(\d+)", captured.out)
         assert match, "Email code not found in captured output"
 
         code = match.group(1)
@@ -81,15 +81,16 @@ class TestUser:
     def set_capsys(self, capsys):
         self.capsys = capsys
 
-    def verify_email(self):
-        querry = TestUser.__get_verify_token(self.capsys)
+    def verify_email(self, querry=None):
+        if querry is None:
+            querry = TestUser.__get_verify_token(self.capsys)
 
         response = self.client.post(
             f"/api/v1/verification/verify_email?{querry}",
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
 
-    def register_user(self):
+    def register_user(self, verify_email=True):
         test_user_data = {
             "email": self.email,
             "username": self.username,
@@ -104,7 +105,8 @@ class TestUser:
 
         assert response.status_code == status.HTTP_200_OK, response.json()
         self.user_id = response.json()["message"]
-        self.verify_email()
+        if verify_email:
+            self.verify_email()
 
     def login_email(self):
         if self.tokens:
@@ -128,7 +130,7 @@ class TestUser:
         assert login_response is not None, "Login failed"
         assert login_response.status_code == status.HTTP_200_OK, login_response.json()
         security_token = login_response.json()["security_token"]
-
+            
         code = TestUser.__get_email_code(self.capsys)
 
         # Verify 2FA- Email

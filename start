@@ -1,0 +1,517 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+import platform
+import time
+import shutil
+import threading
+from threading import RLock
+import re
+from urllib.parse import urlencode
+import random
+from typing import List, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+EMAIL_CODE_PATTERN = re.compile(r"Email code:\s*(\d+)")
+VERIFY_TOKEN_PATTERN = re.compile(r"user_id=([\w-]+)&expires=(\d+)&signature=([\w-]+)")
+
+
+def get_verify_token(text: str, user_id: Optional[str] = None):
+    # Search for the pattern in captured output
+    if user_id is None:
+        match = re.search(VERIFY_TOKEN_PATTERN, text)
+        if not match:
+            raise ValueError("Verify token not found in captured output")
+
+        # Extracted components
+        user_id, expires, signature = match.groups()
+
+        return urlencode({"user_id": user_id, "expires": expires, "signature": signature})
+
+    else:
+        match = re.search(rf"user_id={user_id}&expires=(\d+)&signature=([\w-]+)", text)
+
+        if not match:
+            raise ValueError("Verify token not found in captured output")
+
+        expires, signature = match.groups()
+
+        return urlencode({"user_id": user_id, "expires": expires, "signature": signature})
+
+
+def get_email_code(text: str):
+    # Search for the pattern in captured output
+    match = re.search(EMAIL_CODE_PATTERN, text)
+    if not match:
+        raise ValueError("Email code not found in captured output")
+
+    # Extracted email code
+    email_code = match.group(1)
+
+    return email_code
+
+
+# # Pre-installation check
+# print("This script will install required python packages [rich, faker, requests] and start the test environment.\nPlease make sure you activate a virtual python environment. Continue? (y/n)")
+# response = input()
+# if response.lower() != "y":
+#     sys.exit("Installation cancelled.")
+# print("Installing required packages...")
+# subprocess.run(["pip", "install", "rich", "faker", "requests"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
+from rich.spinner import Spinner
+from rich.table import Table
+from faker import Faker
+import requests
+from urllib.parse import urljoin
+from requests import Session
+from server.tests.v1 import testclasses
+
+
+class DockerLogStreamer:
+    def __init__(self, server_dir, service_name="backend", encoding="utf-8", errors="replace"):
+        """
+        Initializes the log streamer.
+
+        :param server_dir: Path to the directory where the docker-compose file is located.
+        :param service_name: Name of the Docker Compose service (default: "backend").
+        :param encoding: Encoding used for decoding.
+        :param errors: Error handling strategy during decoding.
+        """
+        self.server_dir = server_dir
+        self.service_name = service_name
+        self.encoding = encoding
+        self.errors = errors
+        self.buffer = []  # Buffer for log lines
+        self.all_logs = []  # All log lines
+        self.process = None
+        self.thread = None
+        self._running = False
+        self.lock = RLock()
+
+    def _stream_logs(self):
+        self.process = subprocess.Popen(
+            ["docker-compose", "logs", "-f", "--tail=0", self.service_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=self.server_dir,
+            encoding=self.encoding,
+            errors=self.errors,
+            bufsize=1,
+        )
+
+        while self._running:
+            line = self.process.stdout.readline()  # type: ignore
+            if line:
+                with self.lock:
+                    self.buffer.append(line)
+                    self.all_logs.append(line)
+
+            else:
+                time.sleep(0.001)
+
+        self.process.terminate()
+        self.process.wait()
+
+    def start(self):
+        """Starts the log streaming process in a background thread."""
+        if not self._running:
+            self._running = True
+            self.thread = threading.Thread(target=self._stream_logs, daemon=True)
+            self.thread.start()
+
+    def get_all_logs(self):
+        """Returns all log lines that have occurred since the log streaming process started."""
+        time.sleep(0.1)
+        with self.lock:
+            return "".join(self.all_logs)
+
+    def clear_buffer(self):
+        """Clears the buffer containing the log lines."""
+        with self.lock:
+            self.buffer = []
+
+    def clear_all_logs(self):
+        """Clears the list with all log lines."""
+        with self.lock:
+            self.all_logs = []
+
+    def get_new_logs(self):
+        """
+        Returns the new log lines since the last query and clears the buffer.
+
+        :return: A string that contains all newly added log lines.
+        """
+        time.sleep(0.1)
+        with self.lock:
+            new_logs = "".join(self.buffer)
+            self.buffer = []
+        return new_logs
+
+    def stop(self):
+        """Stops the log streaming process."""
+        self._running = False
+        if self.thread:
+            self.thread.join()
+
+
+class LiveServerSession(Session):
+    def __init__(self, base_url=None):
+        super().__init__()
+        self.base_url = base_url
+
+    def request(self, method, url, *args, **kwargs):
+        joined_url = urljoin(self.base_url, url)  # type: ignore
+        return super().request(method, joined_url, *args, **kwargs)
+
+
+def login_user(client, user: testclasses.TestUser, log_streamer: DockerLogStreamer):
+    response = client.post(
+        "/api/v1/auth/login",
+        headers={"application-id": user.application_id},
+        json={"ident": user.email, "password": user.password},
+    )
+    if response.status_code != 200:
+        raise ValueError(f"Login failed: {response.json()}")
+    security_token = response.json()["security_token"]
+
+    logs = log_streamer.get_new_logs()
+    email_code = get_email_code(logs)
+    response = client.post(
+        "/api/v1/auth/verify-code-2fa",
+        headers={"application-id": user.application_id, "Authorization": f"Bearer {security_token}"},
+        json={"code": email_code, "is_totp": False},
+    )
+    if response.status_code != 200:
+        raise ValueError(f"Email verification failed: {response.json()}")
+    user.tokens = response.json()
+
+
+console = Console()
+faker = Faker()
+
+
+def check_prerequisites():
+    console.print("[bold]Checking prerequisites...[/bold]")
+    try:
+        subprocess.run(["docker", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        console.print("[green]Docker found[/green]")
+    except Exception:
+        console.print("[bold red]Docker not found. Please install Docker.[/bold red]")
+        sys.exit(1)
+    try:
+        subprocess.run(["node", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        console.print("[green]Node found[/green]")
+    except Exception:
+        console.print("[bold red]Node not found. Please install Node.js.[/bold red]")
+        sys.exit(1)
+    try:
+        subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        console.print("[green]npm found[/green]")
+    except Exception:
+        console.print("[bold red]npm not found. Please install npm.[/bold red]")
+        sys.exit(1)
+
+
+def docker_cleanup(server_dir):
+    console.print(f"Running Docker cleanup in directory: [yellow]{server_dir}[/yellow]")
+    try:
+        subprocess.run(["docker-compose", "down", "-v", "--rmi", "all"], check=True, cwd=server_dir)
+        console.print("[bold green]Docker cleanup completed successfully.[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Docker cleanup failed: {e}[/bold red]")
+
+
+def start_docker_stack(server_dir):
+    console.print("Building Docker stack for the backend...")
+    try:
+        subprocess.run(["docker-compose", "up", "-d", "--build"], check=True, cwd=server_dir)
+        console.print("[bold green]Docker stack started successfully.[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Error starting Docker stack: {e}[/bold red]")
+        sys.exit(1)
+
+
+def stop_docker_stack(server_dir):
+    console.print("[bold red]Stopping Docker containers...[/bold red]")
+    try:
+        subprocess.run(["docker-compose", "down"], check=True, cwd=server_dir)
+        console.print("[bold green]Docker stack stopped successfully.[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Error stopping Docker stack: {e}[/bold red]")
+
+
+def open_new_terminal(command, cwd):
+    """
+    Opens a new terminal window and runs the specified command in the given directory.
+    Works cross-platform (Windows, macOS, Linux).
+    """
+    system = platform.system()
+    if system == "Windows":
+        subprocess.Popen(["cmd", "/c", "start", "cmd", "/k", f"cd /d {cwd} && {command}"], shell=True)
+    elif system == "Darwin":  # macOS
+        apple_script = f"""
+        tell application "Terminal"
+            do script "cd {cwd} && {command}"
+            activate
+        end tell
+        """
+        subprocess.Popen(["osascript", "-e", apple_script])
+    else:
+        terminal = None
+        for term in ["gnome-terminal", "konsole", "xfce4-terminal", "x-terminal-emulator"]:
+            if shutil.which(term):
+                terminal = term
+                break
+        if terminal:
+            subprocess.Popen([terminal, "--", "bash", "-c", f'cd "{cwd}" && {command}; exec bash'])
+        else:
+            console.print("[bold red]No terminal emulator found. Please manually run the following command:[/bold red]")
+            console.print(command)
+
+
+###########################################################################
+################################# Testdata ################################
+###########################################################################
+def create_users(
+    log_thread: DockerLogStreamer, progress: Progress, task, total_users: int
+) -> List[testclasses.TestUser]:
+    client = LiveServerSession("http://localhost:8001")
+    users = []
+    for _ in range(total_users):
+        user = testclasses.TestUser(client)  # type: ignore
+        user.first_name = faker.first_name()
+        user.last_name = faker.last_name()
+        user.password = faker.password(length=12)
+        email_sufix = faker.free_email_domain()
+        unique_word = random.randint(1000, 9999)
+
+        user.email = random.choice(
+            [
+                f"{user.first_name}_{user.last_name}-{unique_word}@{email_sufix}",
+                f"{unique_word}@{email_sufix}",
+                f"{user.first_name}_{unique_word}@{email_sufix}",
+            ]
+        )
+
+        user.username = f"{faker.user_name()}-{random.randint(0, 9999)}"
+        try:
+            user.register_user(False)
+            logs = log_thread.get_all_logs()
+            verify_token = get_verify_token(logs, user.user_id)
+            user.verify_email(verify_token)
+            users.append(user)
+        except Exception as e:
+            console.print(f"[bold red]Error creating user: {e}[/bold red]")
+            continue
+        progress.advance(task)
+    return users
+
+def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser):
+    for user in users:
+        user.submit_identity_verification()
+        admin.verify_identity(user.user_id) # type: ignore
+
+
+
+def create_test_data(server_dir):
+    TOTAL_USERS = 100
+    TOTAL_CLUBS = 5
+    TOTAL_PROGRAMS_PER_CLUB = 5
+    MAX_PROGRAMS_PER_CLUB = 5
+    TOTAL_MEMBERSHIPS = 3
+    MAX_PROGRAMS_PER_MEMBERSHIP = 3  #
+    THREADS = 10
+
+    # if TOTAL_CLUBS * 3 > TOTAL_USERS:
+    #     console.print("[bold red]Error: Not enough users to assign to clubs.[/bold red]")
+    #     sys.exit(1)
+
+    console.print("[bold]Starting Backend Log Stream...[/bold]")
+    log_thread = DockerLogStreamer(server_dir)
+    log_thread.start()
+    time.sleep(1)
+    progress = Progress(SpinnerColumn(), "[progress.description]{task.description}", BarColumn(), TimeElapsedColumn(), console=console)
+    progress.start()
+
+    console.print("[bold]Creating test data through simulated API calls...[/bold]")
+    request_client = LiveServerSession("http://localhost:8001")
+
+    admin = testclasses.AdminUser(request_client)  # type: ignore
+
+
+    # ======================================================== #
+    # ========================= Users ======================== #
+    # ======================================================== #
+    task_users = progress.add_task("Creating users...", total=TOTAL_USERS)
+    users: List[testclasses.TestUser] = []
+
+    user_batch_size = TOTAL_USERS // THREADS
+    # Create separate progress tasks for each thread
+    batches = []
+    for i in range(THREADS):
+        batches.append((log_thread, progress, task_users, user_batch_size))
+
+    users = []
+    with ThreadPoolExecutor(max_workers=THREADS) as executor:
+        futures = [executor.submit(create_users, *batch) for batch in batches]
+        for future in as_completed(futures):
+            users.extend(future.result())
+
+    progress.update(task_users, description="Users created.")
+
+    verified_users = users[: TOTAL_CLUBS * 3]
+    unverified_users = users[TOTAL_CLUBS * 3 :]
+
+    log_thread.clear_all_logs()
+
+    login_user(request_client, admin, log_thread)
+
+    
+    # ======================================================== #
+    # ================= IdentityVerification ================= #
+    # ======================================================== #
+
+    task_verify = progress.add_task("Verifying users...", total=TOTAL_CLUBS * 3)
+    for user in verified_users:
+        login_user(request_client, user, log_thread)	
+        user.submit_identity_verification()
+        admin.verify_identity(user.user_id) # type: ignore
+        progress.advance(task_verify)
+    progress.update(task_verify, description="Users verified.")
+    sys.exit(0)
+
+
+
+
+
+    task_clubs = progress.add_task("Creating clubs...", total=5)
+    clubs = []
+    for _ in range(5):
+        club_data = {"name": f"{faker.company()} Dance Club", "description": faker.catch_phrase()}
+        time.sleep(0.3)
+        progress.advance(task_clubs)
+        clubs.append(club_data)
+    progress.update(task_clubs, description="Clubs created.")
+
+    task_programs = progress.add_task("Creating programs...", total=5)
+    programs = []
+    for _ in range(5):
+        program_data = {"name": f"{faker.bs().title()} Course", "description": faker.text(max_nb_chars=50)}
+        time.sleep(0.3)
+        progress.advance(task_programs)
+        programs.append(program_data)
+    progress.update(task_programs, description="Programs created.")
+
+    task_memberships = progress.add_task("Creating memberships...", total=3)
+    memberships = []
+    for _ in range(3):
+        membership_data = {"name": f"{faker.catch_phrase()} Membership", "description": faker.text(max_nb_chars=50)}
+        time.sleep(0.3)
+        progress.advance(task_memberships)
+        memberships.append(membership_data)
+    progress.update(task_memberships, description="Memberships created.")
+    progress.stop()
+
+    console.print("[bold green]Test data created successfully.[/bold green]")
+
+
+def start_frontend(client_dir, expo_platform):
+    console.print("Starting Expo frontend...")
+    try:
+        subprocess.run(["npm", "install"], check=True, cwd=client_dir, shell=True)
+        console.print("[bold green]npm install completed successfully.[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Error during npm install: {e}[/bold red]")
+        return
+    expo_command = f"npx expo run:{expo_platform}"
+    open_new_terminal(expo_command, client_dir)
+    console.print(f"[bold green]Expo frontend is starting for {expo_platform}.[/bold green]")
+
+
+def start_backend_logs(server_dir):
+    console.print("Starting backend logs...")
+    command = "docker-compose logs -f backend"
+    open_new_terminal(command, server_dir)
+
+
+def show_meta_info():
+    table = Table(title="Installation Complete")
+    table.add_column("Service", style="cyan", no_wrap=True)
+    table.add_column("URL", style="magenta")
+    table.add_row("Mailhog", "http://localhost:8025")
+    table.add_row("Swagger Docs", "http://localhost:8001/docs")
+    console.print(table)
+
+
+def backend_is_ready():
+    try:
+        response = requests.get("http://localhost:8001/ping")
+        return response.status_code == 200
+    except requests.exceptions.ConnectionError:
+        return False
+
+
+def main():
+    check_prerequisites()
+
+    # Choose whether to perform cleanup or to start the process.
+    option = Prompt.ask(
+        "Please choose: cleanup = Docker Cleanup, start = Start test environment",
+        choices=["cleanup", "start"],
+        default="start",
+    )
+
+    # Assumption: The script is located at the project root with subdirectories /server and /client
+    current_dir = os.getcwd()
+    server_dir = os.path.join(current_dir, "server")
+    client_dir = os.path.join(current_dir, "client")
+
+    if option == "cleanup":
+        console.print("[bold red]Starting Docker cleanup...[/bold red]")
+        docker_cleanup(server_dir)
+        console.print("[bold green]Cleanup complete.[/bold green]")
+        sys.exit(0)
+
+    # If starting the environment:
+    mode = Prompt.ask(
+        "Choose deployment mode (full = full deployment, start = just start services)",
+        choices=["full", "start"],
+        default="full",
+    )
+    expo_platform = Prompt.ask("Choose Expo platform", choices=["android", "ios"], default="android")
+
+    if mode == "full":
+        console.print("[bold green]Starting full deployment...[/bold green]")
+        start_docker_stack(server_dir)
+
+        with console.status("[bold]Waiting for backend to be ready...") as status:
+            while not backend_is_ready():
+                time.sleep(1)
+        console.print("[bold green]Backend is ready![/bold green]")
+        create_test_data(server_dir)
+    else:
+        console.print("[bold green]Starting just backend and frontend...[/bold green]")
+        start_docker_stack(server_dir)
+
+    start_backend_logs(server_dir)
+    start_frontend(client_dir, expo_platform)
+
+    show_meta_info()
+    console.print("[bold green]Installation complete.[/bold green]")
+    console.print("[bold]Press Ctrl+C to stop the docker services.[/bold]")
+
+    # Keep the script running until Ctrl+C is pressed or the terminal is closed to stop docker containers
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        stop_docker_stack(server_dir)
+
+
+if __name__ == "__main__":
+    main()
