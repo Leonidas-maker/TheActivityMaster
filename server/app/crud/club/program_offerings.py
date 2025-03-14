@@ -999,7 +999,7 @@ async def get_bookable_programs(db: AsyncSession, program_ids: List[uuid.UUID]) 
             m_club.Program.pricing_model == m_club.PriceType.PACKAGE,
             m_club.Program.id.in_(program_ids),
             active_sessions_db_condition(),
-            m_club.Session.capacity > bookings_count_subquery,
+            m_club.Program.capacity > bookings_count_subquery,
         )
         .options(
             joinedload(m_club.Program.sessions),
