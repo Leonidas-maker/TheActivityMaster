@@ -45,14 +45,26 @@ export const deleteBooking = async (booking_id: string[]) => {
 };
 
 export const getBookings = async (
-  club_id: string,
-  program_id?: string,
-  session_id?: string
+  club_id: string | string[],
+  program_id?: string | string[],
+  session_id?: string | string[]
 ) => {
   try {
     const queryParams = new URLSearchParams();
-    if (program_id) queryParams.append("program_id", program_id);
-    if (session_id) queryParams.append("session_id", session_id);
+    if (program_id) {
+      if (Array.isArray(program_id)) {
+        program_id.forEach(id => queryParams.append("program_id", id));
+      } else {
+        queryParams.append("program_id", program_id);
+      }
+    }
+    if (session_id) {
+      if (Array.isArray(session_id)) {
+        session_id.forEach(id => queryParams.append("session_id", id));
+      } else {
+        queryParams.append("session_id", session_id);
+      }
+    }
 
     const response = await axiosInstance.get(
       `/clubs/${club_id}/bookings?${queryParams.toString()}`

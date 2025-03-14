@@ -313,5 +313,11 @@
     "subscriberOverview": "Abonnenten Übersicht",
     "bookingTitle": "Buchung",
     "price": "Preis: €{{value}}",
-    "buy": "Kaufen"
+    "buy": "Kaufen",
+    "noBookings": "Keine Buchungen verfügbar",
+    "sessionId": "Sitzungs-ID:",
+    "bookingType": "Buchungstyp:",
+    "programId": "Programm-ID:",
+    "price_booked": "Preis:",
+    "packageInMembership": "Dieses Paket ist in einigen Mitgliedschaften enthalten"
 }

@@ -15,6 +15,7 @@ import { getUserSessions } from "@/src/services/user/userService";
 
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
+import { getUserMemberships } from '../../services/user/userService';
 
 interface ProgramResponse {
   name: string;
@@ -126,7 +127,7 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
       .then((data: ProgramResponse) => {
         setProgramData(data);
         // If membership is required and there are membership_ids, fetch each membership
-        if (data.membership_required && data.membership_ids && data.membership_ids.length > 0) {
+        if (data.membership_ids && data.membership_ids.length > 0) {
           setLoadingMemberships(true);
           Promise.all(
             data.membership_ids.map((membershipId) => getMembership(club_id, membershipId))
@@ -153,6 +154,37 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
       })
       .finally(() => setLoadingProgram(false));
   }, [club_id, program_id, t]);
+  
+  useEffect(() => {
+    // If programData and membershipDetails are available, check if the user has an active membership
+    // that qualifies for an additional fee price replacement
+    if (programData && programData.membership_ids.length > 0 && membershipDetails.length > 0) {
+      getUserMemberships()
+        .then((userMemberships) => {
+          // Iterate over each user membership
+          for (const userMembership of userMemberships) {
+            const userMembershipId = userMembership.membership.id;
+            // Check if the user's membership id is one of the program's membership_ids
+            if (programData.membership_ids.includes(userMembershipId)) {
+              // Find the corresponding membership detail
+              const membershipDetail = membershipDetails.find(m => m.id === userMembershipId);
+              if (membershipDetail) {
+                // Look for the additional fee for this program within the membership's programs_access array
+                const access = membershipDetail.programs_access.find(access => access.program_id === programData.id);
+                if (access) {
+                  // Replace the program price with the additional fee price
+                  setProgramData({ ...programData, price: access.additional_fee });
+                  break; // Stop after the first match
+                }
+              }
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching user memberships", error);
+        });
+    }
+  }, [programData, membershipDetails]);
 
   // Dummy navigation handlers for sessions
   const handleSessionPress = (session: Session) => {
@@ -292,9 +324,12 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
                 </View>
               )}
               {/* Membership Requirement */}
-              {programData.membership_required && (
+              {programData.membership_ids.length > 0 && (
                 <View className="py-2">
-                  <Subheading text={t("membershipRequired")} />
+
+                  {programData.membership_required ? (
+                    <Subheading text={t("membershipRequired")} />
+                  ) : <Subheading text={t("packageInMembership")} />}
                   {loadingMemberships ? (
                     <ActivityIndicator size="large" color="#000" />
                   ) : membershipDetails.length === 0 ? (

@@ -12,6 +12,8 @@ import { getSessions } from "@/src/services/club/programSessionService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
 import { getUserSessions } from "@/src/services/user/userService";
+import { getUserMemberships } from '../../services/user/userService';
+import { getMembership } from "@/src/services/club/membershipService";
 
 interface Session {
   session_type: string;
@@ -52,6 +54,19 @@ interface ProgramResponse {
   membership_ids: string[];
 }
 
+interface MembershipResponse {
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  duration: number;
+  duration_unit: string;
+  id: string;
+  club_id: string;
+  status: string;
+  programs_access: { program_id: string; additional_fee: number; membership_id: string }[];
+}
+
 
 const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route_name }:
   { club_id: string | string[], program_id: string | string[], session_id: string | string[], pricing_model: string | string[], route_name: string | string[] }) => {
@@ -67,6 +82,8 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
   const [loadingProgram, setLoadingProgram] = useState<boolean>(true);
   const [userSessions, setUserSessions] = useState<any[]>([]);
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
+  const [membershipDetails, setMembershipDetails] = useState<MembershipResponse[]>([]);
+  const [loadingMemberships, setLoadingMemberships] = useState<boolean>(false);
 
   // Shared value and ref for program carousel
   const progressProgram = useSharedValue(0);
@@ -140,6 +157,23 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
     getProgram(club_id, program_id)
       .then((data: ProgramResponse) => {
         setProgramData(data);
+        if (data.membership_ids && data.membership_ids.length > 0) {
+          setLoadingMemberships(true);
+          Promise.all(
+            data.membership_ids.map((membershipId) => getMembership(club_id, membershipId))
+          )
+            .then((memberships: MembershipResponse[]) => {
+              setMembershipDetails(memberships);
+            })
+            .catch(() => {
+              Toast.show({
+                type: "error",
+                text1: t("roleManageError"),
+                text2: t("roleManageErrorDescription"),
+              });
+            })
+            .finally(() => setLoadingMemberships(false));
+        }
       })
       .catch(() => {
         Toast.show({
@@ -158,6 +192,30 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
         console.error("Error fetching user sessions", error);
       });
   }, []);
+
+  useEffect(() => {
+    if (programData && programData.membership_ids.length > 0 && membershipDetails.length > 0) {
+      getUserMemberships()
+        .then((userMemberships) => {
+          for (const userMembership of userMemberships) {
+            const userMembershipId = userMembership.membership.id;
+            if (programData.membership_ids.includes(userMembershipId)) {
+              const membershipDetail = membershipDetails.find(m => m.id === userMembershipId);
+              if (membershipDetail) {
+                const access = membershipDetail.programs_access.find(access => access.program_id === programData.id);
+                if (access) {
+                  setProgramData({ ...programData, price: access.additional_fee });
+                  break;
+                }
+              }
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching user memberships", error);
+        });
+    }
+  }, [programData, membershipDetails]);
 
   const alreadyBooked = sessionData ? userSessions.some((course: any) => course.sessions.some((s: any) => s.id === sessionData.id)) : false;
 
@@ -253,19 +311,18 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
             </View>
           )}
         </View>
-{ programData && programData.pricing_model === "per_session" && sessionData && (
-  <TouchableOpacity
-    onPress={() => { if (!alreadyBooked) router.navigate('/'); }}
-    disabled={alreadyBooked}
-    className={`mx-4 my-4 p-4 rounded-xl items-center justify-center ${
-      alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')
-    }`}
-  >
-    <Text className={alreadyBooked ? 'text-gray-600' : (colorScheme === 'dark' ? 'text-black' : 'text-white')}>
-      {alreadyBooked ? 'Already booked' : `Book for €${(sessionData.price / 100).toFixed(2)}`}
-    </Text>
-  </TouchableOpacity>
-)}
+        {programData && programData.pricing_model === "per_session" && sessionData && (
+          <TouchableOpacity
+            // @ts-ignore
+            onPress={() => { if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&session_id=${session_id}&price=${programData.price}`); }}
+            disabled={alreadyBooked}
+            className={`mx-4 my-4 p-4 rounded-xl items-center justify-center ${alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')}`}
+          >
+            <Text className={alreadyBooked ? 'text-gray-600' : (colorScheme === 'dark' ? 'text-black' : 'text-white')}>
+              {alreadyBooked ? 'Already booked' : `Book for €${(programData.price / 100).toFixed(2)}`}
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
       <DefaultToast />
     </>

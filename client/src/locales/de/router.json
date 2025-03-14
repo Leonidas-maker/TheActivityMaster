@@ -81,5 +81,6 @@
     "licenses_header": "Lizenzen",
     "clubs_subscriber_overview_header": "Abonnenten Übersicht",
     "clubs_booking_page_header": "Buchung",
-    "manage_subscription_header": "Mitgliedschaft verwalten"
+    "manage_subscription_header": "Mitgliedschaft verwalten",
+    "clubs_manage_finance_header": "Finanzen verwalten"
 }
