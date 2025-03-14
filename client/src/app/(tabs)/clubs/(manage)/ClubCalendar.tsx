@@ -1,14 +1,13 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { View } from "react-native";
 import WeekCalendar from "@/src/components/calendar/WeekCalendar";
-import { useTranslation } from "react-i18next";
 
-export default function Tab() {
-    const { t } = useTranslation("calendar");
-
+const ClubCalendar = () => {
     return (
         <View className="bg-light_primary dark:bg-dark_primary flex-1">
-            <WeekCalendar mode="user" />
+            <WeekCalendar mode="club" />
         </View>
     );
-};
+}
+
+export default ClubCalendar;

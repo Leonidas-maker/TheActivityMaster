@@ -319,5 +319,6 @@
     "bookingType": "Buchungstyp:",
     "programId": "Programm-ID:",
     "price_booked": "Preis:",
-    "packageInMembership": "Dieses Paket ist in einigen Mitgliedschaften enthalten"
+    "packageInMembership": "Dieses Paket ist in einigen Mitgliedschaften enthalten",
+    "club_calendar": "Vereinskalender"
 }

@@ -1,5 +1,5 @@
 // ~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~ //
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
     View,
     LayoutAnimation,
@@ -14,19 +14,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as Progress from "react-native-progress";
 import { useNavigation } from "@react-navigation/native";
 import { getUserSessions } from "@/src/services/user/userService";
+import { getProgramsDetails } from "@/src/services/club/programService";
+import { useClubContext } from "@/src/provider/ClubProvider";
 
-// ~~~~~~~~~~~ Service imports ~~~~~~~~~~~ //
-// import {
-//   fetchEvents,
-//   loadEventsFromStorage,
-// } from "../../services/eventService";
-// import {
-//   getSelectedUniversity,
-//   getSelectedCourse,
-//   fetchCalendars,
-// } from "../../services/calendarService";
-
-// // ~~~~~~~~ Own components imports ~~~~~~~ //
+// ~~~~~~~~ Own components imports ~~~~~~~ //
 import Days from "./Days";
 import WeekSelector from "../selector/WeekSelector";
 
@@ -35,7 +26,6 @@ import {
     CalendarProps,
     EventTimeProps,
 } from "../../interfaces/calendarInterfaces";
-// import axios, { AxiosError } from "axios";
 
 // Important for LayoutAnimation on Android according to the docs
 //! Disabled because it causes a crash on Android
@@ -48,7 +38,7 @@ import {
 // ====================================================== //
 // ====================== Component ===================== //
 // ====================================================== //
-const WeekCalendar: React.FC = () => {
+const WeekCalendar: React.FC<{ mode: string }> = ({ mode }) => {
     // ====================================================== //
     // ======================= States ======================= //
     // ====================================================== //
@@ -58,86 +48,103 @@ const WeekCalendar: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0);
     const navigation = useNavigation<any>();
+    const { clubId } = useClubContext();
+
+    const FETCH_SESSIONS_INTERVAL = 60000;
+
+    const lastFetchTimeRef = useRef<number | null>(null);
 
     useFocusEffect(
         useCallback(() => {
-            const fetchUserSessions = async () => {
-                try {
-                    const sessionsResponse = await getUserSessions();
-                    let newEvents: EventTimeProps[] = [];
-
-                    // Iterate over each session group in the response
-                    sessionsResponse.forEach((sessionGroup: any) => {
-                        const name = sessionGroup.name;
-                        const description = sessionGroup.description;
-
-                        // Iterate over each session inside the group
-                        sessionGroup.sessions.forEach((session: any) => {
-                            // Check session type
-                            if (session.session_type === 'event') {
-                                // For events, use start_datetime and end_datetime
-                                const eventItem: any = {
-                                    name,
-                                    description,
-                                    start: new Date(session.start_datetime),
-                                    end: new Date(session.end_datetime),
-                                    session_type: session.session_type,
-                                };
-                                // If address exists, add it
-                                if (session.address) {
-                                    eventItem.address = session.address;
-                                }
-                                newEvents.push(eventItem);
-                            } else if (session.session_type === 'course') {
-                                // For courses, use start_date and end_date as event times
-                                // const courseEvent: any = {
-                                //    name,
-                                //   description,
-                                //  start: session.start_date,
-                                //  end: session.end_date,
-                                //};
-                                // newEvents.push(courseEvent);
-
-                                // Iterate over occurrences to create separate events
-                                if (session.occurrences && Array.isArray(session.occurrences)) {
-                                    session.occurrences.forEach((occ: any) => {
-                                        const occurrenceEvent: any = {
-                                            name,
-                                            description,
-                                            status: occ.status,
-                                            session_type: session.session_type,
-                                        };
-
-                                        // Include note if available
-                                        if (occ.note) {
-                                            occurrenceEvent.note = occ.note;
-                                        }
-
-                                        // Determine start and end times for the occurrence event
-                                        if (occ.start_datetime && occ.end_datetime) {
-                                            // Use occurrence's start and end datetimes if available
-                                            occurrenceEvent.start = new Date(occ.start_datetime);
-                                            occurrenceEvent.end = new Date(occ.end_datetime);
-                                        } else {
-                                            // Fallback: use session's start_time and end_time combined with occurrence_date
-                                            // Construct Date objects by combining occurrence_date with the session times
-                                            const occurrenceDate = occ.occurrence_date;
-                                            occurrenceEvent.start = new Date(`${occurrenceDate}T${session.start_time}`);
-                                            occurrenceEvent.end = new Date(`${occurrenceDate}T${session.end_time}`);
-                                        }
-                                        newEvents.push(occurrenceEvent);
-                                    });
-                                }
+            const now = Date.now();
+            // Only fetch session again if it's been more than FETCH_SESSIONS_INTERVAL since the last fetch
+            if (!lastFetchTimeRef.current || (now - lastFetchTimeRef.current) > FETCH_SESSIONS_INTERVAL) {
+                const fetchUserSessions = async () => {
+                    try {
+                        let sessionsResponse: any;
+                        if (mode === "user") {
+                            sessionsResponse = await getUserSessions();
+                        } else if (mode === "club") {
+                            if (!clubId) {
+                                throw new Error("Club ID is null");
                             }
-                        });
-                    });
-                    setEvents(newEvents);
-                } catch (error) {
-                    console.error('Error fetching user sessions', error);
-                }
-            };
+                            sessionsResponse = await getProgramsDetails(clubId, 1, 50);
+                        }
+                        let newEvents: EventTimeProps[] = [];
 
-            fetchUserSessions();
+                        // Iterate over each session group in the response
+                        sessionsResponse.forEach((sessionGroup: any) => {
+                            const name = sessionGroup.name;
+                            const description = sessionGroup.description;
+
+                            // Iterate over each session inside the group
+                            sessionGroup.sessions.forEach((session: any) => {
+                                // Check session type
+                                if (session.session_type === 'event') {
+                                    // For events, use start_datetime and end_datetime
+                                    const eventItem: any = {
+                                        name,
+                                        description,
+                                        start: new Date(session.start_datetime),
+                                        end: new Date(session.end_datetime),
+                                        session_type: session.session_type,
+                                    };
+                                    // If address exists, add it
+                                    if (session.address) {
+                                        eventItem.address = session.address;
+                                    }
+                                    newEvents.push(eventItem);
+                                } else if (session.session_type === 'course') {
+                                    // For courses, use start_date and end_date as event times
+                                    // const courseEvent: any = {
+                                    //    name,
+                                    //   description,
+                                    //  start: session.start_date,
+                                    //  end: session.end_date,
+                                    //};
+                                    // newEvents.push(courseEvent);
+
+                                    // Iterate over occurrences to create separate events
+                                    if (session.occurrences && Array.isArray(session.occurrences)) {
+                                        session.occurrences.forEach((occ: any) => {
+                                            const occurrenceEvent: any = {
+                                                name,
+                                                description,
+                                                status: occ.status,
+                                                session_type: session.session_type,
+                                            };
+
+                                            // Include note if available
+                                            if (occ.note) {
+                                                occurrenceEvent.note = occ.note;
+                                            }
+
+                                            // Determine start and end times for the occurrence event
+                                            if (occ.start_datetime && occ.end_datetime) {
+                                                // Use occurrence's start and end datetimes if available
+                                                occurrenceEvent.start = new Date(occ.start_datetime);
+                                                occurrenceEvent.end = new Date(occ.end_datetime);
+                                            } else {
+                                                // Fallback: use session's start_time and end_time combined with occurrence_date
+                                                // Construct Date objects by combining occurrence_date with the session times
+                                                const occurrenceDate = occ.occurrence_date;
+                                                occurrenceEvent.start = new Date(`${occurrenceDate}T${session.start_time}`);
+                                                occurrenceEvent.end = new Date(`${occurrenceDate}T${session.end_time}`);
+                                            }
+                                            newEvents.push(occurrenceEvent);
+                                        });
+                                    }
+                                }
+                            });
+                        });
+                        setEvents(newEvents);
+                    } catch (error) {
+                        console.error('Error fetching user sessions', error);
+                    }
+                };
+                fetchUserSessions();
+                lastFetchTimeRef.current = now;
+            }
         }, [])
     );
 

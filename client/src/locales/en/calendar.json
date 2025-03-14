@@ -1,3 +1,7 @@
 {
-    "test_text": "Welcome to the Calendar page"
+    "startTimeLabel": "Start time:",
+    "endTimeLabel": "End time:",
+    "locationLabel": "Location:",
+    "noteLabel": "Note:",
+    "close": "Close"
 }
