@@ -115,3 +115,19 @@ export const getClubSessions = async (
     throw error;
   }
 };
+
+export const getSessionUsers = async (
+  club_id: string | string[],
+  program_id: string | string[],
+  session_id: string | string[]
+) => {
+  try {
+    const response = await axiosInstance.get(
+      `/clubs/${club_id}/programs/${program_id}/sessions/${session_id}/users`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error during getSessionUsers call:", error);
+    throw error;
+  }
+}

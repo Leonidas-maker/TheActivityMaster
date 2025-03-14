@@ -14,5 +14,15 @@
     "admin_identity_overview_btn": "Nutzerverifizierungen Übersicht",
     "pageNavigator_title5": "Vereinsseiten",
     "clubs_overview_btn": "Vereinsübersicht",
-    "billing_booked_btn": "Buchungsübersicht"
+    "billing_booked_btn": "Buchungsübersicht",
+    "pageNavigator_title6": "Infoseiten",
+    "gitlab_btn": "Gitlab",
+    "github_btn": "Github",
+    "bug_report_btn": "Bug Report",
+    "responsible_disclosure_btn": "Responsible Disclosure",
+    "support_btn": "Support",
+    "imprint_btn": "Impressum",
+    "terms_of_service_btn": "Nutzungsbedingungen",
+    "privacy_policy_btn": "Datenschutzerklärung",
+    "licenses_btn": "Lizenzen"
 }

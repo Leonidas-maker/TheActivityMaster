@@ -202,9 +202,12 @@ export const getUserClubs = async () => {
   }
 };
 
-export const getUserMemberships = async () => {
+export const getUserMemberships = async (
+  only_active?: boolean
+) => {
   try {
-    const response = await axiosInstance.get("/clubs/me/memberships");
+    const query = only_active !== undefined ? `?only_active=${only_active}` : '';
+    const response = await axiosInstance.get(`/clubs/me/memberships${query}`);
 
     return response.data;
   } catch (error) {
@@ -231,6 +234,17 @@ export const getUserAttended = async () => {
     return response.data;
   } catch (error) {
     console.error("Error during getUserAttended call:", error);
+    throw error;
+  }
+};
+
+export const getUserSessions = async () => {
+  try {
+    const response = await axiosInstance.get("/clubs/me/sessions");
+
+    return response.data;
+  } catch (error) {
+    console.error("Error during getUserSessions call:", error);
     throw error;
   }
 };

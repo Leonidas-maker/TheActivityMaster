@@ -186,6 +186,42 @@ export default function OverviewLayout() {
           headerTitle: t("admin_identity_approve_header"),
         }}
       />
+      <Stack.Screen
+        name="(info)/BugReport"
+        options={{
+          headerTitle: t("bug_report_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(info)/Licenses"
+        options={{
+          headerTitle: t("licenses_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(info)/Terms"
+        options={{
+          headerTitle: t("terms_of_service_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(info)/Imprint"
+        options={{
+          headerTitle: t("imprint_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(info)/ResponsibleDisclosure"
+        options={{
+          headerTitle: t("responsible_disclosure_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(info)/Support"
+        options={{
+          headerTitle: t("support_header"),
+        }}
+      />
     </Stack>
   );
 }

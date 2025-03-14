@@ -1,6 +1,6 @@
 // ~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~ //
 import React, { useCallback, useState } from "react";
-import { View, ScrollView } from "react-native";
+import { View, ScrollView, Linking } from "react-native";
 import { expo } from "@/app.json";
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { clearAllStorage } from "@/src/services/clearStorage";
@@ -156,6 +156,53 @@ const OverviewHome: React.FC = () => {
   const adminIconNames = ["people"];
 
   // ====================================================== //
+  // =================== InfoNavigator ==================== //
+  // ====================================================== //
+  const handleBugReportPress = () => {
+    router.navigate("/(tabs)/overview/(info)/BugReport");
+  }
+
+  const handleImprintPress = () => {
+    router.navigate("/(tabs)/overview/(info)/Imprint");
+  }
+
+  const handleLicensesPress = () => {
+    router.navigate("/(tabs)/overview/(info)/Licenses");
+  }
+
+  const handleResponsibleDisclosurePress = () => {
+    router.navigate("/(tabs)/overview/(info)/ResponsibleDisclosure");
+  }
+
+  const handleSupportPress = () => {
+    router.navigate("/(tabs)/overview/(info)/Support");
+  }
+
+  const handleTermsPress = () => {
+    router.navigate("/(tabs)/overview/(info)/Terms");
+  }
+
+  const handleGitLabPress = () => {
+    Linking.openURL("https://gitlab.com/themastercollection/theactivitymaster");
+  }
+
+  const handleGitHubPress = () => {
+    Linking.openURL("https://github.com/Leonidas-maker/TheActivityMaster");
+  }
+
+  const handlePrivacyPress = () => {
+    Linking.openURL("https://gitlab.com/themastercollection/TheActivityMaster/-/wikis/Privacy-Policy");
+  }
+
+  const onInfoPressFunctions = [handleGitLabPress, handleGitHubPress, handleBugReportPress, handleResponsibleDisclosurePress, handleSupportPress, handleImprintPress, handleTermsPress, handlePrivacyPress, handleLicensesPress];
+  
+  const infoTitle = t("pageNavigator_title6");
+
+  const infoTexts = [t("gitlab_btn"), t("github_btn"), t("bug_report_btn"), t("responsible_disclosure_btn"), t("support_btn"), t("imprint_btn"), t("terms_of_service_btn"), t("privacy_policy_btn"), t("licenses_btn")];
+
+  const infoIconNames = ["web", "web", "bug-report", "security", "support", "description", "gavel", "lock", "article"];
+
+  // ====================================================== //
   // ================== Return component ================== //
   // ====================================================== //
   // Returns the navigators and the current app version
@@ -186,6 +233,12 @@ const OverviewHome: React.FC = () => {
         texts={devTexts}
         iconNames={devIconNames}
       /> */}
+      <PageNavigator
+        title={infoTitle}
+        onPressFunctions={onInfoPressFunctions}
+        texts={infoTexts}
+        iconNames={infoIconNames}
+      />
       {/* <DefaultButton text={t("clear_storage_btn")} onPress={() => clearAllStorage()} /> */}
       {isLoggedIn && (
         <View className="justify-center items-center my-2">

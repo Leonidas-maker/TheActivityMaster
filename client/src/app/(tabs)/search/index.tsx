@@ -320,10 +320,7 @@ export default function SearchScreen() {
                                                 <TouchableOpacity
                                                     key={club.id}
                                                     onPress={() =>
-                                                        router.push({
-                                                            pathname: `/(tabs)/search/(view)/ClubPage`,
-                                                            params: { club_id: club.id },
-                                                        })
+                                                        router.navigate(`/(tabs)/search/(view)/ClubPage?club_id=${club.id}`)
                                                     }
                                                     className="bg-light_secondary dark:bg-dark_secondary p-4 m-2 rounded-lg shadow-md"
                                                 >
@@ -353,58 +350,60 @@ export default function SearchScreen() {
                                     <>
                                         <View className="space-y-2 mt-2">
                                             {programs.map((program) => (
-                                                <TouchableOpacity
-                                                    key={program.id}
-                                                    onPress={() =>
-                                                        router.push({
-                                                            pathname: "/",
-                                                            params: { itemId: program.id },
-                                                        })
-                                                    }
-                                                    className="bg-light_secondary dark:bg-dark_secondary p-4 m-2 rounded-lg shadow-md"
-                                                >
-                                                    <DefaultText text={program.name} />
-                                                    <DefaultText text={program.description} />
-                                                    {program.price ? (
-                                                        // If price is available, show formatted price and currency
-                                                        <DefaultText text={`${(program.price / 100).toFixed(2)} ${program.currency}`} />
-                                                    ) : (
-                                                        // If price is not available, show translation text for pricing per session
-                                                        <DefaultText text={t("pricingPerSession")} />
-                                                    )}
-                                                </TouchableOpacity>
-                                            ))}
-                                            {programs.map((program) => (
-                                                <TouchableOpacity
-                                                    key={program.id}
-                                                    onPress={() => {
-                                                        if (program.membership_required) {
-                                                            // If membership is required, navigate to the ClubPage
-                                                            router.push(`/(tabs)/search/(view)/ClubPage?club_id=${program.club_id}`);
+                                                program.membership_required ? (
+                                                    <TouchableOpacity
+                                                        key={program.id}
+                                                        onPress={() => {
+                                                            if (program.membership_required) {
+                                                                // If membership is required, navigate to the ClubPage
+                                                                router.navigate(`/(tabs)/search/(view)/ClubPage?club_id=${program.club_id}`);
 
-                                                            Toast.show({
-                                                                type: "info",
-                                                                text1: t("membershipRequired"),
-                                                                text2: t("membershipRequiredDescription"),
-                                                            });
-                                                        }
-                                                    }}
-                                                    className={`p-4 m-2 rounded-lg shadow-md ${
-                                                        program.membership_required
+                                                                Toast.show({
+                                                                    type: "info",
+                                                                    text1: t("membershipRequired"),
+                                                                    text2: t("membershipRequiredDescription"),
+                                                                });
+                                                            }
+                                                        }}
+                                                        className={`p-4 m-2 rounded-lg shadow-md ${program.membership_required
                                                             ? "bg-gray-300 dark:bg-gray-500"
                                                             : "bg-light_secondary dark:bg-dark_secondary"
-                                                    }`}
-                                                >
-                                                    <DefaultText text={program.name} />
-                                                    <DefaultText text={program.description} />
-                                                    {program.price ? (
-                                                        // If price is available, show formatted price and currency
-                                                        <DefaultText text={`${(program.price / 100).toFixed(2)} ${program.currency}`} />
-                                                    ) : (
-                                                        // If price is not available, show translation text for pricing per session
-                                                        <DefaultText text={t("pricingPerSession")} />
-                                                    )}
-                                                </TouchableOpacity>
+                                                            }`}
+                                                    >
+                                                        <DefaultText text={program.name} />
+                                                        <DefaultText text={program.description} />
+                                                        {program.membership_required ? (
+                                                            <DefaultText text={t("membershipRequired")} />
+                                                        ) : (
+                                                            // If price is available, show formatted price and currency
+                                                            program.price ? (
+                                                                // If price is available, show formatted price and currency
+                                                                <DefaultText text={`${(program.price / 100).toFixed(2)} ${program.currency}`} />
+                                                            ) : (
+                                                                // If price is not available, show translation text for pricing per session
+                                                                <DefaultText text={t("pricingPerSession")} />
+                                                            )
+                                                        )}
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <TouchableOpacity
+                                                        key={program.id}
+                                                        onPress={() =>
+                                                            router.navigate(`/(tabs)/search/(view)/ProgramPage?club_id=${program.club_id}&program_id=${program.id}`)
+                                                        }
+                                                        className="bg-light_secondary dark:bg-dark_secondary p-4 m-2 rounded-lg shadow-md"
+                                                    >
+                                                        <DefaultText text={program.name} />
+                                                        <DefaultText text={program.description} />
+                                                        {program.price ? (
+                                                            // If price is available, show formatted price and currency
+                                                            <DefaultText text={`${(program.price / 100).toFixed(2)} ${program.currency}`} />
+                                                        ) : (
+                                                            // If price is not available, show translation text for pricing per session
+                                                            <DefaultText text={t("pricingPerSession")} />
+                                                        )}
+                                                    </TouchableOpacity>
+                                                )
                                             ))}
                                         </View>
                                         {renderPagination(programsPage, handleProgramsPageChange, programs.length)}
@@ -556,8 +555,8 @@ export default function SearchScreen() {
                         </TouchableOpacity>
                     </Modal>
                 </View>
-            </TouchableWithoutFeedback>
+            </TouchableWithoutFeedback >
             <DefaultToast />
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingView >
     );
 }

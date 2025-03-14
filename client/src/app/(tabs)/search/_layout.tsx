@@ -57,9 +57,15 @@ export default function SearchLayout() {
         }}
       />
       <Stack.Screen
-        name="(view)/SessionPage"
+        name="(view)/EventPage"
         options={{
-          headerTitle: t("clubs_session_page_header"),
+          headerTitle: t("clubs_event_page_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(view)/CoursePage"
+        options={{
+          headerTitle: t("clubs_course_page_header"),
         }}
       />
     </Stack>

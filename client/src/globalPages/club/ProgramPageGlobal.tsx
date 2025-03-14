@@ -78,7 +78,7 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
   const [isLight, setIsLight] = useState(false);
   const colorScheme = useColorScheme();
   useEffect(() => {
-      setIsLight(colorScheme === "light");
+    setIsLight(colorScheme === "light");
   }, [colorScheme]);
 
   // Shared values and refs for carousels
@@ -145,15 +145,15 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
   // Dummy navigation handlers for sessions
   const handleSessionPress = (session: Session) => {
     if (session.session_type === "course") {
-        // @ts-ignore
-      router.navigate(`/(tabs)/${route_name}/(view)/coursePage?club_id=${club_id}&program_id=${programData?.id}&session_id=${session.id}`);
+      // @ts-ignore
+      router.navigate(`/(tabs)/${route_name}/(view)/CoursePage?club_id=${club_id}&program_id=${programData?.id}&session_id=${session.id}&pricing_model=${programData?.pricing_model}`);
     } else if (session.session_type === "event") {
-        // @ts-ignore
-      router.navigate(`/(tabs)/${route_name}/(view)/events?club_id=${club_id}&program_id=${programData?.id}&session_id=${session.id}`);
+      // @ts-ignore
+      router.navigate(`/(tabs)/${route_name}/(view)/EventPage?club_id=${club_id}&program_id=${programData?.id}&session_id=${session.id}&pricing_model=${programData?.pricing_model}`);
     } else {
       // Fallback navigation
       // @ts-ignore
-      router.navigate(`/(tabs)/${route_name}/(view)/sessionDetail?club_id=${club_id}&program_id=${programData?.id}&session_id=${session.id}`);
+      router.back();
     }
   };
 
@@ -201,12 +201,12 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
       );
     }
 
-      // Additional details for course sessions
-      if (session.session_type === "course") {
-        // Translate weekday if available
-        details.push(
-          <DefaultText key="day_of_week" text={`${t("day_of_week")}: ${session.day_of_week ? t("weekday." + session.day_of_week) : ''}`} />
-        );
+    // Additional details for course sessions
+    if (session.session_type === "course") {
+      // Translate weekday if available
+      details.push(
+        <DefaultText key="day_of_week" text={`${t("day_of_week")}: ${session.day_of_week ? t("weekday." + session.day_of_week) : ''}`} />
+      );
       // If end_date is defined, display date range; otherwise, display only the start date with a different label
       if (session.end_date && session.start_date) {
         details.push(
@@ -271,12 +271,14 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
                 )}
               </View>
               {/* Categories */}
-              <View className="py-2">
-                <Subheading text={t("categoriesLabel")} />
-                {programData.categories.map((category, index) => (
-                  <DefaultText key={index} text={category.name} />
-                ))}
-              </View>
+              {programData.categories.length > 0 && (
+                <View className="py-2">
+                  <Subheading text={t("categoriesLabel")} />
+                  {programData.categories.map((category, index) => (
+                    <DefaultText key={index} text={category.name} />
+                  ))}
+                </View>
+              )}
               {/* Membership Requirement */}
               {programData.membership_required && (
                 <View className="py-2">
