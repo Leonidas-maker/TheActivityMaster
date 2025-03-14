@@ -60,7 +60,7 @@ async def create_membership_v1(
         await handle_exception(e, ep_context, "Failed to create membership")
 
 
-@router.get("/{membership_id}", response_model=s_club.Membership, tags=["Club - Membership"])
+@router.get("/{membership_id}", response_model=s_club.MembershipDetails, tags=["Club - Membership"])
 async def get_membership_v1(
     club_id: uuid.UUID,
     membership_id: uuid.UUID,
