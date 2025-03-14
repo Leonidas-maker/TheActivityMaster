@@ -255,6 +255,13 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
+        name="(membership)/SubscriberOverview"
+        options={{
+          presentation: "modal",
+          headerTitle: t("clubs_subscriber_overview_header"),
+        }}
+      />
+      <Stack.Screen
         name="(view)/ClubPage"
         options={{
           headerTitle: t("clubs_view_page_header"),
@@ -282,6 +289,12 @@ export default function OverviewLayout() {
         name="(view)/CoursePage"
         options={{
           headerTitle: t("clubs_course_page_header"),
+        }}
+      />
+      <Stack.Screen
+        name="(view)/BookingPage"
+        options={{
+          headerTitle: t("clubs_booking_page_header"),
         }}
       />
     </Stack>

@@ -24,5 +24,19 @@
     "imprint_btn": "Imprint",
     "terms_of_service_btn": "Terms of Service",
     "privacy_policy_btn": "Privacy Policy",
-    "licenses_btn": "Licenses"
+    "licenses_btn": "Licenses",
+    "support_heading": "Need help or have a question?",
+    "support_body": "Please write us an email at the address below and we will try to help you as soon as possible.",
+    "bugreport_heading": "Found a bug?",
+    "bugreport_body1": "Create an issue on GitLab so we can fix it.",
+    "bugreport_body2": "You can also try to fix the bug yourself since this app is an open source project!",
+    "bugreport_button": "Go to the GitLab Repository",
+    "imprint_heading": "Contact Information",
+    "imprint_subheading": "This app was developed as part of a research project at DHBW Mannheim.",
+    "imprint_developed_by": "Developed by:",
+    "imprint_email_label": "Email: ",
+    "licenses_icons_description": "Icons & Symbols used in the app: material-design-icons",
+    "licenses_uicons_description": "UI icons used in the bottom bar: Flaticon",
+    "responsible_disclosure_heading": "Did you find a security vulnerability in our app or server?",
+    "responsible_disclosure_body": "Please send us an email with all the relevant information to the address below, and we will get in touch with you as soon as possible."
 }

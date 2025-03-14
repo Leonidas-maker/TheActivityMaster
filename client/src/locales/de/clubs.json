@@ -305,5 +305,13 @@
     "occurrenceStatus.cancelled": "Abgesagt",
     "occurrence_start_time": "Start: ",
     "occurrence_end_time": "Ende: ",
-    "courseProgram": "Kursprogramm"
+    "courseProgram": "Kursprogramm",
+    "subscriberOverviewTitle": "Abonnenten Übersicht",
+    "noSubscribers": "Keine Abonnenten verfügbar",
+    "subscriberClickedMessageText1": "Keine weiteren Informationen",
+    "subscriberClickedMessageText2": "Weitere Informationen folgen in Kürze",
+    "subscriberOverview": "Abonnenten Übersicht",
+    "bookingTitle": "Buchung",
+    "price": "Preis: €{{value}}",
+    "buy": "Kaufen"
 }

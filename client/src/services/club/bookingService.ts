@@ -1,16 +1,18 @@
 import { axiosInstance } from "../api";
 
 export const createBooking = async (
-  club_id: string,
+  club_id: string | string[],
   program_ids?: string[],
   session_ids?: string[]
 ) => {
   try {
-    const requestBody = {
-      club_id,
-      program_ids: program_ids || [],
-      session_ids: session_ids || [],
-    };
+    const requestBody = [
+      {
+        club_id,
+        program_ids: program_ids || [],
+        session_ids: session_ids || [],
+      },
+    ];
 
     const response = await axiosInstance.post(`/clubs/book`, requestBody);
     return response.data;

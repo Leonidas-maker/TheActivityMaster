@@ -23,12 +23,21 @@ const ManageMembership = () => {
     navigatorTexts.push(t("membershipAccessOverview"));
     navigatorIcons.push("add-circle");
 
-    // Always add Update Membership option
+    // Always add Subscriber Overview option
     pressFunctions.push(() =>
-        router.navigate(`/(tabs)/clubs/(membership)/UpdateMembership?club_id=${club_id}&membership_id=${membership_id}`)
+        router.navigate(`/(tabs)/clubs/(membership)/SubscriberOverview?club_id=${club_id}&membership_id=${membership_id}`)
     );
-    navigatorTexts.push(t("updateMembership"));
-    navigatorIcons.push("edit");
+    navigatorTexts.push(t("subscriberOverview"));
+    navigatorIcons.push("subscriptions");
+
+    // Conditionally add Update Membership option if the permission is present
+    if (hasPermission("club_update_memberships")) {
+        pressFunctions.push(() =>
+            router.navigate(`/(tabs)/clubs/(membership)/UpdateMembership?club_id=${club_id}&membership_id=${membership_id}`)
+        );
+        navigatorTexts.push(t("updateMembership"));
+        navigatorIcons.push("edit");
+    }
 
     // Conditionally add Delete Membership option if the permission is present
     if (hasPermission("club_delete_memberships")) {

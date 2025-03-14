@@ -305,5 +305,13 @@
     "occurrenceStatus.cancelled": "Cancelled",
     "occurrence_start_time": "Occurrence Start Time",
     "occurrence_end_time": "Occurrence End Time",
-    "courseProgram": "Course Program"
+    "courseProgram": "Course Program",
+    "subscriberOverviewTitle": "Subscribers Overview",
+    "noSubscribers": "No subscribers available",
+    "subscriberClickedMessageText1": "No more informations",
+    "subscriberClickedMessageText2": "More informations coming soon",
+    "subscriberOverview": "Subscriber Overview",
+    "bookingTitle": "Booking",
+    "price": "Price: €{{value}}",
+    "buy": "Buy"
 }

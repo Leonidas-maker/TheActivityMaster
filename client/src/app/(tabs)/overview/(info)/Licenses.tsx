@@ -1,6 +1,7 @@
 // ~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~ //
 import React from "react";
 import { View, ScrollView, Text } from "react-native";
+import { useTranslation } from 'react-i18next';
 
 // Import the licenses.json file
 import creditsData from "@/public/json/licenses.json";
@@ -9,6 +10,8 @@ import creditsData from "@/public/json/licenses.json";
 // ====================== Component ===================== //
 // ====================================================== //
 const Licenses = () => {
+  const { t } = useTranslation("overview");
+  
     // ====================================================== //
     // ================== Return component ================== //
     // ====================================================== //
@@ -18,7 +21,7 @@ const Licenses = () => {
             <View>
                 <View className="m-2 p-2 bg-light_secondary dark:bg-dark_secondary rounded-xl shadow-[rgba(0,0,0,0.5)_0px_5px_4px_0px]">
                     <Text className="text-black dark:text-white">
-                        In der App verwendete Icons & Symbole: material-design-icons
+                        {t('licenses_icons_description')}
                     </Text>
                     <Text className="text-black dark:text-white">
                         License Type: Apache-2.0
@@ -33,7 +36,7 @@ const Licenses = () => {
                 </View>
                 <View className="m-2 p-2 bg-light_secondary dark:bg-dark_secondary rounded-xl shadow-[rgba(0,0,0,0.5)_0px_5px_4px_0px]">
                     <Text className="text-black dark:text-white">
-                        Verwendete UIcons in der unteren Leiste: Flaticon
+                        {t('licenses_uicons_description')}
                     </Text>
                     <Text className="text-black dark:text-white">
                         Link: https://www.flaticon.com

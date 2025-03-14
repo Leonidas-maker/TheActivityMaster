@@ -68,6 +68,12 @@ export default function SearchLayout() {
           headerTitle: t("clubs_course_page_header"),
         }}
       />
+      <Stack.Screen
+        name="(view)/BookingPage"
+        options={{
+          headerTitle: t("clubs_booking_page_header"),
+        }}
+      />
     </Stack>
   );
 }

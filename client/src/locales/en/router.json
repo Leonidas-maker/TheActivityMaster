@@ -72,5 +72,14 @@
     "clubs_membership_page_header": "Membership Details",
     "clubs_program_page_header": "Program Details",
     "clubs_event_page_header": "Event Details",
-    "clubs_course_page_header": "Course Details"
+    "clubs_course_page_header": "Course Details",
+    "bug_report_header": "Bug Report",
+    "responsible_disclosure_header": "Responsible Disclosure",
+    "support_header": "Support",
+    "imprint_header": "Imprint",
+    "terms_of_service_header": "Terms of Service",
+    "licenses_header": "Licenses",
+    "clubs_subscriber_overview_header": "Subscriber Overview",
+    "clubs_booking_page_header": "Booking",
+    "manage_subscription_header": "Manage Subscription"
 }

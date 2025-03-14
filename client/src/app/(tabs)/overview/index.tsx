@@ -101,10 +101,6 @@ const OverviewHome: React.FC = () => {
   // ====================================================== //
   // ================== BillingNavigator ================== //
   // ====================================================== //
-  const handleHistoryPress = () => {
-    router.navigate("/(tabs)/overview/(billing)/BillingHistory");
-  };
-
   const handleSubscriptionPress = () => {
     router.navigate("/(tabs)/overview/(billing)/BillingSubscription");
   };
@@ -115,11 +111,11 @@ const OverviewHome: React.FC = () => {
 
   const billingTitle = t("pageNavigator_title3");
 
-  const onPressBillingFunctions = [handleSubscriptionPress, handleBookedPress, handleHistoryPress];
+  const onPressBillingFunctions = [handleSubscriptionPress, handleBookedPress];
 
-  const billingTexts = [t("billing_subscription_btn"), t("billing_booked_btn"), t("billing_history_btn")];
+  const billingTexts = [t("billing_subscription_btn"), t("billing_booked_btn")];
 
-  const billingIconNames = ["payments", "shopping-bag", "receipt-long"];
+  const billingIconNames = ["payments", "shopping-bag"];
 
   // ====================================================== //
   // ==================== DevNavigator ==================== //

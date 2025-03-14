@@ -24,5 +24,19 @@
     "imprint_btn": "Impressum",
     "terms_of_service_btn": "Nutzungsbedingungen",
     "privacy_policy_btn": "Datenschutzerklärung",
-    "licenses_btn": "Lizenzen"
+    "licenses_btn": "Lizenzen",
+    "support_heading": "Du benötigst Hilfe oder hast eine Frage?",
+    "support_body": "Schreib uns bitte eine E-Mail an die unten stehende Adresse und wir werden versuchen dir so schnell wie möglich weiterzuhelfen.",
+    "bugreport_heading": "Du hast einen Fehler gefunden?",
+    "bugreport_body1": "Erstelle ein Issue auf GitLab damit wir diesen beheben können.",
+    "bugreport_body2": "Gerne kannst du auch selber versuchen den Fehler zu beheben, da diese App ein Open Source Projekt ist!",
+    "bugreport_button": "Zum GitLab Repository",
+    "imprint_heading": "Kontaktinformationen",
+    "imprint_subheading": "Die App ist im Rahmen einer Studienarbeit der DHBW Mannheim entstanden.",
+    "imprint_developed_by": "Unter anderem entwickelt von:",
+    "imprint_email_label": "E-Mail: ",
+    "licenses_icons_description": "In der App verwendete Icons & Symbole: material-design-icons",
+    "licenses_uicons_description": "Verwendete UIcons in der unteren Leiste: Flaticon",
+    "responsible_disclosure_heading": "Du hast eine Sicherheitslücke in unserer App oder unserem Server gefunden?",
+    "responsible_disclosure_body": "Schreib uns bitte eine E-Mail an die unten stehende Adresse mit allen relevanten Informationen und wir werden so schnell wie möglich mit dir in Kontakt treten."
 }

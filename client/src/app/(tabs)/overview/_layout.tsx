@@ -157,9 +157,10 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
-        name="(billing)/BillingHistory"
+        name="(billing)/ManageSubscription"
         options={{
-          headerTitle: t("billing_history_header"),
+          presentation: "modal",
+          headerTitle: t("manage_subscription_header"),
         }}
       />
       <Stack.Screen

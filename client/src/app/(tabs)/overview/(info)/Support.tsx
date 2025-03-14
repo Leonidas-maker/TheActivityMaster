@@ -1,6 +1,7 @@
 // ~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~ //
 import React from "react";
 import { View, ScrollView, Linking } from "react-native";
+import { useTranslation } from 'react-i18next';
 
 // ~~~~~~~~ Own components imports ~~~~~~~ //
 import TextButton from "@/src/components/buttons/TextButton";
@@ -11,6 +12,8 @@ import DefaultText from "@/src/components/textFields/DefaultText";
 // ====================== Component ===================== //
 // ====================================================== //
 const Support = () => {
+  const { t } = useTranslation("overview");
+
   // ====================================================== //
   // =================== Press handlers =================== //
   // ====================================================== //
@@ -25,11 +28,11 @@ const Support = () => {
     <ScrollView className="h-screen bg-light_primary dark:bg-dark_primary">
       <View className="px-5 py-5">
         <View className="mb-5">
-          <Heading text="Du benötigst Hilfe oder hast eine Frage?" />
+          <Heading text={t('support_heading')} />
         </View>
         <View className="flex-1 m-5">
           <View className="mb-3">
-            <DefaultText text="Schreib uns bitte eine E-Mail an die unten stehende Adresse und wir werden versuchen dir so schnell wie möglich weiterzuhelfen." />
+            <DefaultText text={t('support_body')} />
           </View>
           <TextButton
             text="support@theactivitymaster.de"

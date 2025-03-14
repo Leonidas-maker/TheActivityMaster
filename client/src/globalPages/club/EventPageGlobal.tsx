@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { ScrollView, View, ActivityIndicator, Dimensions, TouchableOpacity, useColorScheme } from "react-native";
+import { ScrollView, View, ActivityIndicator, Dimensions, TouchableOpacity, useColorScheme, Text } from "react-native";
 import Carousel, { ICarouselInstance, Pagination } from "react-native-reanimated-carousel";
 import { useSharedValue } from "react-native-reanimated";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -11,8 +11,8 @@ import { getProgram } from "@/src/services/club/programService";
 import { getSessions } from "@/src/services/club/programSessionService";
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
+import { getUserSessions } from "@/src/services/user/userService";
 
-// Define interfaces similar to ProgramPageGlobal
 interface Session {
   session_type: string;
   capacity: number;
@@ -65,6 +65,8 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
   const [programData, setProgramData] = useState<ProgramResponse | null>(null);
   const [loadingSession, setLoadingSession] = useState<boolean>(true);
   const [loadingProgram, setLoadingProgram] = useState<boolean>(true);
+  const [userSessions, setUserSessions] = useState<any[]>([]);
+  const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
 
   // Shared value and ref for program carousel
   const progressProgram = useSharedValue(0);
@@ -149,6 +151,16 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
       .finally(() => setLoadingProgram(false));
   }, [club_id, program_id, t]);
 
+  useEffect(() => {
+    getUserSessions()
+      .then((data) => setUserSessions(data))
+      .catch((error) => {
+        console.error("Error fetching user sessions", error);
+      });
+  }, []);
+
+  const alreadyBooked = sessionData ? userSessions.some((course: any) => course.sessions.some((s: any) => s.id === sessionData.id)) : false;
+
   // Handler for navigating to program details when clicking on carousel item
   const handleProgramPress = () => {
     // @ts-ignore
@@ -157,7 +169,9 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
 
   return (
     <>
-      <ScrollView className="bg-light_primary dark:bg-dark_primary">
+      <ScrollView
+        className="bg-light_primary dark:bg-dark_primary"
+      >
         <View className="p-4">
           {/* Program Picture Placeholder */}
           <View className="w-full h-52 bg-gray-300 dark:bg-gray-700 justify-center items-center mb-4 rounded-xl">
@@ -239,6 +253,19 @@ const EventPageGlobal = ({ club_id, program_id, session_id, pricing_model, route
             </View>
           )}
         </View>
+{ programData && programData.pricing_model === "per_session" && sessionData && (
+  <TouchableOpacity
+    onPress={() => { if (!alreadyBooked) router.navigate('/'); }}
+    disabled={alreadyBooked}
+    className={`mx-4 my-4 p-4 rounded-xl items-center justify-center ${
+      alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')
+    }`}
+  >
+    <Text className={alreadyBooked ? 'text-gray-600' : (colorScheme === 'dark' ? 'text-black' : 'text-white')}>
+      {alreadyBooked ? 'Already booked' : `Book for €${(sessionData.price / 100).toFixed(2)}`}
+    </Text>
+  </TouchableOpacity>
+)}
       </ScrollView>
       <DefaultToast />
     </>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { ScrollView, View, ActivityIndicator, Dimensions, TouchableOpacity, useColorScheme } from "react-native";
+import { ScrollView, View, ActivityIndicator, Dimensions, TouchableOpacity, useColorScheme, Text } from "react-native";
 import Carousel, { ICarouselInstance, Pagination } from "react-native-reanimated-carousel";
 import { useSharedValue } from "react-native-reanimated";
 import DefaultText from "@/src/components/textFields/DefaultText";
@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 // Import the services
 import { getProgram } from "@/src/services/club/programService";
 import { getMembership } from "@/src/services/club/membershipService";
+import { getUserSessions } from "@/src/services/user/userService";
 
 import Toast from "react-native-toast-message";
 import DefaultToast from "@/src/components/defaultToast/DefaultToast";
@@ -75,6 +76,7 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
   const [membershipDetails, setMembershipDetails] = useState<MembershipResponse[]>([]);
   const [loadingProgram, setLoadingProgram] = useState<boolean>(true);
   const [loadingMemberships, setLoadingMemberships] = useState<boolean>(false);
+  const [userSessions, setUserSessions] = useState<any[]>([]);
   const [isLight, setIsLight] = useState(false);
   const colorScheme = useColorScheme();
   useEffect(() => {
@@ -107,6 +109,16 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + "...";
   };
+
+  useEffect(() => {
+    getUserSessions()
+      .then((data) => setUserSessions(data))
+      .catch((error) => {
+        console.error("Error fetching user sessions", error);
+      });
+  }, []);
+
+  const alreadyBooked = programData ? userSessions.some((p: any) => p.id === programData.id) : false;
 
   useEffect(() => {
     // Fetch program details
@@ -389,6 +401,20 @@ const ProgramPageGlobal = ({ club_id, program_id, route_name }: { club_id: strin
             </View>
           ) : null}
         </View>
+        {programData && programData.pricing_model === "package" && (
+          <TouchableOpacity
+           // @ts-ignore
+           onPress={() => { if (!alreadyBooked) router.navigate(`/(tabs)/${route_name}/(view)/BookingPage?club_id=${club_id}&program_id=${programData.id}&price=${programData.price}&name=${programData.name}`); 
+           }}
+            disabled={alreadyBooked}
+            className={`mx-4 my-4 p-4 rounded-xl items-center justify-center ${alreadyBooked ? 'bg-gray-400' : (colorScheme === 'dark' ? 'bg-white' : 'bg-black')
+              }`}
+          >
+            <Text className={alreadyBooked ? 'text-gray-600' : (colorScheme === 'dark' ? 'text-black' : 'text-white')}>
+              {alreadyBooked ? 'Already booked' : `Book for €${(programData.price / 100).toFixed(2)}`}
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
       <DefaultToast />
     </>
