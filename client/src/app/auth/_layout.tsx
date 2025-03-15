@@ -33,6 +33,7 @@ export default function AuthLayout() {
                 navigation.goBack();
             }
         } else {
+            // @ts-ignore
             router.push("/(tabs)");
         }
     };
