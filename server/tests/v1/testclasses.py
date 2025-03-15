@@ -345,7 +345,7 @@ class Club:
         self.name = f"Test Club {timestamp} {os.urandom(4).hex()}"
         self.description = f"Test Club {timestamp} Description"
         self.address = {
-            "street": "123 Test St",
+            "street": "123 Test Street",
             "city": "Test City",
             "state": "TS",
             "postal_code": "12345",
@@ -720,6 +720,7 @@ class Program:
         elif price_model == PriceType.PER_SESSION and (price or capacity):
             warnings.warn("Setting price or capacity should be None for per session programm")
 
+        self.status = ProgramStatusPublic.DRAFT
         self.price = price
         self.currency = currency
         self.capacity = capacity
@@ -747,6 +748,7 @@ class Program:
             json={
                 "name": self.name,
                 "description": self.description,
+                "status": self.status.value,
                 "pricing_model": self.price_model.value,
                 "price": self.price,
                 "currency": self.currency,
@@ -1446,6 +1448,7 @@ def get_random_programs(club: Club, count: int = 2, max_sessions: Optional[int] 
             price,
             capacity,
             random.randint(4, max_sessions) if max_sessions else None,
+            membership_required=random.choice([True, False]),
         )
         programs.append(program)
     return programs

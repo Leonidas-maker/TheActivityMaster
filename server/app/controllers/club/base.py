@@ -39,7 +39,10 @@ async def create_club(
     if await club_crud.club_exists(db, club_create.name):
         raise HTTPException(status_code=400, detail="Club name already exists")
 
-    club = await club_crud.create_club(db, user_id, club_create)
+    try:
+        club = await club_crud.create_club(db, user_id, club_create)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     audit_log.club_created(user_id, club.id)
 

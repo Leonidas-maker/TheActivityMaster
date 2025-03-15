@@ -13,9 +13,8 @@ import random
 from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-EMAIL_CODE_PATTERN = re.compile(r"Email code:\s*(\d+)")
+EMAIL_CODE_PATTERN = re.compile(r"Email Code:\s*(\d+)")
 VERIFY_TOKEN_PATTERN = re.compile(r"user_id=([\w-]+)&expires=(\d+)&signature=([\w-]+)")
-
 
 def get_verify_token(text: str, user_id: Optional[str] = None):
     # Search for the pattern in captured output
@@ -40,9 +39,13 @@ def get_verify_token(text: str, user_id: Optional[str] = None):
         return urlencode({"user_id": user_id, "expires": expires, "signature": signature})
 
 
-def get_email_code(text: str):
+def get_email_code(text: str, user_id: Optional[str] = None):
     # Search for the pattern in captured output
-    match = re.search(EMAIL_CODE_PATTERN, text)
+
+    if user_id is not None:
+        match = re.search(rf"UserID: {user_id},\s*Email Code:\s*(\d+)", text)
+    else:
+        match = re.search(EMAIL_CODE_PATTERN, text)
     if not match:
         raise ValueError("Email code not found in captured output")
 
@@ -70,7 +73,30 @@ import requests
 from urllib.parse import urljoin
 from requests import Session
 from server.tests.v1 import testclasses
+from faker.providers import BaseProvider
 
+import json
+from faker import Faker
+from faker.providers import BaseProvider
+
+class ProgramProvider(BaseProvider):
+    def __init__(self, generator, data):
+        super().__init__(generator)
+        self.adjectives = data.get("adjectives", [])
+        self.subjects = data.get("subjects", [])
+
+    def program_name(self):
+        adjective = self.random_element(self.adjectives)
+        subject = self.random_element(self.subjects)
+        return f"{adjective} {subject}"
+
+# JSON-Daten einlesen
+with open("start_data", "r", encoding="utf-8") as f:
+    start_data = json.load(f)
+
+console = Console()
+faker = Faker()
+faker.add_provider(ProgramProvider(faker, start_data["program"]))
 
 class DockerLogStreamer:
     def __init__(self, server_dir, service_name="backend", encoding="utf-8", errors="replace"):
@@ -126,7 +152,7 @@ class DockerLogStreamer:
 
     def get_all_logs(self):
         """Returns all log lines that have occurred since the log streaming process started."""
-        time.sleep(0.1)
+        time.sleep(0.04)
         with self.lock:
             return "".join(self.all_logs)
 
@@ -146,7 +172,7 @@ class DockerLogStreamer:
 
         :return: A string that contains all newly added log lines.
         """
-        time.sleep(0.1)
+        time.sleep(0.04)
         with self.lock:
             new_logs = "".join(self.buffer)
             self.buffer = []
@@ -159,6 +185,60 @@ class DockerLogStreamer:
             self.thread.join()
 
 
+class TestUser(testclasses.TestUser):
+    def __init__(self, client, log_thread: DockerLogStreamer):
+        super().__init__(client)
+        self.log_thread = log_thread
+
+    def login_email(self):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            headers={"application-id": self.application_id},
+            json={"ident": self.email, "password": self.password},
+        )
+        if response.status_code != 200:
+            raise ValueError(f"Login failed: {response.json()}")
+        security_token = response.json()["security_token"]
+
+        logs = self.log_thread.get_all_logs()  # type: ignore
+        email_code = get_email_code(logs, self.user_id)
+        response = self.client.post(
+            "/api/v1/auth/verify-code-2fa",
+            headers={"application-id": self.application_id, "Authorization": f"Bearer {security_token}"},
+            json={"code": email_code, "is_totp": False},
+        )
+        if response.status_code != 200:
+            raise ValueError(f"Email verification failed: {response.json()}")
+        self.tokens = response.json()
+
+
+class AdminUser(testclasses.AdminUser):
+    def __init__(self, client, log_thread: DockerLogStreamer):
+        super().__init__(client)
+        self.log_thread = log_thread
+
+    def login_email(self):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            headers={"application-id": self.application_id},
+            json={"ident": self.email, "password": self.password},
+        )
+        if response.status_code != 200:
+            raise ValueError(f"Login failed: {response.json()}")
+        security_token = response.json()["security_token"]
+
+        logs = self.log_thread.get_all_logs()  # type: ignore
+        email_code = get_email_code(logs, self.user_id)
+        response = self.client.post(
+            "/api/v1/auth/verify-code-2fa",
+            headers={"application-id": self.application_id, "Authorization": f"Bearer {security_token}"},
+            json={"code": email_code, "is_totp": False},
+        )
+        if response.status_code != 200:
+            raise ValueError(f"Email verification failed: {response.json()}")
+        self.tokens = response.json()
+
+
 class LiveServerSession(Session):
     def __init__(self, base_url=None):
         super().__init__()
@@ -169,30 +249,7 @@ class LiveServerSession(Session):
         return super().request(method, joined_url, *args, **kwargs)
 
 
-def login_user(client, user: testclasses.TestUser, log_streamer: DockerLogStreamer):
-    response = client.post(
-        "/api/v1/auth/login",
-        headers={"application-id": user.application_id},
-        json={"ident": user.email, "password": user.password},
-    )
-    if response.status_code != 200:
-        raise ValueError(f"Login failed: {response.json()}")
-    security_token = response.json()["security_token"]
 
-    logs = log_streamer.get_new_logs()
-    email_code = get_email_code(logs)
-    response = client.post(
-        "/api/v1/auth/verify-code-2fa",
-        headers={"application-id": user.application_id, "Authorization": f"Bearer {security_token}"},
-        json={"code": email_code, "is_totp": False},
-    )
-    if response.status_code != 200:
-        raise ValueError(f"Email verification failed: {response.json()}")
-    user.tokens = response.json()
-
-
-console = Console()
-faker = Faker()
 
 
 def check_prerequisites():
@@ -234,6 +291,15 @@ def start_docker_stack(server_dir):
     except Exception as e:
         console.print(f"[bold red]Error starting Docker stack: {e}[/bold red]")
         sys.exit(1)
+
+
+def restart_docker_stack(server_dir):
+    console.print("Restarting Docker stack...")
+    try:
+        subprocess.run(["docker-compose", "restart"], check=True, cwd=server_dir)
+        console.print("[bold green]Docker stack restarted successfully.[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]Error restarting Docker stack: {e}[/bold red]")
 
 
 def stop_docker_stack(server_dir):
@@ -283,12 +349,12 @@ def create_users(
     client = LiveServerSession("http://localhost:8001")
     users = []
     for _ in range(total_users):
-        user = testclasses.TestUser(client)  # type: ignore
+        user = TestUser(client, log_thread)  # type: ignore
         user.first_name = faker.first_name()
         user.last_name = faker.last_name()
         user.password = faker.password(length=12)
         email_sufix = faker.free_email_domain()
-        unique_word = random.randint(1000, 9999)
+        unique_word = os.urandom(4).hex()
 
         user.email = random.choice(
             [
@@ -311,38 +377,119 @@ def create_users(
         progress.advance(task)
     return users
 
-def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser):
+
+def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser, progress: Progress, task) -> None:
     for user in users:
         user.submit_identity_verification()
-        admin.verify_identity(user.user_id) # type: ignore
+        admin.verify_identity(user.user_id)  # type: ignore
+        progress.advance(task)
 
+
+def create_clubs(
+    club_owners: List[testclasses.TestUser],
+    employees: List[testclasses.TestUser],
+    admin: testclasses.AdminUser,
+    progress: Progress,
+    task,
+) -> List[testclasses.Club]:
+    clubs = []
+    for club_owner in club_owners:
+        club = testclasses.Club(club_owner)
+        club.name = f"{faker.company()} Club {faker.random_lowercase_letter()}"
+        club.description = faker.text(max_nb_chars=50)
+        club.address = {
+            "street": faker.street_address(),
+            "city": faker.city(),
+            "state": faker.state(),
+            "postal_code": faker.zipcode(),
+            "country": random.choice(["Germany", "France", "Italy", "Spain", "United Kingdom", "United States"]),
+        }
+        try:
+            try:
+                club.create()
+            except Exception:
+                time.sleep(1)
+                club.create()
+        except Exception:
+            console.print(f"[bold red]Error creating club: {club.name}[/bold red]")
+            continue
+
+        club.refresh_roles()
+
+        admin.put(
+            f"/api/v1/clubs/{club.club_id}/stripe",
+            json={"stripe_account_id": f"acct_{os.urandom(16).hex()}"},
+        )
+
+        club_employees = employees[:3]
+        for employee in club_employees:
+            club_role = None
+            while True:
+                club_role = random.choice(club.roles)
+                if club_role.name != "Owner":
+                    break
+
+            club_employee = testclasses.Employee(employee.email, club, club_role, employee)
+            club_employee.create()
+            club.employees.append(club_employee)
+
+        progress.advance(task)
+        clubs.append(club)
+    return clubs
+
+
+def create_programs(
+    clubs: List[testclasses.Club], max_programs: int, admin: testclasses.AdminUser, progress: Progress, task
+):
+    print("Creating programs...")
+    for club in clubs:
+       
+        count = random.randint(1, max_programs)
+        rand_programs = testclasses.get_random_programs(club, count, 20)
+        for program in rand_programs:
+            try:
+                program.name = f"{faker.program_name()} - {faker.random_lowercase_letter()}"
+                program.status = random.choice([testclasses.ProgramStatusPublic.ACTIVE, testclasses.ProgramStatusPublic.DRAFT])
+                
+                program.description = faker.text(max_nb_chars=50)
+                program.create()
+                progress.advance(task)
+            except Exception as e:
+                console.print(f"[bold red]Error creating program[/bold red] {e}")
+                continue
+        club.refresh_programs()
 
 
 def create_test_data(server_dir):
-    TOTAL_USERS = 100
-    TOTAL_CLUBS = 5
+    TOTAL_USERS = 50
+    TOTAL_CLUBS = 10
     TOTAL_PROGRAMS_PER_CLUB = 5
     MAX_PROGRAMS_PER_CLUB = 5
     TOTAL_MEMBERSHIPS = 3
-    MAX_PROGRAMS_PER_MEMBERSHIP = 3  #
     THREADS = 10
 
-    # if TOTAL_CLUBS * 3 > TOTAL_USERS:
-    #     console.print("[bold red]Error: Not enough users to assign to clubs.[/bold red]")
-    #     sys.exit(1)
+    if TOTAL_CLUBS * 4 > TOTAL_USERS:
+        console.print("[bold red]Error: Not enough users to assign to clubs.[/bold red]")
+        sys.exit(1)
 
     console.print("[bold]Starting Backend Log Stream...[/bold]")
     log_thread = DockerLogStreamer(server_dir)
     log_thread.start()
     time.sleep(1)
-    progress = Progress(SpinnerColumn(), "[progress.description]{task.description}", BarColumn(), TimeElapsedColumn(), console=console)
+    progress = Progress(
+        SpinnerColumn(),
+        "[progress.description]{task.description}",
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        console=console,
+    )
     progress.start()
 
-    console.print("[bold]Creating test data through simulated API calls...[/bold]")
+    console.print("[bold]Creating test data...[/bold]")
     request_client = LiveServerSession("http://localhost:8001")
 
-    admin = testclasses.AdminUser(request_client)  # type: ignore
-
+    admin = AdminUser(request_client, log_thread)
 
     # ======================================================== #
     # ========================= Users ======================== #
@@ -350,71 +497,98 @@ def create_test_data(server_dir):
     task_users = progress.add_task("Creating users...", total=TOTAL_USERS)
     users: List[testclasses.TestUser] = []
 
-    user_batch_size = TOTAL_USERS // THREADS
+    num_threads = min(THREADS, TOTAL_USERS)
+    user_batch_size = TOTAL_USERS // num_threads
     # Create separate progress tasks for each thread
     batches = []
-    for i in range(THREADS):
+    for i in range(num_threads):
         batches.append((log_thread, progress, task_users, user_batch_size))
 
     users = []
-    with ThreadPoolExecutor(max_workers=THREADS) as executor:
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(create_users, *batch) for batch in batches]
         for future in as_completed(futures):
             users.extend(future.result())
 
-    progress.update(task_users, description="Users created.")
+    progress.update(task_users, description="Users created.", completed=TOTAL_USERS)
+    progress.stop_task(task_users)
 
-    verified_users = users[: TOTAL_CLUBS * 3]
-    unverified_users = users[TOTAL_CLUBS * 3 :]
+    verified_users = users[: TOTAL_CLUBS * 4]
+    unverified_users = users[TOTAL_CLUBS * 4 :]
 
     log_thread.clear_all_logs()
 
-    login_user(request_client, admin, log_thread)
-
-    
+    admin.login_email()
     # ======================================================== #
     # ================= IdentityVerification ================= #
     # ======================================================== #
+    task_verify = progress.add_task("Verifying users...", total=len(verified_users))
+    num_threads = min(THREADS, len(verified_users))
+    batch_size = len(verified_users) // num_threads
+    batches = []
+    for i in range(num_threads):
+        batches.append((verified_users[i * batch_size : (i + 1) * batch_size], admin, progress, task_verify))
 
-    task_verify = progress.add_task("Verifying users...", total=TOTAL_CLUBS * 3)
-    for user in verified_users:
-        login_user(request_client, user, log_thread)	
-        user.submit_identity_verification()
-        admin.verify_identity(user.user_id) # type: ignore
-        progress.advance(task_verify)
-    progress.update(task_verify, description="Users verified.")
-    sys.exit(0)
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(verify_users, *batch) for batch in batches]
+        for future in as_completed(futures):
+            pass
+    progress.update(task_verify, description="Users verified.", completed=len(verified_users))
+    progress.stop_task(task_verify)
 
+    # ======================================================== #
+    # ========================= Clubs ======================== #
+    # ======================================================== #
 
+    club_owners = verified_users[:TOTAL_CLUBS]
+    employees = verified_users[TOTAL_CLUBS : TOTAL_CLUBS * 2]
 
-
-
-    task_clubs = progress.add_task("Creating clubs...", total=5)
     clubs = []
-    for _ in range(5):
-        club_data = {"name": f"{faker.company()} Dance Club", "description": faker.catch_phrase()}
-        time.sleep(0.3)
-        progress.advance(task_clubs)
-        clubs.append(club_data)
-    progress.update(task_clubs, description="Clubs created.")
 
-    task_programs = progress.add_task("Creating programs...", total=5)
-    programs = []
-    for _ in range(5):
-        program_data = {"name": f"{faker.bs().title()} Course", "description": faker.text(max_nb_chars=50)}
-        time.sleep(0.3)
-        progress.advance(task_programs)
-        programs.append(program_data)
-    progress.update(task_programs, description="Programs created.")
+    task_clubs = progress.add_task("Creating clubs...", total=TOTAL_CLUBS)
 
-    task_memberships = progress.add_task("Creating memberships...", total=3)
-    memberships = []
-    for _ in range(3):
-        membership_data = {"name": f"{faker.catch_phrase()} Membership", "description": faker.text(max_nb_chars=50)}
-        time.sleep(0.3)
-        progress.advance(task_memberships)
-        memberships.append(membership_data)
-    progress.update(task_memberships, description="Memberships created.")
+    num_threads = min(THREADS, TOTAL_CLUBS)
+    club_batch_size = TOTAL_CLUBS // num_threads
+    batches = []
+    for i in range(num_threads):
+        batches.append(
+            (club_owners[i * club_batch_size : (i + 1) * club_batch_size], employees, admin, progress, task_clubs)
+        )
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(create_clubs, *batch) for batch in batches]
+        for future in as_completed(futures):
+            clubs.extend(future.result())
+
+    progress.update(task_clubs, description="Clubs created.", completed=TOTAL_CLUBS)
+    progress.stop_task(task_clubs)
+
+    # ======================================================== #
+    # ========================= Programs ===================== #
+    # ======================================================== #
+    task_programs = progress.add_task("Creating programs...", total=TOTAL_CLUBS * TOTAL_PROGRAMS_PER_CLUB)
+
+    num_threads = min(THREADS, TOTAL_CLUBS)
+    program_batch_size = TOTAL_CLUBS // num_threads
+    batches = []
+    for i in range(num_threads):
+        batches.append(
+            (
+                clubs[i * program_batch_size : (i + 1) * program_batch_size],
+                MAX_PROGRAMS_PER_CLUB,
+                admin,
+                progress,
+                task_programs,
+            )
+        )
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(create_programs, *batch) for batch in batches]
+        for future in as_completed(futures):
+            pass
+
+    progress.update(task_programs, description="Programs created.", completed=TOTAL_CLUBS * TOTAL_PROGRAMS_PER_CLUB)
+    progress.stop_task(task_programs)
     progress.stop()
 
     console.print("[bold green]Test data created successfully.[/bold green]")
@@ -494,6 +668,8 @@ def main():
                 time.sleep(1)
         console.print("[bold green]Backend is ready![/bold green]")
         create_test_data(server_dir)
+        time.sleep(1)
+        restart_docker_stack(server_dir)
     else:
         console.print("[bold green]Starting just backend and frontend...[/bold green]")
         start_docker_stack(server_dir)
