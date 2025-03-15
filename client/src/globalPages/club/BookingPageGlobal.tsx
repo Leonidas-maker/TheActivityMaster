@@ -62,7 +62,7 @@ const BookingPageGlobal = ({
                 }
 
                 // Call createBooking with both program_ids and session_ids
-                await createBooking(club_id, program_ids, session_ids);
+                await createBooking(program_ids, session_ids);
             }
             // Navigate to bookingInfo page on successful booking
             router.dismissAll();
