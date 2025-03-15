@@ -77,9 +77,7 @@ async def create_transaction(
                 split_transactions_db.append(
                     m_payment.SplitTransaction(
                         club_id=club_id,
-                        stripe_club_account_id=split_transaction_data["stripe_account_id"],
                         amount=split_transaction_data["total_amount"],
-                        currency=split_transaction_data["currency"],
                         transaction=transaction,
                         status=m_payment.TransactionStatus.PENDING,
                     )
@@ -114,7 +112,7 @@ async def create_transaction(
 
 
 async def add_transfer_id_to_split_transactions(
-    db: AsyncSession, transaction_id: uuid.UUID
+    db: AsyncSession, transaction_id: uuid.UUID, currency: str
 ) -> List[m_payment.SplitTransaction]:
     """Add transfer ID to split transactions
 
@@ -142,8 +140,8 @@ async def add_transfer_id_to_split_transactions(
         transfer = core_transactions.create_split_payment_transfer(
             transfer_group=transfer_group,
             total_amount=split_transaction.amount,
-            currency=split_transaction.currency,
-            stripe_club_account_id=split_transaction.stripe_club_account_id,
+            currency=currency,
+            stripe_club_account_id=split_transaction.club.stripe_account_id,
         )
         split_transaction.external_transfer_id = transfer.id
         split_transaction.status = m_payment.TransactionStatus.PENDING
@@ -253,6 +251,9 @@ async def create_refund(
             split_transaction = split_transactions[refund_club_id]
             if split_transaction.amount_refunded + refund_amount > split_transaction.amount:
                 raise ValueError("Refund amount exceeds split transaction amount")
+            
+            if not split_transaction.external_transfer_id:
+                raise ValueError("Transfer ID not found")
 
             club_reversals[refund_club_id] = core_transactions.create_reversal(
                 transfer_id=split_transaction.external_transfer_id,
@@ -334,7 +335,7 @@ async def check_pending_transactions(db: AsyncSession, console: Console) -> bool
                 transaction.status = m_payment.TransactionStatus.SUCCESS
                 transactions_succeeded += 1
                 if transaction.is_split_payment:
-                    await add_transfer_id_to_split_transactions(db, transaction_id)
+                    await add_transfer_id_to_split_transactions(db, transaction_id, transaction.currency)
                 for booking in transaction.bookings:
                     booking.status = m_payment.BookingStatus.CONFIRMED
             elif intent_status == "canceled":

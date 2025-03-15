@@ -45,6 +45,10 @@ class TestUser:
         self.totp_secret = None
         self.last_totp_code = None
 
+        # Bookings
+        self.booked_programs = []
+        self.booked_sessions = []
+
     # ======================================================== #
     # =================== GET Terminal AUTH ================== #
     # ======================================================== #
@@ -130,7 +134,7 @@ class TestUser:
         assert login_response is not None, "Login failed"
         assert login_response.status_code == status.HTTP_200_OK, login_response.json()
         security_token = login_response.json()["security_token"]
-            
+
         code = TestUser.__get_email_code(self.capsys)
 
         # Verify 2FA- Email
@@ -290,6 +294,16 @@ class TestUser:
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
         return response.json()
+
+    def book(self, program_ids: List[str]  = [], session_ids: List[str] = [], check_status=True):
+        response = self.post(
+            f"/api/v1/clubs/book",
+            json={"program_ids": program_ids, "session_ids": session_ids},
+            check_status=check_status,
+        )
+        self.booked_programs.extend(program_ids)
+        self.booked_sessions.extend(session_ids)
+        return response
 
 
 class AdminUser(TestUser):
@@ -469,24 +483,28 @@ class Club:
     # =================== Program Offerings ================== #
     # ======================================================== #
     def refresh_programs(self):
-        response = self.user.get(
-            f"/api/v1/clubs/{self.club_id}/programs",
-        )
-        assert response.status_code == status.HTTP_200_OK, response.json()
+        page = 1
         self.programs.clear()
-        for program in response.json():
-            program_obj = Program(
-                self,
-                program["name"],
-                program["description"],
-                PriceType(program["pricing_model"]),
-                program.get("price"),
-                program.get("capacity"),
-                session_count=0,
-                currency=program["currency"],
-            )
-            program_obj.program_id = program["id"]
-            self.programs.append(program_obj)
+        while True:
+            response = self.user.get(f"/api/v1/clubs/{self.club_id}/programs?page={page}&page_size=50")
+            if not response.json():
+                break
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            for program in response.json():
+                program_obj = Program(
+                    self,
+                    program["name"],
+                    program["description"],
+                    PriceType(program["pricing_model"]),
+                    program.get("price"),
+                    program.get("capacity"),
+                    session_count=0,
+                    currency=program["currency"],
+                )
+                program_obj.program_id = program["id"]
+                program_obj.refresh_sessions()
+                self.programs.append(program_obj)
+            page += 1
 
     def refresh_programs_details(self):
         response = self.user.get(
@@ -1044,8 +1062,6 @@ class Session:
             assert response.status_code == status.HTTP_200_OK, response.json()
         self.session_id = response.json()["id"]
 
-
-
     def get(self, check=True) -> bool:
         response = self.user.get(
             f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions",
@@ -1343,12 +1359,11 @@ class SessionCourse(Session):
             self.refresh_occurrences()
             occurence = self.occurences[occurence_id]
             assert occurence["status"] == "cancelled", f"Status mismatch {occurence['status']}"
-        return occurence_id # type: ignore
+        return occurence_id  # type: ignore
 
     def reinstate_occurrence(self, occurence_id: str) -> str:
         if not occurence_id:
             raise Exception("Occurence ID required for reinstating")
-            
 
         response = self.user.put(
             f"/api/v1/clubs/{self.program.club.club_id}/programs/{self.program.get_id()}/sessions/{self.get_id()}/occurrences/reinstate",
@@ -1448,7 +1463,7 @@ def get_random_programs(club: Club, count: int = 2, max_sessions: Optional[int] 
             price,
             capacity,
             random.randint(4, max_sessions) if max_sessions else None,
-            membership_required=random.choice([True, False]),
+            membership_required=False
         )
         programs.append(program)
     return programs

@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 EMAIL_CODE_PATTERN = re.compile(r"Email Code:\s*(\d+)")
 VERIFY_TOKEN_PATTERN = re.compile(r"user_id=([\w-]+)&expires=(\d+)&signature=([\w-]+)")
 
+
 def get_verify_token(text: str, user_id: Optional[str] = None):
     # Search for the pattern in captured output
     if user_id is None:
@@ -79,6 +80,7 @@ import json
 from faker import Faker
 from faker.providers import BaseProvider
 
+
 class ProgramProvider(BaseProvider):
     def __init__(self, generator, data):
         super().__init__(generator)
@@ -90,6 +92,7 @@ class ProgramProvider(BaseProvider):
         subject = self.random_element(self.subjects)
         return f"{adjective} {subject}"
 
+
 # JSON-Daten einlesen
 with open("start_data", "r", encoding="utf-8") as f:
     start_data = json.load(f)
@@ -97,6 +100,7 @@ with open("start_data", "r", encoding="utf-8") as f:
 console = Console()
 faker = Faker()
 faker.add_provider(ProgramProvider(faker, start_data["program"]))
+
 
 class DockerLogStreamer:
     def __init__(self, server_dir, service_name="backend", encoding="utf-8", errors="replace"):
@@ -249,9 +253,6 @@ class LiveServerSession(Session):
         return super().request(method, joined_url, *args, **kwargs)
 
 
-
-
-
 def check_prerequisites():
     console.print("[bold]Checking prerequisites...[/bold]")
     try:
@@ -286,6 +287,9 @@ def docker_cleanup(server_dir):
 def start_docker_stack(server_dir):
     console.print("Building Docker stack for the backend...")
     try:
+        console.print("Pulling Docker images...")
+        subprocess.run(["docker-compose", "pull"], check=True, cwd=server_dir)
+        console.print("Starting Docker stack...")
         subprocess.run(["docker-compose", "up", "-d", "--build"], check=True, cwd=server_dir)
         console.print("[bold green]Docker stack started successfully.[/bold green]")
     except Exception as e:
@@ -305,7 +309,7 @@ def restart_docker_stack(server_dir):
 def stop_docker_stack(server_dir):
     console.print("[bold red]Stopping Docker containers...[/bold red]")
     try:
-        subprocess.run(["docker-compose", "down"], check=True, cwd=server_dir)
+        subprocess.run(["docker-compose", "stop"], check=True, cwd=server_dir)
         console.print("[bold green]Docker stack stopped successfully.[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Error stopping Docker stack: {e}[/bold red]")
@@ -343,9 +347,7 @@ def open_new_terminal(command, cwd):
 ###########################################################################
 ################################# Testdata ################################
 ###########################################################################
-def create_users(
-    log_thread: DockerLogStreamer, progress: Progress, task, total_users: int
-) -> List[testclasses.TestUser]:
+def create_users(log_thread: DockerLogStreamer, progress: Progress, task, total_users: int) -> List[TestUser]:
     client = LiveServerSession("http://localhost:8001")
     users = []
     for _ in range(total_users):
@@ -378,11 +380,18 @@ def create_users(
     return users
 
 
-def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser, progress: Progress, task) -> None:
+def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser, progress: Progress, task) -> int:
+    count = 0
     for user in users:
         user.submit_identity_verification()
-        admin.verify_identity(user.user_id)  # type: ignore
+        try:
+            admin.verify_identity(user.user_id)  # type: ignore
+        except Exception as e:
+            admin.login_email()
+            admin.verify_identity(user.user_id)  # type: ignore
         progress.advance(task)
+        count += 1
+    return count
 
 
 def create_clubs(
@@ -439,37 +448,112 @@ def create_clubs(
 
 
 def create_programs(
-    clubs: List[testclasses.Club], max_programs: int, admin: testclasses.AdminUser, progress: Progress, task
+    clubs: List[testclasses.Club], min_programs: int, max_programs: int, max_sessions: int, progress: Progress, task
 ):
-    print("Creating programs...")
     for club in clubs:
-       
-        count = random.randint(1, max_programs)
-        rand_programs = testclasses.get_random_programs(club, count, 20)
-        for program in rand_programs:
+        program_count = random.randint(min_programs, max_programs)
+
+        rand_programs_active = testclasses.get_random_programs(club, (program_count // 2 + program_count % 2), random.randint(2, max_sessions))
+
+        for program in rand_programs_active:
             try:
                 program.name = f"{faker.program_name()} - {faker.random_lowercase_letter()}"
-                program.status = random.choice([testclasses.ProgramStatusPublic.ACTIVE, testclasses.ProgramStatusPublic.DRAFT])
-                
-                program.description = faker.text(max_nb_chars=50)
+                program.status = testclasses.ProgramStatusPublic.ACTIVE
+
+                desc = faker.text(max_nb_chars=100)
+                while len(desc) < 10:
+                    desc += " " + faker.text(max_nb_chars=20)
+
+                program.description = desc
                 program.create()
                 progress.advance(task)
             except Exception as e:
                 console.print(f"[bold red]Error creating program[/bold red] {e}")
                 continue
+
+        rand_programs_draft = testclasses.get_random_programs(club, program_count // 2, random.randint(2, max_sessions))
+        for program in rand_programs_draft:
+            try:
+                program.name = f"{faker.program_name()} - {faker.random_lowercase_letter()}"
+                program.status = testclasses.ProgramStatusPublic.DRAFT
+
+                desc = faker.text(max_nb_chars=20)
+                while len(desc) < 10:
+                    desc += " " + faker.text(max_nb_chars=5)
+
+                program.description = desc
+                program.create()
+                progress.advance(task)
+            except Exception as e:
+                console.print(f"[bold red]Error creating program[/bold red] {e}")
+                continue
+
         club.refresh_programs()
 
 
+def create_bookings(users: List[TestUser], clubs: List[testclasses.Club], max_bookings: int, progress: Progress, task):
+    programs_per_session = []
+    programs_package = []
+    for club in clubs:
+        for program in club.programs:
+            if program.status != testclasses.ProgramStatusPublic.ACTIVE:
+                continue
+            if program.price_model == testclasses.PriceType.PACKAGE:
+                programs_package.append(program)
+            else:
+                programs_per_session.extend(program.session_courses)
+                programs_per_session.extend(program.session_events)
+
+    random.shuffle(programs_per_session)
+    random.shuffle(programs_package)
+
+    if not programs_per_session:
+        console.print("[bold red]No session programs available for booking.[/bold red]")
+        return
+
+    if not programs_package:
+        console.print("[bold red]No package programs available for booking.[/bold red]")
+        return
+
+    count = 0
+    for user in users:
+        if count > max_bookings:
+            break
+        try:
+            sessions_to_book = random.sample(
+                programs_per_session, random.randint(1, min(10, len(programs_per_session)))
+            )
+            programs_to_book = random.sample(programs_package, random.randint(1, min(5, len(programs_package))))
+
+            user.book(
+                [program.program_id for program in programs_to_book],
+                [session.session_id for session in sessions_to_book],
+            )
+        except Exception as e:
+            continue
+        count += 1
+        progress.advance(task)
+
+    if count < max_bookings:
+        console.print("[bold yellow]Could not book for all users due backend.[/bold yellow]")
+
+
 def create_test_data(server_dir):
-    TOTAL_USERS = 50
-    TOTAL_CLUBS = 10
-    TOTAL_PROGRAMS_PER_CLUB = 5
-    MAX_PROGRAMS_PER_CLUB = 5
+    TOTAL_USERS = 200
+    TOTAL_CLUBS = 20
+    MIN_PROGRAMS_PER_CLUB = 20
+    MAX_PROGRAMS_PER_CLUB = 50
+    MAX_BOOKINGS = 20
+    MAX_SESSIONS_PER_PROGRAM = 20
     TOTAL_MEMBERSHIPS = 3
     THREADS = 10
 
     if TOTAL_CLUBS * 4 > TOTAL_USERS:
         console.print("[bold red]Error: Not enough users to assign to clubs.[/bold red]")
+        sys.exit(1)
+
+    if MAX_BOOKINGS > TOTAL_USERS:
+        console.print("[bold red]Error: Not enough users to create bookings.[/bold red]")
         sys.exit(1)
 
     console.print("[bold]Starting Backend Log Stream...[/bold]")
@@ -495,7 +579,7 @@ def create_test_data(server_dir):
     # ========================= Users ======================== #
     # ======================================================== #
     task_users = progress.add_task("Creating users...", total=TOTAL_USERS)
-    users: List[testclasses.TestUser] = []
+    users: List[TestUser] = []
 
     num_threads = min(THREADS, TOTAL_USERS)
     user_batch_size = TOTAL_USERS // num_threads
@@ -504,7 +588,6 @@ def create_test_data(server_dir):
     for i in range(num_threads):
         batches.append((log_thread, progress, task_users, user_batch_size))
 
-    users = []
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(create_users, *batch) for batch in batches]
         for future in as_completed(futures):
@@ -529,10 +612,20 @@ def create_test_data(server_dir):
     for i in range(num_threads):
         batches.append((verified_users[i * batch_size : (i + 1) * batch_size], admin, progress, task_verify))
 
+    count = 0
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(verify_users, *batch) for batch in batches]
         for future in as_completed(futures):
-            pass
+            count += future.result()
+
+    if count != len(verified_users):
+        console.print(f"[bold red]Error verifying user. Please rerun the script.[/bold red]")
+        purge_data = Prompt.ask("Do you want to purge the data?", choices=["yes", "no"], default="yes")
+        if purge_data == "yes":
+            docker_cleanup(server_dir)
+
+        sys.exit(1)
+
     progress.update(task_verify, description="Users verified.", completed=len(verified_users))
     progress.stop_task(task_verify)
 
@@ -566,7 +659,7 @@ def create_test_data(server_dir):
     # ======================================================== #
     # ========================= Programs ===================== #
     # ======================================================== #
-    task_programs = progress.add_task("Creating programs...", total=TOTAL_CLUBS * TOTAL_PROGRAMS_PER_CLUB)
+    task_programs = progress.add_task("Creating programs...", total=TOTAL_CLUBS * MAX_PROGRAMS_PER_CLUB)
 
     num_threads = min(THREADS, TOTAL_CLUBS)
     program_batch_size = TOTAL_CLUBS // num_threads
@@ -575,8 +668,9 @@ def create_test_data(server_dir):
         batches.append(
             (
                 clubs[i * program_batch_size : (i + 1) * program_batch_size],
+                MIN_PROGRAMS_PER_CLUB,
                 MAX_PROGRAMS_PER_CLUB,
-                admin,
+                MAX_SESSIONS_PER_PROGRAM,
                 progress,
                 task_programs,
             )
@@ -587,7 +681,29 @@ def create_test_data(server_dir):
         for future in as_completed(futures):
             pass
 
-    progress.update(task_programs, description="Programs created.", completed=TOTAL_CLUBS * TOTAL_PROGRAMS_PER_CLUB)
+    progress.update(task_programs, description="Programs created.", completed=TOTAL_CLUBS * MAX_PROGRAMS_PER_CLUB)
+
+    # ======================================================== #
+    # ======================= Bookings ======================= #
+    # ======================================================== #
+    task_bookings = progress.add_task("Creating bookings...", total=len(unverified_users))
+
+    num_threads = min(THREADS, MAX_BOOKINGS)
+    user_batch_size = len(unverified_users) // num_threads
+    batches = []
+
+    users_for_booking = unverified_users + random.sample(verified_users, max(MAX_BOOKINGS - len(unverified_users), 0))
+
+    for i in range(num_threads):
+        batches.append((users_for_booking[i * user_batch_size : (i + 1) * user_batch_size], clubs, MAX_BOOKINGS // num_threads, progress, task_bookings))
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(create_bookings, *batch) for batch in batches]
+        for future in as_completed(futures):
+            pass
+
+    progress.update(task_bookings, description="Bookings created.", completed=len(unverified_users))
+
     progress.stop_task(task_programs)
     progress.stop()
 
@@ -653,13 +769,15 @@ def main():
 
     # If starting the environment:
     mode = Prompt.ask(
-        "Choose deployment mode (full = full deployment, start = just start services)",
-        choices=["full", "start"],
-        default="full",
+        "Choose deployment mode (full = full deployment, start = just start services, prepare = setup test environment)",
+        choices=["full", "start", "prepare"],
+        default="prepare",
     )
-    expo_platform = Prompt.ask("Choose Expo platform", choices=["android", "ios"], default="android")
+    expo_platform = None
+    if mode != "prepare":
+        expo_platform = Prompt.ask("Choose Expo platform", choices=["android", "ios"], default="android")
 
-    if mode == "full":
+    if mode == "full" or mode == "prepare":
         console.print("[bold green]Starting full deployment...[/bold green]")
         start_docker_stack(server_dir)
 
@@ -669,11 +787,16 @@ def main():
         console.print("[bold green]Backend is ready![/bold green]")
         create_test_data(server_dir)
         time.sleep(1)
-        restart_docker_stack(server_dir)
+        if mode == "full":
+            restart_docker_stack(server_dir)
     else:
         console.print("[bold green]Starting just backend and frontend...[/bold green]")
         start_docker_stack(server_dir)
 
+    if mode == "prepare":
+        # stop_docker_stack(server_dir)
+        console.print("[bold green]Test environment setup complete.[/bold green]")
+        sys.exit(0)
     start_backend_logs(server_dir)
     start_frontend(client_dir, expo_platform)
 

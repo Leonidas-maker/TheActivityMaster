@@ -225,7 +225,7 @@ async def get_my_club_permissions_v1(
 ###########################################################################
 @router.post("/book", tags=["Club - Booking"], response_model=s_payment.BookingsCreateResponse)
 async def create_booking_v1(
-    booking_create: List[s_payment.BookingCreateRequest],
+    booking_create: s_payment.BookingCreateRequest,
     ep_context: EndpointContext = Depends(get_endpoint_context),
     token_details: core_security.TokenDetails = Depends(auth_middleware.AccessTokenChecker()),
 ):

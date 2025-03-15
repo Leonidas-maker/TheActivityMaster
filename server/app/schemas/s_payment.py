@@ -144,11 +144,9 @@ class BookingCreateRequest(BaseModel):
     Request model for creating bookings.
 
     Fields:
-      - club_id: The UUID of the club for which the booking is made.
       - program_ids: A list of program UUIDs (max 5 allowed) for which bookings are being made.
       - session_ids: A list of session UUIDs (max 10 allowed) for which bookings are being made.
     """
-    club_id: uuid.UUID = Field(..., description="The ID of the club for which the booking was made.")
     program_ids: List[uuid.UUID] = Field(
         ..., max_length=5, description="The IDs of the programs for which the booking was made."
     )

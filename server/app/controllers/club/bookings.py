@@ -76,7 +76,7 @@ def add_to_transaction_data(
 async def create_bookings(
     ep_context: EndpointContext,
     token_details: core_security.TokenDetails,
-    booking_create_request: List[s_payment.BookingCreateRequest],
+    booking_create: s_payment.BookingCreateRequest,
 ) -> Tuple[List[s_payment.Booking], Optional[stripe.PaymentIntent]]:
     audit_log = ep_context.audit_logger
     db = ep_context.db
@@ -87,25 +87,25 @@ async def create_bookings(
     programs_to_book: List[m_club.Program] = []
     all_session_ids: List[uuid.UUID] = []
 
-    for booking_create in booking_create_request:
-        if booking_create.session_ids:
-            sessions = await club_crud.get_bookable_sessions(db, booking_create.session_ids)
+   
+    if booking_create.session_ids:
+        sessions = await club_crud.get_bookable_sessions(db, booking_create.session_ids)
 
-            if len(sessions) != len(booking_create.session_ids):
-                raise HTTPException(status_code=400, detail="Invalid session_ids")
+        if len(sessions) != len(booking_create.session_ids):
+            raise HTTPException(status_code=400, detail="Invalid session_ids")
 
-            sessions_to_book.extend(sessions)
-            all_session_ids.extend(booking_create.session_ids)
+        sessions_to_book.extend(sessions)
+        all_session_ids.extend(booking_create.session_ids)
 
-        if booking_create.program_ids:
-            programs = await club_crud.get_bookable_programs(db, booking_create.program_ids)
+    if booking_create.program_ids:
+        programs = await club_crud.get_bookable_programs(db, booking_create.program_ids)
 
-            if len(programs) != len(booking_create.program_ids):
-                raise HTTPException(status_code=400, detail="Invalid program_ids")
+        if len(programs) != len(booking_create.program_ids):
+            raise HTTPException(status_code=400, detail="Invalid program_ids")
 
-            programs_to_book.extend(programs)
-            for program in programs:
-                all_session_ids.extend([session.id for session in program.sessions])
+        programs_to_book.extend(programs)
+        for program in programs:
+            all_session_ids.extend([session.id for session in program.sessions])
 
     if await club_crud.has_user_booked(db, user_id, all_session_ids):
         raise HTTPException(status_code=400, detail="User has already booked some of the sessions")
