@@ -17,15 +17,16 @@ import { asyncRemoveData } from "./asyncStorageService";
 import { getGlobalLogout } from "../provider/AuthContextProvider";
 import { triggerPermissionRefresh } from "../permissions/PermissionRefreshHandler";
 
+import getExpoDevServerIp from "./dev_ip";
+
 // Extended request configuration interface with custom flags
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean; // Flag to avoid infinite loops during token refresh
   _retry403?: boolean; // Counter for 403 errors
   skipAuth?: boolean; // Flag to skip attaching the access token
 }
-
 //! For Android testing replace localhost with your local IP address
-const BASE_URL = "http://localhost:8001/api/v1";
+const BASE_URL = `http://${getExpoDevServerIp()}:8001/api/v1`;
 axios.defaults.baseURL = BASE_URL;
 
 const axiosInstance: AxiosInstance = axios.create();
