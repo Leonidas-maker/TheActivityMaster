@@ -163,8 +163,8 @@ export default function SearchScreen() {
         onPageChange: (page: number) => Promise<void>,
         resultsCount: number
     ) => {
-        // Show pagination only if there are as many items as the page size
-        if (resultsCount < pageSize) return null;
+        // Show pagination if it's page 1 and results are less than pageSize, otherwise always show it if currentPage > 1
+        if (currentPage === 1 && resultsCount < pageSize) return null;
 
         return (
             <View className="flex-row justify-center items-center space-x-4 mt-4">

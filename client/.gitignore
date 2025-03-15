@@ -42,3 +42,5 @@ ios/
 
 package-lock.json
 yarn.lock
+src/test.py
+src/ausgabe.txt
