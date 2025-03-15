@@ -55,12 +55,12 @@ services:
       - "1025:1025"
 
   backend:
-    # build:
-    #   context: ./app
-    #   dockerfile: Dockerfile
-    #   args:
-    #     PYTHON_VERSION: 3.12.8
-    image: registry.gitlab.com/themastercollection/theactivitymaster/backend-dev
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        PYTHON_VERSION: 3.12.8
+    #image: registry.gitlab.com/themastercollection/theactivitymaster/backend-dev
     container_name: backend
     environment:
       - DB_HOST=mariadb

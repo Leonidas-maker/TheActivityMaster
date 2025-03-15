@@ -40,7 +40,7 @@ async def create_membership(
     if await club_crud.membership_exists(db, club_id, new_membership.name):
         raise HTTPException(status_code=409, detail="Membership already exists")
 
-    if new_membership.status == m_club.MembershipStatusPublic.BOOKABLE and not club_crud.has_club_stripe_account(
+    if new_membership.status == m_club.MembershipStatusPublic.BOOKABLE and not await club_crud.has_club_stripe_account(
         db, club_id
     ):
         raise HTTPException(status_code=400, detail="Club does not have a Stripe account")

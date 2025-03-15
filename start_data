@@ -118,5 +118,24 @@
             "Podiumsdiskussion",
             "Meetup"
         ]
+    },
+    "membership": {
+        "adjectives": [
+            "Premium",
+            "Exklusiv",
+            "Standard",
+            "Basic",
+            "Gold",
+            "Silber",
+            "Platin"
+        ],
+        "subjects": [
+            "Mitgliedschaft",
+            "Abo",
+            "Abonnement",
+            "Teilnahme",
+            "Zugang",
+            "Club"
+        ]
     }
 }

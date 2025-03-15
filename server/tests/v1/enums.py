@@ -33,3 +33,8 @@ class OccurrenceStatus(enum.Enum):
 class DurationUnit(enum.Enum):
     DAY = "day"
     MONTH = "month"
+
+class MembershipStatusPublic(enum.Enum):
+    DRAFT = "draft"
+    BOOKABLE = "bookable"
+    NOT_BOOKABLE = "not_bookable"

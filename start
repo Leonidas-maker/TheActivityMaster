@@ -57,13 +57,14 @@ def get_email_code(text: str, user_id: Optional[str] = None):
 
 
 # # Pre-installation check
-# print("This script will install required python packages [rich, faker, requests] and start the test environment.\nPlease make sure you activate a virtual python environment. Continue? (y/n)")
-# response = input()
-# if response.lower() != "y":
-#     sys.exit("Installation cancelled.")
-# print("Installing required packages...")
-# subprocess.run(["pip", "install", "rich", "faker", "requests"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+print("This script will install required python packages [rich, faker, requests] and start the test environment.\nPlease make sure you activate a virtual python environment. Continue? (y/n)")
+response = input()
+if response.lower() != "y":
+    sys.exit("Installation cancelled.")
+print("Installing required packages...")
+subprocess.run(["pip", "install", "rich", "faker", "requests", "pandas", "openpyxl"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+import pandas as pd
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
@@ -75,6 +76,8 @@ from urllib.parse import urljoin
 from requests import Session
 from server.tests.v1 import testclasses
 from faker.providers import BaseProvider
+import openpyxl
+from openpyxl.utils import get_column_letter
 
 import json
 from faker import Faker
@@ -91,15 +94,26 @@ class ProgramProvider(BaseProvider):
         adjective = self.random_element(self.adjectives)
         subject = self.random_element(self.subjects)
         return f"{adjective} {subject}"
+    
+class MembershipProvider(BaseProvider):
+    def __init__(self, generator, data):
+        super().__init__(generator)
+        self.adjectives = data.get("adjectives", [])
+        self.subjects = data.get("subjects", [])
+       
+    def membership_name(self):
+        adjective = self.random_element(self.adjectives)
+        subject = self.random_element(self.subjects)
+        return f"{adjective} {subject}"
 
 
-# JSON-Daten einlesen
 with open("start_data", "r", encoding="utf-8") as f:
     start_data = json.load(f)
 
 console = Console()
 faker = Faker()
 faker.add_provider(ProgramProvider(faker, start_data["program"]))
+faker.add_provider(MembershipProvider(faker, start_data["membership"]))
 
 
 class DockerLogStreamer:
@@ -156,7 +170,7 @@ class DockerLogStreamer:
 
     def get_all_logs(self):
         """Returns all log lines that have occurred since the log streaming process started."""
-        time.sleep(0.04)
+        time.sleep(0.05)
         with self.lock:
             return "".join(self.all_logs)
 
@@ -176,7 +190,7 @@ class DockerLogStreamer:
 
         :return: A string that contains all newly added log lines.
         """
-        time.sleep(0.04)
+        time.sleep(0.05)
         with self.lock:
             new_logs = "".join(self.buffer)
             self.buffer = []
@@ -204,15 +218,20 @@ class TestUser(testclasses.TestUser):
             raise ValueError(f"Login failed: {response.json()}")
         security_token = response.json()["security_token"]
 
-        logs = self.log_thread.get_all_logs()  # type: ignore
-        email_code = get_email_code(logs, self.user_id)
-        response = self.client.post(
-            "/api/v1/auth/verify-code-2fa",
-            headers={"application-id": self.application_id, "Authorization": f"Bearer {security_token}"},
-            json={"code": email_code, "is_totp": False},
-        )
-        if response.status_code != 200:
+        for _ in range(3):
+            logs = self.log_thread.get_all_logs()  # type: ignore
+            email_code = get_email_code(logs, self.user_id)
+            response = self.client.post(
+                "/api/v1/auth/verify-code-2fa",
+                headers={"application-id": self.application_id, "Authorization": f"Bearer {security_token}"},
+                json={"code": email_code, "is_totp": False},
+            )
+            if response.status_code == 200:
+                break
+            time.sleep(1)
+        else:
             raise ValueError(f"Email verification failed: {response.json()}")
+
         self.tokens = response.json()
 
 
@@ -347,6 +366,90 @@ def open_new_terminal(command, cwd):
 ###########################################################################
 ################################# Testdata ################################
 ###########################################################################
+def export_test_data(all_users, verified_users, clubs):
+    # Create the Users table
+    user_rows = []
+    for user in all_users:
+        employee_in_clubs = []
+        # Check in which clubs the user appears as an employee
+        for club in clubs:
+            for employee in club.employees:
+                if employee.ident == user.email:
+                    employee_in_clubs.append(club.name)
+        user_rows.append(
+            {
+                "User ID": user.user_id,
+                "Username": user.username,
+                "Email": user.email,
+                "Password": user.password,
+                "First Name": user.first_name,
+                "Last Name": user.last_name,
+                "Employee in Clubs": ", ".join(employee_in_clubs) if employee_in_clubs else "",
+                "Verified": "Yes" if user in verified_users else "No",
+            }
+        )
+    df_users = pd.DataFrame(user_rows)
+
+    # Create the Clubs table
+    club_rows = []
+    for club in clubs:
+        club_rows.append(
+            {
+                "Club ID": club.club_id,
+                "Name": club.name,
+                "Description": club.description,
+                "Address": json.dumps(club.address, ensure_ascii=False),
+                "Programs": ", ".join([program.name for program in club.programs]),
+                "Memberships": ", ".join([membership.name for membership in club.memberships]),
+                "Employees": ", ".join([employee.ident for employee in club.employees]),
+                "Club Roles": ", ".join([role.name for role in club.roles]),
+            }
+        )
+    df_clubs = pd.DataFrame(club_rows)
+
+    # Create the Programs table
+    program_rows = []
+    for club in clubs:
+        for program in club.programs:
+            program_rows.append(
+                {
+                    "Program ID": program.program_id,
+                    "Club ID": club.club_id,
+                    "Club Name": club.name,
+                    "Name": program.name,
+                    "Description": program.description,
+                    "Price Model": program.price_model.value,
+                    "Price": program.price,
+                    "Currency": program.currency,
+                    "Capacity": program.capacity,
+                    "Membership Required": "Yes" if program.membership_required else "No",
+                    "Status": program.status.value,
+                }
+            )
+    df_programs = pd.DataFrame(program_rows)
+    os.makedirs("test_data", exist_ok=True)
+
+    # Export as separate CSV files
+    df_users.to_csv("test_data/users.csv", index=False)
+    df_clubs.to_csv("test_data/clubs.csv", index=False)
+    df_programs.to_csv("test_data/programs.csv", index=False)
+
+    # Export all tables into one Excel file with separate sheets
+    excel_filename = "test_data/test_data.xlsx"
+    with pd.ExcelWriter(excel_filename, engine="openpyxl") as writer:
+        df_users.to_excel(writer, sheet_name="Users", index=False)
+        df_clubs.to_excel(writer, sheet_name="Clubs", index=False)
+        df_programs.to_excel(writer, sheet_name="Programs", index=False)
+
+    # Post-processing: Set AutoFilter for each sheet in the Excel file
+    wb = openpyxl.load_workbook(excel_filename)
+    for ws in wb.worksheets:
+        max_col = ws.max_column
+        max_row = ws.max_row
+        ws.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+    wb.save(excel_filename)
+
+
 def create_users(log_thread: DockerLogStreamer, progress: Progress, task, total_users: int) -> List[TestUser]:
     client = LiveServerSession("http://localhost:8001")
     users = []
@@ -383,12 +486,22 @@ def create_users(log_thread: DockerLogStreamer, progress: Progress, task, total_
 def verify_users(users: List[testclasses.TestUser], admin: testclasses.AdminUser, progress: Progress, task) -> int:
     count = 0
     for user in users:
-        user.submit_identity_verification()
+        try:
+            user.submit_identity_verification()
+        except Exception:
+            try:
+                time.sleep(1)
+                user.submit_identity_verification()
+            except Exception:
+                continue
         try:
             admin.verify_identity(user.user_id)  # type: ignore
-        except Exception as e:
-            admin.login_email()
-            admin.verify_identity(user.user_id)  # type: ignore
+        except Exception:
+            try:
+                time.sleep(1)
+                admin.verify_identity(user.user_id)  # type: ignore
+            except Exception:
+                continue
         progress.advance(task)
         count += 1
     return count
@@ -453,7 +566,9 @@ def create_programs(
     for club in clubs:
         program_count = random.randint(min_programs, max_programs)
 
-        rand_programs_active = testclasses.get_random_programs(club, (program_count // 2 + program_count % 2), random.randint(2, max_sessions))
+        rand_programs_active = testclasses.get_random_programs(
+            club, (program_count // 2 + program_count % 2), random.randint(2, max_sessions)
+        )
 
         for program in rand_programs_active:
             try:
@@ -474,7 +589,7 @@ def create_programs(
         rand_programs_draft = testclasses.get_random_programs(club, program_count // 2, random.randint(2, max_sessions))
         for program in rand_programs_draft:
             try:
-                program.name = f"{faker.program_name()} - {faker.random_lowercase_letter()}"
+                program.name = f"{faker.program_name()} ({faker.random_lowercase_letter()})"
                 program.status = testclasses.ProgramStatusPublic.DRAFT
 
                 desc = faker.text(max_nb_chars=20)
@@ -489,6 +604,24 @@ def create_programs(
                 continue
 
         club.refresh_programs()
+
+
+def create_memberships(clubs: List[testclasses.Club], total_memberships: int, progress: Progress, task):
+    for club in clubs:
+        for _ in range(total_memberships):
+            membership = testclasses.Membership(
+                club,
+                f"{faker.membership_name()} {faker.random_lowercase_letter()}",
+                faker.text(max_nb_chars=50),
+                random.randint(10, 100),
+                random.choice(["EUR", "USD"]),
+                random.randint(5, 12),
+                random.choice([testclasses.DurationUnit.DAY, testclasses.DurationUnit.MONTH]),
+            )
+
+            membership.create()
+            progress.advance(task)
+        club.refresh_memberships()
 
 
 def create_bookings(users: List[TestUser], clubs: List[testclasses.Club], max_bookings: int, progress: Progress, task):
@@ -529,7 +662,7 @@ def create_bookings(users: List[TestUser], clubs: List[testclasses.Club], max_bo
                 [program.program_id for program in programs_to_book],
                 [session.session_id for session in sessions_to_book],
             )
-        except Exception as e:
+        except Exception:
             continue
         count += 1
         progress.advance(task)
@@ -539,10 +672,10 @@ def create_bookings(users: List[TestUser], clubs: List[testclasses.Club], max_bo
 
 
 def create_test_data(server_dir):
-    TOTAL_USERS = 200
-    TOTAL_CLUBS = 20
-    MIN_PROGRAMS_PER_CLUB = 20
-    MAX_PROGRAMS_PER_CLUB = 50
+    TOTAL_USERS = 50
+    TOTAL_CLUBS = 10
+    MIN_PROGRAMS_PER_CLUB = 10
+    MAX_PROGRAMS_PER_CLUB = 20
     MAX_BOOKINGS = 20
     MAX_SESSIONS_PER_PROGRAM = 20
     TOTAL_MEMBERSHIPS = 3
@@ -619,6 +752,7 @@ def create_test_data(server_dir):
             count += future.result()
 
     if count != len(verified_users):
+        progress.stop()
         console.print(f"[bold red]Error verifying user. Please rerun the script.[/bold red]")
         purge_data = Prompt.ask("Do you want to purge the data?", choices=["yes", "no"], default="yes")
         if purge_data == "yes":
@@ -682,6 +816,7 @@ def create_test_data(server_dir):
             pass
 
     progress.update(task_programs, description="Programs created.", completed=TOTAL_CLUBS * MAX_PROGRAMS_PER_CLUB)
+    progress.stop_task(task_programs)
 
     # ======================================================== #
     # ======================= Bookings ======================= #
@@ -695,7 +830,15 @@ def create_test_data(server_dir):
     users_for_booking = unverified_users + random.sample(verified_users, max(MAX_BOOKINGS - len(unverified_users), 0))
 
     for i in range(num_threads):
-        batches.append((users_for_booking[i * user_batch_size : (i + 1) * user_batch_size], clubs, MAX_BOOKINGS // num_threads, progress, task_bookings))
+        batches.append(
+            (
+                users_for_booking[i * user_batch_size : (i + 1) * user_batch_size],
+                clubs,
+                MAX_BOOKINGS // num_threads,
+                progress,
+                task_bookings,
+            )
+        )
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(create_bookings, *batch) for batch in batches]
@@ -703,11 +846,35 @@ def create_test_data(server_dir):
             pass
 
     progress.update(task_bookings, description="Bookings created.", completed=len(unverified_users))
+    progress.stop_task(task_bookings)
 
-    progress.stop_task(task_programs)
+    # ======================================================== #
+    # ====================== Memberships ===================== #
+    # ======================================================== #
+    task_memberships = progress.add_task("Creating memberships...", total=TOTAL_CLUBS * TOTAL_MEMBERSHIPS)
+
+    num_threads = min(THREADS, TOTAL_CLUBS)
+    membership_batch_size = TOTAL_CLUBS // num_threads
+    batches = []
+    
+    for i in range(num_threads):
+        batches.append(
+            (clubs[i * membership_batch_size : (i + 1) * membership_batch_size], progress, task_memberships)
+        )
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(create_memberships, *batch) for batch in batches]
+        for future in as_completed(futures):
+            pass
+
+    progress.update(task_memberships, description="Memberships created.", completed=TOTAL_CLUBS * TOTAL_MEMBERSHIPS)
+    progress.stop_task(task_memberships)
+
+
     progress.stop()
-
     console.print("[bold green]Test data created successfully.[/bold green]")
+    export_test_data(users, verified_users, clubs)
+    console.print("[bold green]Test data saved to Excel and CSV files.[/bold green]")
 
 
 def start_frontend(client_dir, expo_platform):
@@ -794,7 +961,7 @@ def main():
         start_docker_stack(server_dir)
 
     if mode == "prepare":
-        # stop_docker_stack(server_dir)
+        stop_docker_stack(server_dir)
         console.print("[bold green]Test environment setup complete.[/bold green]")
         sys.exit(0)
     start_backend_logs(server_dir)

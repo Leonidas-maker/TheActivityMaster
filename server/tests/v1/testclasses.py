@@ -14,7 +14,7 @@ import warnings
 from abc import abstractmethod
 
 from config.permissions import DEFAULT_CLUB_ROLES, ClubPermissions  # type: ignore
-from .enums import PriceType, SessionType, ProgramStatusPublic, Weekday, OccurrenceStatus, DurationUnit
+from .enums import PriceType, SessionType, ProgramStatusPublic, Weekday, OccurrenceStatus, DurationUnit, MembershipStatusPublic
 
 
 ###########################################################################
@@ -48,6 +48,9 @@ class TestUser:
         # Bookings
         self.booked_programs = []
         self.booked_sessions = []
+
+        # Admin
+        self.is_elevated = False
 
     # ======================================================== #
     # =================== GET Terminal AUTH ================== #
@@ -295,7 +298,19 @@ class TestUser:
         assert response.status_code == status.HTTP_200_OK, response.json()
         return response.json()
 
-    def book(self, program_ids: List[str]  = [], session_ids: List[str] = [], check_status=True):
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "username": self.username,
+            "email": self.email,
+            "password": self.password,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "bookings": {"programs": self.booked_programs, "sessions": self.booked_sessions},
+            "is_elevated": self.is_elevated,
+        }
+
+    def book(self, program_ids: List[str] = [], session_ids: List[str] = [], check_status=True):
         response = self.post(
             f"/api/v1/clubs/book",
             json={"program_ids": program_ids, "session_ids": session_ids},
@@ -314,6 +329,7 @@ class AdminUser(TestUser):
         self.email = "admin@localhost.de"
         self.name = "Admin"
         self.password = "ADMIN_ADMIN"
+        self.is_elevated = True
 
     def register(self):
         raise Exception("Admin user cannot be registered")
@@ -500,6 +516,7 @@ class Club:
                     program.get("capacity"),
                     session_count=0,
                     currency=program["currency"],
+                    membership_required=program["membership_required"],
                 )
                 program_obj.program_id = program["id"]
                 program_obj.refresh_sessions()
@@ -527,6 +544,44 @@ class Club:
             program_obj.program_id = program["id"]
             program_obj.refresh_sessions(program["sessions"])
             self.programs.append(program_obj)
+
+    # ======================================================== #
+    # ====================== Memberships ===================== #
+    # ======================================================== #
+    def refresh_memberships(self):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club_id}/memberships",
+        )
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        self.memberships.clear()
+        for membership in response.json():
+            membership_obj = Membership(
+                self,
+                membership["name"],
+                membership["description"],
+                membership["price"],
+                membership["currency"],
+                membership["duration"],
+                DurationUnit(membership["duration_unit"]),
+                membership["status"],
+            )
+            membership_obj.membership_id = membership["id"]
+            self.memberships.append(membership_obj)
+
+    # ======================================================== #
+    # ========================= Other ======================== #
+    # ======================================================== #
+    def to_dict(self):
+        return {
+            "club_id": self.club_id,
+            "name": self.name,
+            "description": self.description,
+            "address": self.address,
+            "employees": [employee.to_dict() for employee in self.employees],
+            "roles": [role.to_dict() for role in self.roles],
+            "programs": [program.to_dict() for program in self.programs],
+            "memberships": [membership.to_dict() for membership in self.memberships],
+        }
 
 
 class ClubRole:
@@ -642,6 +697,18 @@ class ClubRole:
         )
         assert response.status_code == status.HTTP_200_OK, response.json()
 
+    # ======================================================== #
+    # ========================= Other ======================== #
+    # ======================================================== #
+    def to_dict(self):
+        return {
+            "role_id": self.role_id,
+            "name": self.name,
+            "description": self.description,
+            "permissions": self.permissions,
+            "level": self.level,
+        }
+
 
 class Employee:
     def __init__(self, employee_ident: str, club: Club, role: ClubRole, employee: Optional[TestUser] = None):
@@ -711,6 +778,16 @@ class Employee:
             assert response.status_code == status.HTTP_404_NOT_FOUND, response.json()
 
         self.employee_id = None
+
+    # ======================================================== #
+    # ========================= Other ======================== #
+    # ======================================================== #
+    def to_dict(self):
+        return {
+            "employee_id": self.employee_id,
+            "employee_ident": self.ident,
+            "role": self.role.to_dict(),
+        }
 
 
 class Program:
@@ -1033,6 +1110,22 @@ class Program:
             f"/api/v1/clubs/{self.club.club_id}/programs/{self.get_id()}/trainers",
         )
         return response.json()
+
+    # ======================================================== #
+    # ========================= Other ======================== #
+    # ======================================================== #
+    def to_dict(self):
+        return {
+            "program_id": self.program_id,
+            "name": self.name,
+            "description": self.description,
+            "price_model": self.price_model.value,
+            "price": self.price,
+            "currency": self.currency,
+            "capacity": self.capacity,
+            "membership_required": self.membership_required,
+            "sessions": [session.to_dict() for session in self.session_events + self.session_courses],
+        }
 
 
 class Session:
@@ -1383,6 +1476,92 @@ class SessionCourse(Session):
         return occurence_id
 
 
+class Membership:
+    def __init__(
+        self,
+        club: Club,
+        name: str,
+        description: str,
+        price: int,
+        currency: str = "EUR",
+        duration: int = 30,
+        duration_unit: DurationUnit = DurationUnit.DAY,
+        status: MembershipStatusPublic = MembershipStatusPublic.BOOKABLE,
+    ):
+        self.user = club.user
+        self.club = club
+
+        self.name = name
+        self.description = description
+        self.price = price
+        self.currency = currency
+        self.duration = duration
+        self.duration_unit = duration_unit
+        self.status = status
+
+        self.membership_id = None
+
+    def create(self, check=True):
+        response = self.user.post(
+            f"/api/v1/clubs/{self.club.club_id}/memberships",
+            json={
+                "name": self.name,
+                "description": self.description,
+                "price": self.price,
+                "currency": self.currency,
+                "duration": self.duration,
+                "duration_unit": self.duration_unit.value,
+                "status": self.status.value,
+            },
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["price"] == self.price
+            assert response.json()["currency"] == self.currency
+            assert response.json()["duration"] == self.duration
+            assert response.json()["duration_unit"] == self.duration_unit.value
+            assert response.json()["status"] == self.status.value
+            self.membership_id = response.json()["id"]
+        self.club.memberships.append(self)
+
+    def get(self, check=True):
+        response = self.user.get(
+            f"/api/v1/clubs/{self.club.club_id}/memberships/{self.membership_id}",
+            check_status=False,
+        )
+        if check:
+            assert response.status_code == status.HTTP_200_OK, response.json()
+            assert response.json()["id"] == self.membership_id
+            assert response.json()["name"] == self.name
+            assert response.json()["description"] == self.description
+            assert response.json()["price"] == self.price
+            assert response.json()["currency"] == self.currency
+            assert response.json()["duration"] == self.duration
+            assert response.json()["duration_unit"] == self.duration_unit.value
+            assert response.json()["status"] == self.status
+            assert response
+
+    # ======================================================== #
+    # ========================= Other ======================== #
+    # ======================================================== #
+    def to_dict(self):
+        return {
+            "membership_id": self.membership_id,
+            "name": self.name,
+            "description": self.description,
+            "price": self.price,
+            "currency": self.currency,
+            "duration": self.duration,
+            "duration_unit": self.duration_unit.value,
+        }
+
+
+###########################################################################
+################################## Random #################################
+###########################################################################
 def get_random_session_events(program: Program, count: int = 1) -> List[SessionEvent]:
     sessions = []
     for _ in range(count):
@@ -1463,75 +1642,7 @@ def get_random_programs(club: Club, count: int = 2, max_sessions: Optional[int] 
             price,
             capacity,
             random.randint(4, max_sessions) if max_sessions else None,
-            membership_required=False
+            membership_required=False,
         )
         programs.append(program)
     return programs
-
-
-class Membership:
-    def __init__(
-        self,
-        club: Club,
-        name: str,
-        description: str,
-        price: int,
-        currency: str = "EUR",
-        duration: int = 30,
-        duration_unit: DurationUnit = DurationUnit.DAY,
-        session_count: int = 0,
-    ):
-        self.user = club.user
-        self.club = club
-
-        self.name = name
-        self.description = description
-        self.price = price
-        self.currency = currency
-        self.duration = duration
-        self.duration_unit = duration_unit
-        self.session_count = session_count
-
-        self.membership_id = None
-
-    def create(self, check=True):
-        response = self.user.post(
-            f"/api/v1/clubs/{self.club.club_id}/memberships",
-            json={
-                "name": self.name,
-                "description": self.description,
-                "price": self.price,
-                "currency": self.currency,
-                "duration": self.duration,
-                "duration_unit": self.duration_unit.value,
-                "session_count": self.session_count,
-            },
-            check_status=False,
-        )
-        if check:
-            assert response.status_code == status.HTTP_200_OK, response.json()
-            assert response.json()["name"] == self.name
-            assert response.json()["description"] == self.description
-            assert response.json()["price"] == self.price
-            assert response.json()["currency"] == self.currency
-            assert response.json()["duration"] == self.duration
-            assert response.json()["duration_unit"] == self.duration_unit.value
-            assert response.json()["session_count"] == self.session_count
-            self.membership_id = response.json()["id"]
-        self.club.memberships.append(self)
-
-    def get(self, check=True):
-        response = self.user.get(
-            f"/api/v1/clubs/{self.club.club_id}/memberships/{self.membership_id}",
-            check_status=False,
-        )
-        if check:
-            assert response.status_code == status.HTTP_200_OK, response.json()
-            assert response.json()["id"] == self.membership_id
-            assert response.json()["name"] == self.name
-            assert response.json()["description"] == self.description
-            assert response.json()["price"] == self.price
-            assert response.json()["currency"] == self.currency
-            assert response.json()["duration"] == self.duration
-            assert response.json()["duration_unit"] == self.duration_unit.value
-            assert response

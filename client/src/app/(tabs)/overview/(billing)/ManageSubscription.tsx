@@ -91,7 +91,7 @@ const ManageSubscription = () => {
             ),
         });
     }, [navigation, iconColor]);
-
+ 
     return (
         <View className="flex h-screen bg-light_primary dark:bg-dark_primary p-4">
             <Heading text={t("title")} />
@@ -104,7 +104,7 @@ const ManageSubscription = () => {
                         <DefaultText text={`${t("startDateTime")}: ${formatDate(start_datetime as string)} ${formatTime(start_datetime as string)}`} />
                         <DefaultText text={`${t("endDateTime")}: ${formatDate(end_datetime as string)} ${formatTime(end_datetime as string)}`} />
                         <View className="py-2" />
-                        {parsedMembership.membership.status === "Active" ? (
+                        {parsedMembership.status === "Active" ? (
                             <DefaultButton text={t("cancelButton")} onPress={handleCancelMembership} />
                         ) : (
                             <Subheading text={t("membershipInactive")} />
