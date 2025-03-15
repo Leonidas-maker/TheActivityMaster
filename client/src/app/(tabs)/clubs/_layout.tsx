@@ -106,6 +106,12 @@ export default function OverviewLayout() {
         }}
       />
       <Stack.Screen
+        name="(manage)/ClubCalendar"
+        options={{
+          headerTitle: t("clubs_calendar_header"),
+        }}
+      />
+      <Stack.Screen
         name="(employee)/ManageEmployee"
         options={{
           presentation: "modal",

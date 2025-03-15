@@ -23,9 +23,9 @@ module.exports = {
         dark_action_active: "#BD1B0F",
         dark_subheading: "#E0E0E0",
 
+        //* Event
         light_event: "#8344C2",
         light_event_active: "#7037A9",
-
         dark_event: "#66329A",
         dark_event_active: "#52287B",
 
@@ -42,7 +42,10 @@ module.exports = {
         dark_course_active: "#1f5f1f",
 
         //* Course rescheduled
-        
+        light_course_rescheduled: "#04418B",
+        light_course_rescheduled_active: "#054A9E",
+        dark_course_rescheduled: "#011936",
+        dark_course_rescheduled_active: "#022550",
 
       },
     },

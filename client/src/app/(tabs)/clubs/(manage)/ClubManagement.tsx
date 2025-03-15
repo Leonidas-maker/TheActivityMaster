@@ -16,6 +16,10 @@ const ClubManagement = () => {
         router.navigate(`/(tabs)/clubs/(view)/ClubPage?club_id=${club_id}`);
     };
 
+    const handleClubCalendarPress = () => {
+        router.navigate(`/(tabs)/clubs/(manage)/ClubCalendar?club_id=${club_id}`);
+    };
+
     const handleManageEmployeePress = () => {
         router.navigate(`/(tabs)/clubs/(employee)/ClubManageEmployee?club_id=${club_id}`);
     };
@@ -55,6 +59,13 @@ const ClubManagement = () => {
         text: t("club_view_page"),
         icon: "home",
         onPress: handleViewPagePress,
+    });
+
+    // Always show the club calendar navigation
+    navItems.push({
+        text: t("club_calendar"),
+        icon: "calendar-month",
+        onPress: handleClubCalendarPress,
     });
 
     // Conditionally add employee management navigation

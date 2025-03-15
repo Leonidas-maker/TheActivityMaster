@@ -9,6 +9,7 @@ import {
   useColorScheme,
 } from "react-native";
 import "nativewind";
+import { useTranslation } from "react-i18next";
 
 // ~~~~~~~~ Own components imports ~~~~~~~ //
 import {
@@ -43,6 +44,7 @@ const Event: React.FC<EventProps> = ({
   // ====================================================== //
   const [modalVisible, setModalVisible] = useState(false);
   const [isWeb, setIsWeb] = useState(false);
+  const { t } = useTranslation("calendar");
 
   const colorScheme = useColorScheme();
   const [isLight, setIsLight] = useState(false);
@@ -136,7 +138,6 @@ const Event: React.FC<EventProps> = ({
   // Gets the color for the event based on the event type
   // TODO Implement more colors for different event types
   const getEventColor = () => {
-    console.log(event.status)
     if (event.session_type === "course") {
       if (event.status === 'scheduled') {
         return 'bg-light_course active:light_course_active dark:bg-dark_course dark:active:bg-dark_course_active';
@@ -207,17 +208,17 @@ const Event: React.FC<EventProps> = ({
             <Text className="item-center pb-3 text-black dark:text-white">
               {event.name}
             </Text>
-            <Text className="item-center font-bold text-black dark:text-white">{`Startzeit: ${startTimeString}`}</Text>
-            <Text className="item-center font-bold text-black dark:text-white">{`Endzeit: ${endTimeString}`}</Text>
+            <Text className="item-center font-bold text-black dark:text-white">{`${t('startTimeLabel')} ${startTimeString}`}</Text>
+            <Text className="item-center font-bold text-black dark:text-white">{`${t('endTimeLabel')} ${endTimeString}`}</Text>
             {event.location && (
-              <Text className="item-center font-bold text-black dark:text-white">{`Ort: ${event.location}`}</Text>
+              <Text className="item-center font-bold text-black dark:text-white">{`${t('locationLabel')} ${event.location}`}</Text>
             )}
             {event.note && (
-              <Text className="item-center font-bold text-black dark:text-white">{`Notiz: ${event.note}`}</Text>
+              <Text className="item-center font-bold text-black dark:text-white">{`${t('noteLabel')} ${event.note}`}</Text>
             )}
             {isWeb && (
               <>
-                <DefaultButton text="Schließen" />
+                <DefaultButton text={t('close')} />
               </>
             )}
           </View>
