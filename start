@@ -121,7 +121,7 @@ class DockerLogStreamer:
         """
         Initializes the log streamer.
 
-        :param server_dir: Path to the directory where the docker-compose file is located.
+        :param server_dir: Path to the directory where the docker compose file is located.
         :param service_name: Name of the Docker Compose service (default: "backend").
         :param encoding: Encoding used for decoding.
         :param errors: Error handling strategy during decoding.
@@ -139,7 +139,7 @@ class DockerLogStreamer:
 
     def _stream_logs(self):
         self.process = subprocess.Popen(
-            ["docker-compose", "logs", "-f", "--tail=0", self.service_name],
+            ["docker", "compose", "logs", "-f", "--tail=0", self.service_name],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             cwd=self.server_dir,
@@ -287,7 +287,10 @@ def check_prerequisites():
         console.print("[bold red]Node not found. Please install Node.js.[/bold red]")
         sys.exit(1)
     try:
-        subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        if os.name == "nt":
+            subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        else:
+            subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, )
         console.print("[green]npm found[/green]")
     except Exception:
         console.print("[bold red]npm not found. Please install npm.[/bold red]")
@@ -297,7 +300,7 @@ def check_prerequisites():
 def docker_cleanup(server_dir):
     console.print(f"Running Docker cleanup in directory: [yellow]{server_dir}[/yellow]")
     try:
-        subprocess.run(["docker-compose", "down", "-v", "--rmi", "all"], check=True, cwd=server_dir)
+        subprocess.run(["docker", "compose", "down", "-v", "--rmi", "all"], check=True, cwd=server_dir)
         console.print("[bold green]Docker cleanup completed successfully.[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Docker cleanup failed: {e}[/bold red]")
@@ -307,9 +310,9 @@ def start_docker_stack(server_dir):
     console.print("Building Docker stack for the backend...")
     try:
         console.print("Pulling Docker images...")
-        subprocess.run(["docker-compose", "pull"], check=True, cwd=server_dir)
+        subprocess.run(["docker", "compose", "pull"], check=True, cwd=server_dir)
         console.print("Starting Docker stack...")
-        subprocess.run(["docker-compose", "up", "-d", "--build"], check=True, cwd=server_dir)
+        subprocess.run(["docker", "compose", "up", "-d", "--build"], check=True, cwd=server_dir)
         console.print("[bold green]Docker stack started successfully.[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Error starting Docker stack: {e}[/bold red]")
@@ -319,7 +322,7 @@ def start_docker_stack(server_dir):
 def restart_docker_stack(server_dir):
     console.print("Restarting Docker stack...")
     try:
-        subprocess.run(["docker-compose", "restart"], check=True, cwd=server_dir)
+        subprocess.run(["docker", "compose", "restart"], check=True, cwd=server_dir)
         console.print("[bold green]Docker stack restarted successfully.[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Error restarting Docker stack: {e}[/bold red]")
@@ -328,7 +331,7 @@ def restart_docker_stack(server_dir):
 def stop_docker_stack(server_dir):
     console.print("[bold red]Stopping Docker containers...[/bold red]")
     try:
-        subprocess.run(["docker-compose", "stop"], check=True, cwd=server_dir)
+        subprocess.run(["docker", "compose", "stop"], check=True, cwd=server_dir)
         console.print("[bold green]Docker stack stopped successfully.[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Error stopping Docker stack: {e}[/bold red]")
@@ -336,31 +339,53 @@ def stop_docker_stack(server_dir):
 
 def open_new_terminal(command, cwd):
     """
-    Opens a new terminal window and runs the specified command in the given directory.
-    Works cross-platform (Windows, macOS, Linux).
+    Öffnet ein neues Terminal-Fenster und führt den angegebenen Befehl im gewünschten Verzeichnis aus.
+    Unterstützt Windows, macOS und Linux.
     """
     system = platform.system()
+    
     if system == "Windows":
-        subprocess.Popen(["cmd", "/c", "start", "cmd", "/k", f"cd /d {cwd} && {command}"], shell=True)
+        subprocess.Popen(
+            ["cmd", "/c", "start", "cmd", "/k", f"cd /d {cwd} && {command}"],
+            shell=True
+        )
+    
     elif system == "Darwin":  # macOS
-        apple_script = f"""
+        apple_script = f'''
         tell application "Terminal"
             do script "cd {cwd} && {command}"
             activate
         end tell
-        """
+        '''
         subprocess.Popen(["osascript", "-e", apple_script])
-    else:
+    
+    elif system == "Linux":
+        # Suche nach einem verfügbaren Terminal-Emulator
         terminal = None
         for term in ["gnome-terminal", "konsole", "xfce4-terminal", "x-terminal-emulator"]:
             if shutil.which(term):
                 terminal = term
                 break
+
         if terminal:
-            subprocess.Popen([terminal, "--", "bash", "-c", f'cd "{cwd}" && {command}; exec bash'])
+            # Verwende die aktuell konfigurierte Shell oder default zu bash
+            shell = os.environ.get("SHELL", "/bin/bash")
+            shell_name = os.path.basename(shell)
+            # Erstelle den Befehl mit dem gewünschten Arbeitsverzeichnis
+            full_command = f'cd "{cwd}" && {command}; exec {shell_name}'
+            print(terminal)
+            # Bei gnome-terminal wird häufig der Parameter -e benötigt, bei anderen eventuell "--"
+            if terminal in ["gnome-terminal", "xfce4-terminal"]:
+                subprocess.Popen([terminal, "-e", f'{shell} -i -c "{full_command}"'])
+            elif terminal == "konsole":
+                subprocess.Popen([terminal, "--noclose", "-e", shell, "-i", "-c", full_command])
+            else:
+                subprocess.Popen([terminal, "--", shell, "-i", "-c", full_command])
         else:
-            console.print("[bold red]No terminal emulator found. Please manually run the following command:[/bold red]")
+            console.print("[bold red]Kein Terminal-Emulator gefunden. Bitte führe folgenden Befehl manuell aus:[/bold red]")
             console.print(command)
+    else:
+        console.print(f"[bold red]Betriebssystem {system} wird nicht unterstützt.[/bold red]")
 
 
 ###########################################################################
@@ -880,7 +905,10 @@ def create_test_data(server_dir):
 def start_frontend(client_dir, expo_platform):
     console.print("Starting Expo frontend...")
     try:
-        subprocess.run(["npm", "install"], check=True, cwd=client_dir, shell=True)
+        if os.name == "nt":
+            subprocess.run(["npm", "install"], check=True, cwd=client_dir, shell=True)
+        else:
+            subprocess.run(["npm", "install"], check=True, cwd=client_dir)
         console.print("[bold green]npm install completed successfully.[/bold green]")
     except Exception as e:
         console.print(f"[bold red]Error during npm install: {e}[/bold red]")
@@ -892,7 +920,7 @@ def start_frontend(client_dir, expo_platform):
 
 def start_backend_logs(server_dir):
     console.print("Starting backend logs...")
-    command = "docker-compose logs -f backend"
+    command = "docker compose logs -f backend"
     open_new_terminal(command, server_dir)
 
 
