@@ -274,7 +274,7 @@ export default function SearchScreen() {
             className="flex-1"
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                <View className="flex-1 bg-light_primary dark:bg-dark_primary">
+                <ScrollView className="flex-1 bg-light_primary dark:bg-dark_primary">
                     {/* Header with filter icon, search bar, and search icon */}
                     <View className="p-4 bg-light_primary dark:bg-dark_primary">
                         <View className="flex-row items-center mt-2">
@@ -554,7 +554,7 @@ export default function SearchScreen() {
                             </TouchableOpacity>
                         </TouchableOpacity>
                     </Modal>
-                </View>
+                </ScrollView>
             </TouchableWithoutFeedback >
             <DefaultToast />
         </KeyboardAvoidingView >
