@@ -62,7 +62,7 @@ response = input()
 if response.lower() != "y":
     sys.exit("Installation cancelled.")
 print("Installing required packages...")
-subprocess.run(["pip", "install", "rich", "faker", "requests", "pandas", "openpyxl, fastapi, pyotp"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+subprocess.run(["pip", "install", "rich", "faker", "requests", "pandas", "openpyxl", "fastapi", "pyotp"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 import pandas as pd
 from rich.console import Console
