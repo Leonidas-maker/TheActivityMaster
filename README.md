@@ -43,6 +43,8 @@ In addition to manual deployment steps, **TheActivityMaster** includes a powerfu
 
 By using the start script, you can easily start, monitor, and manage your entire development environment with one command—no need for separate terminal sessions for each service!
 
+⚠️ Note: If you encounter error messages when running the startup script, please execute it again. Due to the multithreaded deployment of the test data, the backend's stdout may not have fully flushed yet, causing the script to miss essential backend authentication data. Re-running the script typically resolves this issue.
+
 ---
 
 ## 🛠️ Tech Stack
