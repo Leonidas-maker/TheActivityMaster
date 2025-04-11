@@ -5,3 +5,4 @@ __pycache__
 verifications
 keyfiles
 **/static/addresses.json
+env

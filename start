@@ -57,12 +57,12 @@ def get_email_code(text: str, user_id: Optional[str] = None):
 
 
 # Pre-installation check
-print("This script will install required python packages [rich, faker, requests, pandas, openpyxl, fastapi, pyotp] and start the test environment.\nPlease make sure you activate a virtual python environment. Continue? (y/n)")
+print("This script will install required python packages [rich, faker, requests, pandas, openpyxl, fastapi, pyotp, httpx] and start the test environment.\nPlease make sure you activate a virtual python environment. Continue? (y/n)")
 response = input()
 if response.lower() != "y":
     sys.exit("Installation cancelled.")
 print("Installing required packages...")
-subprocess.run(["pip", "install", "rich", "faker", "requests", "pandas", "openpyxl", "fastapi", "pyotp"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+subprocess.run(["pip", "install", "rich", "faker", "requests", "pandas", "openpyxl", "fastapi", "pyotp", "httpx"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 import pandas as pd
 from rich.console import Console
