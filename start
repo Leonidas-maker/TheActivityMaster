@@ -56,7 +56,7 @@ def get_email_code(text: str, user_id: Optional[str] = None):
     return email_code
 
 
-# # Pre-installation check
+# Pre-installation check
 print("This script will install required python packages [rich, faker, requests] and start the test environment.\nPlease make sure you activate a virtual python environment. Continue? (y/n)")
 response = input()
 if response.lower() != "y":
@@ -290,7 +290,7 @@ def check_prerequisites():
         if os.name == "nt":
             subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         else:
-            subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, )
+            subprocess.run(["npm", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         console.print("[green]npm found[/green]")
     except Exception:
         console.print("[bold red]npm not found. Please install npm.[/bold red]")
@@ -339,8 +339,8 @@ def stop_docker_stack(server_dir):
 
 def open_new_terminal(command, cwd):
     """
-    Öffnet ein neues Terminal-Fenster und führt den angegebenen Befehl im gewünschten Verzeichnis aus.
-    Unterstützt Windows, macOS und Linux.
+    Opens a new terminal window and executes the given command in the desired directory.
+    Supports Windows, macOS, and Linux.
     """
     system = platform.system()
     
@@ -360,7 +360,7 @@ def open_new_terminal(command, cwd):
         subprocess.Popen(["osascript", "-e", apple_script])
     
     elif system == "Linux":
-        # Suche nach einem verfügbaren Terminal-Emulator
+        # Search for an available terminal emulator
         terminal = None
         for term in ["gnome-terminal", "konsole", "xfce4-terminal", "x-terminal-emulator"]:
             if shutil.which(term):
@@ -368,13 +368,13 @@ def open_new_terminal(command, cwd):
                 break
 
         if terminal:
-            # Verwende die aktuell konfigurierte Shell oder default zu bash
+            # Use the currently configured shell or default to bash
             shell = os.environ.get("SHELL", "/bin/bash")
             shell_name = os.path.basename(shell)
-            # Erstelle den Befehl mit dem gewünschten Arbeitsverzeichnis
+            # Build the command with the desired working directory
             full_command = f'cd "{cwd}" && {command}; exec {shell_name}'
             print(terminal)
-            # Bei gnome-terminal wird häufig der Parameter -e benötigt, bei anderen eventuell "--"
+            # For gnome-terminal and xfce4-terminal, the parameter -e is often needed; for others, maybe "--"
             if terminal in ["gnome-terminal", "xfce4-terminal"]:
                 subprocess.Popen([terminal, "-e", f'{shell} -i -c "{full_command}"'])
             elif terminal == "konsole":
@@ -382,10 +382,10 @@ def open_new_terminal(command, cwd):
             else:
                 subprocess.Popen([terminal, "--", shell, "-i", "-c", full_command])
         else:
-            console.print("[bold red]Kein Terminal-Emulator gefunden. Bitte führe folgenden Befehl manuell aus:[/bold red]")
+            console.print("[bold red]No terminal emulator found. Please run the following command manually:[/bold red]")
             console.print(command)
     else:
-        console.print(f"[bold red]Betriebssystem {system} wird nicht unterstützt.[/bold red]")
+        console.print(f"[bold red]Operating system {system} is not supported.[/bold red]")
 
 
 ###########################################################################
@@ -966,11 +966,11 @@ def main():
     mode = Prompt.ask(
         "Choose deployment mode (full = full deployment, start = just start services, prepare = setup test environment)",
         choices=["full", "start", "prepare"],
-        default="prepare",
+        default="start",
     )
     expo_platform = None
     if mode != "prepare":
-        expo_platform = Prompt.ask("Choose Expo platform", choices=["android", "ios"], default="android")
+        expo_platform = Prompt.ask("Choose Expo platform", choices=["android", "ios"], default="ios")
 
     if mode == "full" or mode == "prepare":
         console.print("[bold green]Starting full deployment...[/bold green]")

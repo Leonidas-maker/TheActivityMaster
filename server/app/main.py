@@ -241,21 +241,6 @@ app.mount("/static", StaticFiles(directory=static_folder), name="static")
 def ping():
     return {"message": "pong"}
 
-
-@app.get("/test-mail")
-async def test_mail():
-    from schemas import s_email
-
-    with email_manager_dependency.get() as email_manager:
-        await email_manager.send_mail(
-            s_email.TwoFactorAuthModel(
-                user_name="Test User", user_email="test@example.com", language="en", two_fa_code="123456"
-            )
-        )
-
-    return {"message": "Mail sent successfully!"}
-
-
 if __name__ == "__main__":
     import uvicorn
 
